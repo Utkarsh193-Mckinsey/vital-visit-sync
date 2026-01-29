@@ -153,9 +153,16 @@ export default function TreatmentAdmin() {
     
     // If trying to set a dose but consent not signed, show warning
     if (value && !treatment.hasConsentSigned) {
-      setConsentWarning({ treatmentName: treatment.treatmentName, index });
+      setConsentWarning({ treatmentName: treatment.treatmentName, treatmentId: treatment.treatmentId, index });
       return;
     }
+    
+    setTreatments(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], doseAdministered: value };
+      return updated;
+    });
+  };
     
     setTreatments(prev => {
       const updated = [...prev];
