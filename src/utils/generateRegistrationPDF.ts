@@ -22,11 +22,22 @@ export async function generateRegistrationPDF(data: RegistrationPDFData): Promis
   const margin = 20;
   let yPosition = margin;
 
-  // Header
-  pdf.setFontSize(18);
+  // Clinic Header
+  pdf.setFontSize(20);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('COSMIQUE', pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 6;
+  
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text('Aesthetics and Dermatology Clinic', pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 12;
+
+  // Form Title
+  pdf.setFontSize(14);
   pdf.setFont('helvetica', 'bold');
   pdf.text('PATIENT REGISTRATION FORM', pageWidth / 2, yPosition, { align: 'center' });
-  yPosition += 15;
+  yPosition += 10;
 
   // Divider line
   pdf.setLineWidth(0.5);

@@ -23,17 +23,28 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
   const contentWidth = pageWidth - (margin * 2);
   let yPosition = margin;
 
-  // Header
-  pdf.setFontSize(18);
+  // Clinic Header
+  pdf.setFontSize(20);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('CONSENT FORM', pageWidth / 2, yPosition, { align: 'center' });
-  yPosition += 10;
+  pdf.text('COSMIQUE', pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 6;
+  
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text('Aesthetics and Dermatology Clinic', pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 12;
 
-  // Treatment name
+  // Form Title
   pdf.setFontSize(14);
   pdf.setFont('helvetica', 'bold');
+  pdf.text('CONSENT FORM', pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 8;
+
+  // Treatment/form name
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'bold');
   pdf.text(data.consentFormName, pageWidth / 2, yPosition, { align: 'center' });
-  yPosition += 15;
+  yPosition += 12;
 
   // Divider line
   pdf.setLineWidth(0.5);
