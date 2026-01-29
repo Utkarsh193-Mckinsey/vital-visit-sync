@@ -122,6 +122,20 @@ export default function TreatmentAdmin() {
     setIsSaving(true);
 
     try {
+      // First update visit (without locking) so RLS allows subsequent updates
+      const { error: visitUpdateError } = await supabase
+        .from('visits')
+        .update({
+          current_status: 'completed',
+          treatment_completed: true,
+          doctor_notes: doctorNotes || null,
+          doctor_staff_id: staff.id,
+          completed_date: new Date().toISOString(),
+        })
+        .eq('id', visitId);
+
+      if (visitUpdateError) throw visitUpdateError;
+
       // Insert visit treatments and deduct sessions ONLY for treatments with dose
       for (const treatment of treatmentsToAdminister) {
         // Insert visit treatment
@@ -153,20 +167,16 @@ export default function TreatmentAdmin() {
         if (pkgError) throw pkgError;
       }
 
-      // Update visit as completed
-      const { error: visitError } = await supabase
+      // Finally lock the visit (last operation since RLS checks is_locked)
+      const { error: lockError } = await supabase
         .from('visits')
-        .update({
-          current_status: 'completed',
-          treatment_completed: true,
-          doctor_notes: doctorNotes || null,
-          doctor_staff_id: staff.id,
-          completed_date: new Date().toISOString(),
-          is_locked: true,
-        })
+        .update({ is_locked: true })
         .eq('id', visitId);
 
-      if (visitError) throw visitError;
+      if (lockError) {
+        // Non-critical: log but don't fail the whole operation
+        console.warn('Could not lock visit:', lockError);
+      }
 
       const treatmentCount = treatmentsToAdminister.length;
       toast({
