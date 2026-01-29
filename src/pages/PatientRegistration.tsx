@@ -8,7 +8,9 @@ import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletCard, TabletCardContent, TabletCardHeader, TabletCardTitle } from '@/components/ui/tablet-card';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, UserPlus, Eraser } from 'lucide-react';
+import { ArrowLeft, UserPlus, Eraser, Download, Check } from 'lucide-react';
+import { generateRegistrationPDF, getRegistrationFileName } from '@/utils/generateRegistrationPDF';
+import { downloadPDF, getFirstName } from '@/utils/pdfDownload';
 
 export default function PatientRegistration() {
   const [formData, setFormData] = useState({
@@ -21,6 +23,8 @@ export default function PatientRegistration() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [registeredPatient, setRegisteredPatient] = useState<{ id: string; signatureDataUrl: string } | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
   const signatureRef = useRef<SignatureCanvas>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -138,6 +142,10 @@ export default function PatientRegistration() {
         return;
       }
 
+      // Capture signature data URL before upload
+      const canvas = signatureRef.current?.getCanvas();
+      const signatureDataUrl = canvas?.toDataURL('image/png') || '';
+
       // Upload signature
       const signatureUrl = await uploadSignature();
       
@@ -176,8 +184,11 @@ export default function PatientRegistration() {
         description: `${formData.full_name} has been successfully registered.`,
       });
 
-      // Navigate to patient dashboard
-      navigate(`/patient/${patient.id}`);
+      // Store patient info and signature for download
+      setRegisteredPatient({
+        id: patient.id,
+        signatureDataUrl,
+      });
       
     } catch (error) {
       console.error('Registration error:', error);
@@ -190,6 +201,84 @@ export default function PatientRegistration() {
       setIsSubmitting(false);
     }
   };
+
+  const handleDownloadRegistration = async () => {
+    if (!registeredPatient) return;
+    
+    setIsDownloading(true);
+    try {
+      const pdfBlob = await generateRegistrationPDF({
+        patientName: formData.full_name.trim(),
+        patientDOB: formData.date_of_birth,
+        patientPhone: formData.phone_number.trim(),
+        patientEmail: formData.email.trim(),
+        emiratesId: formData.emirates_id.trim() || null,
+        address: formData.address.trim() || null,
+        signatureDataUrl: registeredPatient.signatureDataUrl,
+        registrationDate: new Date(),
+      });
+
+      const firstName = getFirstName(formData.full_name);
+      const fileName = getRegistrationFileName(firstName, formData.phone_number);
+      downloadPDF(pdfBlob, fileName);
+
+      toast({
+        title: 'Download Started',
+        description: 'Registration form PDF is downloading.',
+      });
+    } catch (error) {
+      console.error('Error generating registration PDF:', error);
+      toast({
+        title: 'Download Failed',
+        description: 'Failed to generate PDF. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleContinueToPatient = () => {
+    if (registeredPatient) {
+      navigate(`/patient/${registeredPatient.id}`);
+    }
+  };
+
+  // Show success screen with download option
+  if (registeredPatient) {
+    return (
+      <PageContainer maxWidth="md">
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+            <Check className="h-8 w-8 text-primary" />
+          </div>
+          <h1 className="text-2xl font-bold text-center mb-2">Registration Complete!</h1>
+          <p className="text-muted-foreground text-center mb-8">
+            {formData.full_name} has been successfully registered.
+          </p>
+
+          <div className="w-full max-w-sm space-y-4">
+            <TabletButton
+              fullWidth
+              variant="outline"
+              onClick={handleDownloadRegistration}
+              disabled={isDownloading}
+              leftIcon={<Download />}
+            >
+              {isDownloading ? 'Generating PDF...' : 'Download Registration Form'}
+            </TabletButton>
+
+            <TabletButton
+              fullWidth
+              onClick={handleContinueToPatient}
+            >
+              Continue to Patient Dashboard
+            </TabletButton>
+          </div>
+        </div>
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer maxWidth="md">
