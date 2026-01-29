@@ -26,7 +26,7 @@ export default function ConsentSigning() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSigning, setIsSigning] = useState(false);
   const [signedPackages, setSignedPackages] = useState<Set<string>>(new Set());
-  const [signatures, setSignatures] = useState<Map<string, string>>(new Map());
+  const [signatureData, setSignatureData] = useState<Map<string, { signatureUrl: string; pdfUrl: string }>>(new Map());
   const signatureRef = useRef<SignatureCanvas>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
