@@ -19,7 +19,6 @@ import { NavLink } from '@/components/NavLink';
 import { 
   Users, 
   Clock, 
-  Stethoscope, 
   Settings, 
   LogOut,
   Syringe,
@@ -27,6 +26,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { TabletButton } from '@/components/ui/tablet-button';
+import cosmiqueLogo from '@/assets/cosmique-symbol.png';
 
 import type { StaffRole } from '@/types/database';
 
