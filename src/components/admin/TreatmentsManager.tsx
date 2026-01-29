@@ -284,6 +284,84 @@ export default function TreatmentsManager() {
               onChange={(e) => setFormData({ ...formData, administration_method: e.target.value })}
             />
 
+            {/* Common Doses Section - only show for measurable units */}
+            {UNITS_WITH_DOSES.includes(formData.dosage_unit) && (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium">
+                  Common Doses ({formData.dosage_unit})
+                  <span className="text-muted-foreground font-normal ml-1">- doctors will pick from these</span>
+                </label>
+                
+                {/* Current doses as tags */}
+                {formData.common_doses.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {formData.common_doses.map((dose, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium"
+                      >
+                        {dose} {formData.dosage_unit}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData({
+                              ...formData,
+                              common_doses: formData.common_doses.filter((_, i) => i !== index),
+                            });
+                          }}
+                          className="ml-1 hover:bg-primary/20 rounded-full p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Add new dose input */}
+                <div className="flex gap-2">
+                  <TabletInput
+                    type="text"
+                    placeholder={`e.g., 2.5, 5, 7.5`}
+                    value={newDose}
+                    onChange={(e) => setNewDose(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (newDose.trim() && !formData.common_doses.includes(newDose.trim())) {
+                          setFormData({
+                            ...formData,
+                            common_doses: [...formData.common_doses, newDose.trim()],
+                          });
+                          setNewDose('');
+                        }
+                      }
+                    }}
+                    className="flex-1"
+                  />
+                  <TabletButton
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      if (newDose.trim() && !formData.common_doses.includes(newDose.trim())) {
+                        setFormData({
+                          ...formData,
+                          common_doses: [...formData.common_doses, newDose.trim()],
+                        });
+                        setNewDose('');
+                      }
+                    }}
+                    leftIcon={<Plus className="h-4 w-4" />}
+                  >
+                    Add
+                  </TabletButton>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Press Enter or click Add to add a dose. These will appear as dropdown options for doctors.
+                </p>
+              </div>
+            )}
+
             <div className="flex gap-3">
               <TabletButton
                 variant="outline"
