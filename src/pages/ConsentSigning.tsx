@@ -370,6 +370,65 @@ export default function ConsentSigning() {
     );
   }
 
+  const handleDownloadConsent = (consent: SignedConsentData) => {
+    if (!patient) return;
+    const firstName = getFirstName(patient.full_name);
+    const fileName = getConsentFileName(firstName, consent.treatmentName, consent.visitNumber);
+    downloadPDF(consent.pdfBlob, fileName);
+    toast({
+      title: 'Download Started',
+      description: `Downloading consent form for ${consent.treatmentName}.`,
+    });
+  };
+
+  const handleContinueToWaiting = () => {
+    navigate('/waiting');
+  };
+
+  // Show success screen with download options after all consents are signed
+  if (allConsentsSigned && patient) {
+    return (
+      <PageContainer maxWidth="md">
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+            <Check className="h-8 w-8 text-primary" />
+          </div>
+          <h1 className="text-2xl font-bold text-center mb-2">All Consents Signed!</h1>
+          <p className="text-muted-foreground text-center mb-2">
+            Visit #{createdVisitNumber} has been created for {patient.full_name}.
+          </p>
+          <p className="text-muted-foreground text-center mb-8">
+            Patient is now in the waiting area.
+          </p>
+
+          <div className="w-full max-w-sm space-y-4">
+            <p className="text-sm font-medium text-center mb-2">Download Consent Forms</p>
+            {signedConsents.map((consent, index) => (
+              <TabletButton
+                key={consent.packageId}
+                fullWidth
+                variant="outline"
+                onClick={() => handleDownloadConsent(consent)}
+                leftIcon={<Download />}
+              >
+                {consent.treatmentName} Consent
+              </TabletButton>
+            ))}
+
+            <div className="pt-4">
+              <TabletButton
+                fullWidth
+                onClick={handleContinueToWaiting}
+              >
+                Continue to Waiting Area
+              </TabletButton>
+            </div>
+          </div>
+        </div>
+      </PageContainer>
+    );
+  }
+
   const currentPackage = packages[currentPackageIndex];
   const consentTemplate = currentPackage?.treatment?.consent_template;
 
