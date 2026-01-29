@@ -8,7 +8,7 @@ import { TabletInput } from '@/components/ui/tablet-input';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, CheckCircle, Syringe, FileText, User, Package, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Syringe, FileText, User, Package, AlertTriangle, FileSignature } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -26,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { InlineConsentModal } from '@/components/treatment/InlineConsentModal';
 import type { Visit, Patient, Treatment } from '@/types/database';
 
 interface VisitWithPatient extends Omit<Visit, 'consent_forms'> {
@@ -67,7 +68,8 @@ export default function TreatmentAdmin() {
   const [doctorNotes, setDoctorNotes] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [consentWarning, setConsentWarning] = useState<{ treatmentName: string; index: number } | null>(null);
+  const [consentWarning, setConsentWarning] = useState<{ treatmentName: string; treatmentId: string; index: number } | null>(null);
+  const [showConsentModal, setShowConsentModal] = useState(false);
   const { staff } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -151,7 +153,7 @@ export default function TreatmentAdmin() {
     
     // If trying to set a dose but consent not signed, show warning
     if (value && !treatment.hasConsentSigned) {
-      setConsentWarning({ treatmentName: treatment.treatmentName, index });
+      setConsentWarning({ treatmentName: treatment.treatmentName, treatmentId: treatment.treatmentId, index });
       return;
     }
     
@@ -510,7 +512,7 @@ export default function TreatmentAdmin() {
       </TabletButton>
 
       {/* Consent Warning Dialog */}
-      <AlertDialog open={!!consentWarning} onOpenChange={() => setConsentWarning(null)}>
+      <AlertDialog open={!!consentWarning && !showConsentModal} onOpenChange={() => setConsentWarning(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-warning">
@@ -522,19 +524,39 @@ export default function TreatmentAdmin() {
               Please have the patient sign the consent form before administering this treatment.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Understood</AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              // Navigate to consent signing
-              if (visit) {
-                navigate(`/patient/${visit.patient_id}`);
-              }
-            }}>
-              Go to Patient Dashboard
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => setShowConsentModal(true)}
+              className="bg-primary"
+            >
+              <FileSignature className="h-4 w-4 mr-2" />
+              Sign Consent Now
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Inline Consent Signing Modal */}
+      {visit && consentWarning && (
+        <InlineConsentModal
+          open={showConsentModal}
+          onClose={() => {
+            setShowConsentModal(false);
+            setConsentWarning(null);
+          }}
+          onConsentSigned={() => {
+            // Refresh the consent status for this treatment
+            fetchVisitData();
+            setShowConsentModal(false);
+            setConsentWarning(null);
+          }}
+          visitId={visit.id}
+          patient={visit.patient}
+          treatmentId={consentWarning.treatmentId}
+          treatmentName={consentWarning.treatmentName}
+        />
+      )}
     </PageContainer>
   );
 }
