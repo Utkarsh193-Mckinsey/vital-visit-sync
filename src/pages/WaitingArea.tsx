@@ -19,8 +19,6 @@ import type { Visit, Patient, ConsentForm, Treatment } from '@/types/database';
 interface WaitingVisit extends Visit {
   patient: Patient;
   consent_forms: (ConsentForm & { treatment: Treatment })[];
-  nurse_staff?: Staff | null;
-  doctor_staff?: Staff | null;
 }
 
 export default function WaitingArea() {
