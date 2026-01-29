@@ -115,13 +115,11 @@ export default function WaitingArea() {
       description: `Now attending to ${visit.patient.full_name}`,
     });
 
-    // Navigate based on role and visit state
-    if (staff?.role === 'nurse' && !visit.vitals_completed) {
+    // Navigate based on vitals state - always do vitals first if not completed
+    if (!visit.vitals_completed) {
       navigate(`/visit/${visit.id}/vitals`);
-    } else if (staff?.role === 'doctor' || staff?.role === 'admin') {
-      navigate(`/visit/${visit.id}/treatment`);
     } else {
-      navigate(`/visit/${visit.id}/vitals`);
+      navigate(`/visit/${visit.id}/treatment`);
     }
   };
 
