@@ -12,10 +12,14 @@ import {
   CheckCircle2, 
   AlertCircle,
   FileText,
-  ChevronRight
+  ChevronRight,
+  UserCheck,
+  Stethoscope,
+  PlayCircle
 } from 'lucide-react';
 import type { Patient, Visit } from '@/types/database';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface VisitWithDetails extends Visit {
   visit_treatments?: {
@@ -36,6 +40,7 @@ export default function VisitHistory() {
   const [expandedVisit, setExpandedVisit] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { hasRole } = useAuth();
 
   useEffect(() => {
     fetchData();
@@ -112,6 +117,29 @@ export default function VisitHistory() {
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
+  };
+
+  const getNextStep = (visit: VisitWithDetails) => {
+    if (visit.current_status === 'completed') return null;
+    if (visit.current_status === 'waiting') {
+      return { label: 'Waiting for Staff', icon: Clock, action: null };
+    }
+    // In progress - check what's pending
+    if (!visit.vitals_completed) {
+      return { 
+        label: 'Take Patient (Vitals)', 
+        icon: UserCheck, 
+        action: () => navigate(`/visit/${visit.id}/vitals`)
+      };
+    }
+    if (!visit.treatment_completed) {
+      return { 
+        label: 'Start Treatment', 
+        icon: Stethoscope, 
+        action: () => navigate(`/visit/${visit.id}/treatment`)
+      };
+    }
+    return null;
   };
 
   if (isLoading) {
@@ -200,6 +228,29 @@ export default function VisitHistory() {
                           </span>
                         )}
                       </div>
+                      {/* Show next step for in-progress visits */}
+                      {visit.current_status === 'in_progress' && getNextStep(visit) && (
+                        <div className="mt-2">
+                          {hasRole(['admin', 'nurse', 'doctor']) && getNextStep(visit)?.action ? (
+                            <TabletButton
+                              size="sm"
+                              variant="default"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                getNextStep(visit)?.action?.();
+                              }}
+                              leftIcon={getNextStep(visit)?.icon && <PlayCircle className="h-4 w-4" />}
+                            >
+                              {getNextStep(visit)?.label}
+                            </TabletButton>
+                          ) : (
+                            <span className="flex items-center gap-1.5 text-xs text-warning font-medium">
+                              <AlertCircle className="h-3 w-3" />
+                              Next: {getNextStep(visit)?.label}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <ChevronRight className={`h-5 w-5 text-muted-foreground transition-transform ${
