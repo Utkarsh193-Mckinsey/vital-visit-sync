@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Check, FileSignature, AlertCircle } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import type { Patient, Package, Treatment, ConsentTemplate } from '@/types/database';
+import { generateConsentPDF } from '@/utils/generateConsentPDF';
 
 interface PackageWithTreatment extends Package {
   treatment: Treatment & {
