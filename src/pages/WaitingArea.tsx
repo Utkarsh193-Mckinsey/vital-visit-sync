@@ -23,22 +23,14 @@ interface WaitingVisit extends Visit {
 
 export default function WaitingArea() {
   const [waitingVisits, setWaitingVisits] = useState<WaitingVisit[]>([]);
-  const [inProgressVisits, setInProgressVisits] = useState<WaitingVisit[]>([]);
-  const [completedVisits, setCompletedVisits] = useState<WaitingVisit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [takingPatient, setTakingPatient] = useState<string | null>(null);
   const { staff, signOut, hasRole } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const fetchAllVisits = async () => {
-    // Get today's date range
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    // Fetch waiting visits
+  const fetchWaitingVisits = async () => {
+    // Fetch waiting visits only
     const { data: waiting, error: waitingError } = await supabase
       .from('visits')
       .select(`
@@ -56,52 +48,6 @@ export default function WaitingArea() {
       console.error('Error fetching waiting visits:', waitingError);
     } else {
       setWaitingVisits(waiting as unknown as WaitingVisit[]);
-    }
-
-    // Fetch in-progress visits
-    const { data: inProgress, error: inProgressError } = await supabase
-      .from('visits')
-      .select(`
-        *,
-        patient:patients (*),
-        consent_forms (
-          *,
-          treatment:treatments (*)
-        ),
-        nurse_staff:staff!visits_nurse_staff_id_fkey (*),
-        doctor_staff:staff!visits_doctor_staff_id_fkey (*)
-      `)
-      .eq('current_status', 'in_progress')
-      .order('visit_date', { ascending: true });
-
-    if (inProgressError) {
-      console.error('Error fetching in-progress visits:', inProgressError);
-    } else {
-      setInProgressVisits(inProgress as unknown as WaitingVisit[]);
-    }
-
-    // Fetch today's completed visits
-    const { data: completed, error: completedError } = await supabase
-      .from('visits')
-      .select(`
-        *,
-        patient:patients (*),
-        consent_forms (
-          *,
-          treatment:treatments (*)
-        ),
-        nurse_staff:staff!visits_nurse_staff_id_fkey (*),
-        doctor_staff:staff!visits_doctor_staff_id_fkey (*)
-      `)
-      .eq('current_status', 'completed')
-      .gte('completed_date', today.toISOString())
-      .lt('completed_date', tomorrow.toISOString())
-      .order('completed_date', { ascending: false });
-
-    if (completedError) {
-      console.error('Error fetching completed visits:', completedError);
-    } else {
-      setCompletedVisits(completed as unknown as WaitingVisit[]);
     }
 
     setIsLoading(false);
