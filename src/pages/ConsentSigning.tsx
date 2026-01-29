@@ -266,20 +266,7 @@ export default function ConsentSigning() {
       if (consentError) throw consentError;
 
       // Update all signed consents with the correct visit number
-      setSignedConsents(prev => {
-        const updated = prev.map(sc => ({ ...sc, visitNumber: nextVisitNumber }));
-        // Add the last consent if we have it
-        if (lastPdfBlob && lastTreatmentName) {
-          const lastPackage = packages[packages.length - 1];
-          updated.push({
-            packageId: lastPackage.id,
-            treatmentName: lastTreatmentName,
-            pdfBlob: lastPdfBlob,
-            visitNumber: nextVisitNumber,
-          });
-        }
-        return updated;
-      });
+      setSignedConsents(prev => prev.map(sc => ({ ...sc, visitNumber: nextVisitNumber })));
 
       setCreatedVisitNumber(nextVisitNumber);
       setAllConsentsSigned(true);
