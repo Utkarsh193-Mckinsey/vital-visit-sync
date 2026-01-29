@@ -4,12 +4,15 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 // Pages
 import Login from "./pages/Login";
 import PatientSearch from "./pages/PatientSearch";
 import PatientRegistration from "./pages/PatientRegistration";
 import PatientDashboard from "./pages/PatientDashboard";
+import ConsentSigning from "./pages/ConsentSigning";
+import VisitHistory from "./pages/VisitHistory";
 import WaitingArea from "./pages/WaitingArea";
 import AdminSettings from "./pages/AdminSettings";
 import NotFound from "./pages/NotFound";
@@ -28,7 +31,7 @@ function LoadingSpinner() {
   );
 }
 
-// Protected route wrapper
+// Protected route wrapper with layout
 function ProtectedRoute({ 
   children, 
   allowedRoles 
@@ -47,14 +50,13 @@ function ProtectedRoute({
   }
 
   if (allowedRoles && staff && !allowedRoles.includes(staff.role)) {
-    // Redirect to appropriate dashboard based on role
     if (staff.role === 'reception') {
       return <Navigate to="/patients" replace />;
     }
     return <Navigate to="/waiting" replace />;
   }
 
-  return <>{children}</>;
+  return <AppLayout>{children}</AppLayout>;
 }
 
 // Public route that redirects if authenticated
@@ -66,7 +68,6 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (isAuthenticated && staff) {
-    // Redirect based on role
     if (staff.role === 'admin' || staff.role === 'reception') {
       return <Navigate to="/patients" replace />;
     }
@@ -124,6 +125,18 @@ function AppRoutes() {
       <Route path="/patient/:patientId" element={
         <ProtectedRoute allowedRoles={['admin', 'reception']}>
           <PatientDashboard />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/patient/:patientId/consent" element={
+        <ProtectedRoute allowedRoles={['admin', 'reception']}>
+          <ConsentSigning />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/patient/:patientId/history" element={
+        <ProtectedRoute allowedRoles={['admin', 'reception', 'nurse', 'doctor']}>
+          <VisitHistory />
         </ProtectedRoute>
       } />
       
