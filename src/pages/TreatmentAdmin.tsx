@@ -68,7 +68,8 @@ export default function TreatmentAdmin() {
   const [doctorNotes, setDoctorNotes] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [consentWarning, setConsentWarning] = useState<{ treatmentName: string; index: number } | null>(null);
+  const [consentWarning, setConsentWarning] = useState<{ treatmentName: string; treatmentId: string; index: number } | null>(null);
+  const [showConsentModal, setShowConsentModal] = useState(false);
   const { staff } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
