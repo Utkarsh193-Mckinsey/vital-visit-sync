@@ -178,6 +178,17 @@ export default function VisitHistory() {
     return null;
   };
 
+  const fetchImageAsDataUrl = async (url: string): Promise<string> => {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
   const handleDownloadConsentPDF = async (cf: ConsentFormWithDetails) => {
     // If PDF already exists, just open it
     if (cf.pdf_url) {
@@ -191,6 +202,9 @@ export default function VisitHistory() {
     setGeneratingPDF(cf.id);
 
     try {
+      // Fetch signature image and convert to data URL
+      const signatureDataUrl = await fetchImageAsDataUrl(cf.signature_url);
+
       const pdfBlob = await generateConsentPDF({
         patientName: patient.full_name,
         patientDOB: patient.date_of_birth,
@@ -198,7 +212,7 @@ export default function VisitHistory() {
         treatmentName: cf.treatment?.treatment_name || 'Treatment',
         consentFormName: cf.consent_template?.form_name || 'Consent Form',
         consentText: cf.consent_template?.consent_text || 'Consent terms on file.',
-        signatureDataUrl: cf.signature_url,
+        signatureDataUrl: signatureDataUrl,
         signedDate: new Date(cf.signed_date),
       });
 
