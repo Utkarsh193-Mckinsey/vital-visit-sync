@@ -54,14 +54,14 @@ const navigationItems: NavItem[] = [
   },
   { 
     title: 'In Treatment', 
-    url: '/waiting#in-progress', 
+    url: '/in-treatment', 
     icon: Activity,
     roles: ['admin', 'nurse', 'doctor'],
     countKey: 'inProgress'
   },
   { 
     title: 'Completed', 
-    url: '/waiting#completed', 
+    url: '/completed', 
     icon: CheckCircle,
     roles: ['admin', 'nurse', 'doctor'],
     countKey: 'completed'

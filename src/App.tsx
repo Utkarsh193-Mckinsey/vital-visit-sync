@@ -146,8 +146,20 @@ function AppRoutes() {
       
       {/* Clinical routes */}
       <Route path="/waiting" element={
-        <ProtectedRoute allowedRoles={['admin', 'nurse', 'doctor']}>
+        <ProtectedRoute allowedRoles={['admin', 'nurse', 'doctor', 'reception']}>
           <WaitingArea />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/in-treatment" element={
+        <ProtectedRoute allowedRoles={['admin', 'nurse', 'doctor']}>
+          <InTreatment />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/completed" element={
+        <ProtectedRoute allowedRoles={['admin', 'nurse', 'doctor']}>
+          <CompletedToday />
         </ProtectedRoute>
       } />
 
