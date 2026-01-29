@@ -18,13 +18,30 @@ import {
   PlayCircle,
   FileSignature,
   ClipboardList,
-  Download
+  Download,
+  Loader2
 } from 'lucide-react';
 import type { Patient, Visit } from '@/types/database';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { generateConsentPDF } from '@/utils/generateConsentPDF';
 
-interface VisitWithDetails extends Visit {
+interface ConsentFormWithDetails {
+  id: string;
+  signature_url: string;
+  pdf_url: string | null;
+  signed_date: string;
+  consent_template_id: string;
+  treatment: {
+    treatment_name: string;
+  } | null;
+  consent_template?: {
+    form_name: string;
+    consent_text: string;
+  } | null;
+}
+
+interface VisitWithDetails extends Omit<Visit, 'consent_forms'> {
   visit_treatments?: {
     id: string;
     dose_administered: string;
@@ -33,6 +50,7 @@ interface VisitWithDetails extends Visit {
       treatment_name: string;
     };
   }[];
+  consent_forms?: ConsentFormWithDetails[];
 }
 
 export default function VisitHistory() {
@@ -41,6 +59,7 @@ export default function VisitHistory() {
   const [visits, setVisits] = useState<VisitWithDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedVisit, setExpandedVisit] = useState<string | null>(null);
+  const [generatingPDF, setGeneratingPDF] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { hasRole } = useAuth();
@@ -81,8 +100,13 @@ export default function VisitHistory() {
             signature_url,
             pdf_url,
             signed_date,
+            consent_template_id,
             treatment:treatments (
               treatment_name
+            ),
+            consent_template:consent_templates (
+              form_name,
+              consent_text
             )
           )
         `)
@@ -152,6 +176,58 @@ export default function VisitHistory() {
       };
     }
     return null;
+  };
+
+  const handleDownloadConsentPDF = async (cf: ConsentFormWithDetails) => {
+    // If PDF already exists, just open it
+    if (cf.pdf_url) {
+      window.open(cf.pdf_url, '_blank');
+      return;
+    }
+
+    // Generate PDF on-the-fly
+    if (!patient) return;
+
+    setGeneratingPDF(cf.id);
+
+    try {
+      const pdfBlob = await generateConsentPDF({
+        patientName: patient.full_name,
+        patientDOB: patient.date_of_birth,
+        patientPhone: patient.phone_number,
+        treatmentName: cf.treatment?.treatment_name || 'Treatment',
+        consentFormName: cf.consent_template?.form_name || 'Consent Form',
+        consentText: cf.consent_template?.consent_text || 'Consent terms on file.',
+        signatureDataUrl: cf.signature_url,
+        signedDate: new Date(cf.signed_date),
+      });
+
+      // Create download link
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `consent-${cf.treatment?.treatment_name || 'form'}-${new Date(cf.signed_date).toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: 'PDF Generated',
+        description: 'Consent form PDF has been downloaded.',
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      // Fallback to signature if PDF generation fails
+      window.open(cf.signature_url, '_blank');
+      toast({
+        title: 'PDF Generation Failed',
+        description: 'Opened signature image instead.',
+        variant: 'destructive',
+      });
+    } finally {
+      setGeneratingPDF(null);
+    }
   };
 
   if (isLoading) {
@@ -337,14 +413,14 @@ export default function VisitHistory() {
                               key={cf.id}
                               size="sm"
                               variant="outline"
+                              disabled={generatingPDF === cf.id}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                // Prefer PDF if available, otherwise fall back to signature
-                                window.open(cf.pdf_url || cf.signature_url, '_blank');
+                                handleDownloadConsentPDF(cf);
                               }}
-                              leftIcon={<FileSignature className="h-4 w-4" />}
+                              leftIcon={generatingPDF === cf.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                             >
-                              {cf.treatment?.treatment_name || 'Consent'} {cf.pdf_url ? 'PDF' : 'Signature'}
+                              {generatingPDF === cf.id ? 'Generating...' : `${cf.treatment?.treatment_name || 'Consent'} PDF`}
                             </TabletButton>
                           ))}
                         </div>
