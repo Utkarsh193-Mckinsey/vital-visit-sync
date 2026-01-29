@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { TabletButton } from '@/components/ui/tablet-button';
-import { TabletCard, TabletCardContent, TabletCardHeader, TabletCardTitle } from '@/components/ui/tablet-card';
+import { TabletCard, TabletCardContent } from '@/components/ui/tablet-card';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -12,38 +12,25 @@ import {
   AlertCircle, 
   UserCheck, 
   LogOut, 
-  Search,
-  Activity,
-  Stethoscope,
-  ClipboardCheck
+  Search
 } from 'lucide-react';
-import type { Visit, Patient, ConsentForm, Treatment, Staff } from '@/types/database';
+import type { Visit, Patient, ConsentForm, Treatment } from '@/types/database';
 
 interface WaitingVisit extends Visit {
   patient: Patient;
   consent_forms: (ConsentForm & { treatment: Treatment })[];
-  nurse_staff?: Staff | null;
-  doctor_staff?: Staff | null;
 }
 
 export default function WaitingArea() {
   const [waitingVisits, setWaitingVisits] = useState<WaitingVisit[]>([]);
-  const [inProgressVisits, setInProgressVisits] = useState<WaitingVisit[]>([]);
-  const [completedVisits, setCompletedVisits] = useState<WaitingVisit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [takingPatient, setTakingPatient] = useState<string | null>(null);
   const { staff, signOut, hasRole } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const fetchAllVisits = async () => {
-    // Get today's date range
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    // Fetch waiting visits
+  const fetchWaitingVisits = async () => {
+    // Fetch waiting visits only
     const { data: waiting, error: waitingError } = await supabase
       .from('visits')
       .select(`
@@ -63,64 +50,18 @@ export default function WaitingArea() {
       setWaitingVisits(waiting as unknown as WaitingVisit[]);
     }
 
-    // Fetch in-progress visits
-    const { data: inProgress, error: inProgressError } = await supabase
-      .from('visits')
-      .select(`
-        *,
-        patient:patients (*),
-        consent_forms (
-          *,
-          treatment:treatments (*)
-        ),
-        nurse_staff:staff!visits_nurse_staff_id_fkey (*),
-        doctor_staff:staff!visits_doctor_staff_id_fkey (*)
-      `)
-      .eq('current_status', 'in_progress')
-      .order('visit_date', { ascending: true });
-
-    if (inProgressError) {
-      console.error('Error fetching in-progress visits:', inProgressError);
-    } else {
-      setInProgressVisits(inProgress as unknown as WaitingVisit[]);
-    }
-
-    // Fetch today's completed visits
-    const { data: completed, error: completedError } = await supabase
-      .from('visits')
-      .select(`
-        *,
-        patient:patients (*),
-        consent_forms (
-          *,
-          treatment:treatments (*)
-        ),
-        nurse_staff:staff!visits_nurse_staff_id_fkey (*),
-        doctor_staff:staff!visits_doctor_staff_id_fkey (*)
-      `)
-      .eq('current_status', 'completed')
-      .gte('completed_date', today.toISOString())
-      .lt('completed_date', tomorrow.toISOString())
-      .order('completed_date', { ascending: false });
-
-    if (completedError) {
-      console.error('Error fetching completed visits:', completedError);
-    } else {
-      setCompletedVisits(completed as unknown as WaitingVisit[]);
-    }
-
     setIsLoading(false);
   };
 
   useEffect(() => {
-    fetchAllVisits();
+    fetchWaitingVisits();
 
     // Poll every 10 seconds
-    const interval = setInterval(fetchAllVisits, 10000);
+    const interval = setInterval(fetchWaitingVisits, 10000);
 
     // Also set up realtime subscription
     const channel = supabase
-      .channel('all-visits')
+      .channel('waiting-visits')
       .on(
         'postgres_changes',
         {
@@ -129,7 +70,7 @@ export default function WaitingArea() {
           table: 'visits',
         },
         () => {
-          fetchAllVisits();
+          fetchWaitingVisits();
         }
       )
       .subscribe();
@@ -215,13 +156,11 @@ export default function WaitingArea() {
     navigate('/patients');
   };
 
-  const totalActivePatients = waitingVisits.length + inProgressVisits.length;
-
   return (
     <PageContainer maxWidth="xl">
       <PageHeader 
         title="Waiting Area"
-        subtitle={`${totalActivePatients} active patient${totalActivePatients !== 1 ? 's' : ''}`}
+        subtitle={`${waitingVisits.length} patient${waitingVisits.length !== 1 ? 's' : ''} waiting`}
         action={
           <div className="flex gap-2">
             {hasRole(['admin', 'reception']) && (
@@ -350,164 +289,8 @@ export default function WaitingArea() {
               </div>
             )}
           </section>
-
-          {/* Treatment in Progress Section */}
-          <section>
-            <div className="flex items-center gap-2 mb-4">
-              <Activity className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-semibold">Treatment in Progress</h2>
-              <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-sm font-medium text-primary">
-                {inProgressVisits.length}
-              </span>
-            </div>
-
-            {inProgressVisits.length === 0 ? (
-              <TabletCard>
-                <TabletCardContent className="p-8 text-center">
-                  <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-                    <Stethoscope className="h-7 w-7 text-muted-foreground" />
-                  </div>
-                  <p className="text-muted-foreground">No patients in treatment</p>
-                </TabletCardContent>
-              </TabletCard>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                {inProgressVisits.map((visit) => (
-                  <TabletCard key={visit.id} className="overflow-hidden border-l-4 border-l-primary">
-                    <TabletCardContent className="p-0">
-                      <div className="flex items-center justify-between border-b bg-primary/5 px-5 py-3">
-                        <div className="flex items-center gap-3">
-                          <span className="text-lg font-semibold">
-                            {visit.patient.full_name}
-                          </span>
-                          <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-sm font-medium text-primary">
-                            Visit #{visit.visit_number}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {visit.vitals_completed ? (
-                            <span className="flex items-center gap-1 text-sm text-success">
-                              <CheckCircle className="h-3.5 w-3.5" />
-                              Vitals Done
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-1 text-sm text-warning">
-                              <Clock className="h-3.5 w-3.5" />
-                              Awaiting Vitals
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="p-5">
-                        <div className="mb-4">
-                          <div className="flex flex-wrap gap-2">
-                            {visit.consent_forms.map((cf) => (
-                              <span 
-                                key={cf.id}
-                                className="rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground"
-                              >
-                                {cf.treatment?.treatment_name}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <div className="text-sm text-muted-foreground">
-                            {visit.nurse_staff && (
-                              <span>Nurse: {visit.nurse_staff.full_name}</span>
-                            )}
-                          </div>
-
-                          {hasRole(['nurse', 'doctor', 'admin']) && (
-                            <TabletButton
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => handleContinueTreatment(visit)}
-                              leftIcon={visit.vitals_completed ? <Stethoscope /> : <Activity />}
-                            >
-                              {visit.vitals_completed 
-                                ? 'Administer Treatment' 
-                                : 'Take Vitals'
-                              }
-                            </TabletButton>
-                          )}
-                        </div>
-                      </div>
-                    </TabletCardContent>
-                  </TabletCard>
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* Completed Treatments Section */}
-          <section>
-            <div className="flex items-center gap-2 mb-4">
-              <ClipboardCheck className="h-5 w-5 text-success" />
-              <h2 className="text-lg font-semibold">Completed Today</h2>
-              <span className="rounded-full bg-success/10 px-2.5 py-0.5 text-sm font-medium text-success">
-                {completedVisits.length}
-              </span>
-            </div>
-
-            {completedVisits.length === 0 ? (
-              <TabletCard>
-                <TabletCardContent className="p-8 text-center">
-                  <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-                    <ClipboardCheck className="h-7 w-7 text-muted-foreground" />
-                  </div>
-                  <p className="text-muted-foreground">No completed treatments today</p>
-                </TabletCardContent>
-              </TabletCard>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {completedVisits.map((visit) => (
-                  <TabletCard key={visit.id} className="overflow-hidden border-l-4 border-l-success">
-                    <TabletCardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-semibold">{visit.patient.full_name}</span>
-                        <span className="text-sm text-muted-foreground">
-                          Visit #{visit.visit_number}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 mb-3">
-                        {visit.consent_forms.map((cf) => (
-                          <span 
-                            key={cf.id}
-                            className="rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success"
-                          >
-                            {cf.treatment?.treatment_name}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="flex items-center justify-between text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <CheckCircle className="h-3.5 w-3.5 text-success" />
-                          Completed
-                        </span>
-                        {visit.completed_date && (
-                          <span>
-                            {new Date(visit.completed_date).toLocaleTimeString('en-AE', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </span>
-                        )}
-                      </div>
-                    </TabletCardContent>
-                  </TabletCard>
-                ))}
-              </div>
-            )}
-          </section>
         </div>
       )}
-
-      <p className="mt-6 text-center text-sm text-muted-foreground">
-        Auto-refreshing every 10 seconds
-      </p>
     </PageContainer>
   );
 }
