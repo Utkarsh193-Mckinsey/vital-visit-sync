@@ -178,6 +178,14 @@ export default function ConsentSigning() {
       // Mark this package as signed
       setSignedPackages(prev => new Set([...prev, currentPackage.id]));
       
+      // Store PDF blob for download (we'll get visit number after createVisit)
+      setSignedConsents(prev => [...prev, {
+        packageId: currentPackage.id,
+        treatmentName: currentPackage.treatment.treatment_name,
+        pdfBlob: pdfBlob,
+        visitNumber: 0, // Will be updated after createVisit
+      }]);
+      
       // Move to next package or finish
       if (currentPackageIndex < packages.length - 1) {
         setCurrentPackageIndex(prev => prev + 1);
@@ -191,7 +199,7 @@ export default function ConsentSigning() {
         await createVisit({
           signatureUrl: signatureUrlData.publicUrl,
           pdfUrl: pdfUrlData.publicUrl,
-        });
+        }, pdfBlob, currentPackage.treatment.treatment_name);
       }
     } catch (error) {
       console.error('Error signing consent:', error);
