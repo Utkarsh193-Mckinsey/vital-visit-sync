@@ -15,7 +15,10 @@ import {
   ChevronRight,
   UserCheck,
   Stethoscope,
-  PlayCircle
+  PlayCircle,
+  FileSignature,
+  ClipboardList,
+  Download
 } from 'lucide-react';
 import type { Patient, Visit } from '@/types/database';
 import { Badge } from '@/components/ui/badge';
