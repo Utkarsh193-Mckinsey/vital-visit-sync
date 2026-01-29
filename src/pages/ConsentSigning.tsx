@@ -6,15 +6,23 @@ import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletCard, TabletCardContent, TabletCardHeader, TabletCardTitle } from '@/components/ui/tablet-card';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Check, FileSignature, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Check, FileSignature, AlertCircle, Download } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import type { Patient, Package, Treatment, ConsentTemplate } from '@/types/database';
 import { generateConsentPDF } from '@/utils/generateConsentPDF';
+import { downloadPDF, getFirstName, getConsentFileName } from '@/utils/pdfDownload';
 
 interface PackageWithTreatment extends Package {
   treatment: Treatment & {
     consent_template?: ConsentTemplate;
   };
+}
+
+interface SignedConsentData {
+  packageId: string;
+  treatmentName: string;
+  pdfBlob: Blob;
+  visitNumber: number;
 }
 
 export default function ConsentSigning() {
@@ -27,6 +35,9 @@ export default function ConsentSigning() {
   const [isSigning, setIsSigning] = useState(false);
   const [signedPackages, setSignedPackages] = useState<Set<string>>(new Set());
   const [signatureData, setSignatureData] = useState<Map<string, { signatureUrl: string; pdfUrl: string }>>(new Map());
+  const [signedConsents, setSignedConsents] = useState<SignedConsentData[]>([]);
+  const [allConsentsSigned, setAllConsentsSigned] = useState(false);
+  const [createdVisitNumber, setCreatedVisitNumber] = useState<number | null>(null);
   const signatureRef = useRef<SignatureCanvas>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -167,6 +178,14 @@ export default function ConsentSigning() {
       // Mark this package as signed
       setSignedPackages(prev => new Set([...prev, currentPackage.id]));
       
+      // Store PDF blob for download (we'll get visit number after createVisit)
+      setSignedConsents(prev => [...prev, {
+        packageId: currentPackage.id,
+        treatmentName: currentPackage.treatment.treatment_name,
+        pdfBlob: pdfBlob,
+        visitNumber: 0, // Will be updated after createVisit
+      }]);
+      
       // Move to next package or finish
       if (currentPackageIndex < packages.length - 1) {
         setCurrentPackageIndex(prev => prev + 1);
@@ -180,7 +199,7 @@ export default function ConsentSigning() {
         await createVisit({
           signatureUrl: signatureUrlData.publicUrl,
           pdfUrl: pdfUrlData.publicUrl,
-        });
+        }, pdfBlob, currentPackage.treatment.treatment_name);
       }
     } catch (error) {
       console.error('Error signing consent:', error);
@@ -194,7 +213,11 @@ export default function ConsentSigning() {
     }
   };
 
-  const createVisit = async (lastData: { signatureUrl: string; pdfUrl: string }) => {
+  const createVisit = async (
+    lastData: { signatureUrl: string; pdfUrl: string },
+    lastPdfBlob?: Blob,
+    lastTreatmentName?: string
+  ) => {
     if (!patient || !staff) return;
 
     try {
@@ -242,12 +265,29 @@ export default function ConsentSigning() {
 
       if (consentError) throw consentError;
 
-      toast({
-        title: 'Visit Created',
-        description: `Visit #${nextVisitNumber} has been created. Patient is now in the waiting area.`,
+      // Update all signed consents with the correct visit number
+      setSignedConsents(prev => {
+        const updated = prev.map(sc => ({ ...sc, visitNumber: nextVisitNumber }));
+        // Add the last consent if we have it
+        if (lastPdfBlob && lastTreatmentName) {
+          const lastPackage = packages[packages.length - 1];
+          updated.push({
+            packageId: lastPackage.id,
+            treatmentName: lastTreatmentName,
+            pdfBlob: lastPdfBlob,
+            visitNumber: nextVisitNumber,
+          });
+        }
+        return updated;
       });
 
-      navigate('/waiting');
+      setCreatedVisitNumber(nextVisitNumber);
+      setAllConsentsSigned(true);
+
+      toast({
+        title: 'Visit Created',
+        description: `Visit #${nextVisitNumber} has been created. You can now download consent forms.`,
+      });
     } catch (error) {
       console.error('Error creating visit:', error);
       toast({
@@ -325,6 +365,65 @@ export default function ConsentSigning() {
           <TabletButton className="mt-4" onClick={() => navigate('/patients')}>
             Back to Search
           </TabletButton>
+        </div>
+      </PageContainer>
+    );
+  }
+
+  const handleDownloadConsent = (consent: SignedConsentData) => {
+    if (!patient) return;
+    const firstName = getFirstName(patient.full_name);
+    const fileName = getConsentFileName(firstName, consent.treatmentName, consent.visitNumber);
+    downloadPDF(consent.pdfBlob, fileName);
+    toast({
+      title: 'Download Started',
+      description: `Downloading consent form for ${consent.treatmentName}.`,
+    });
+  };
+
+  const handleContinueToWaiting = () => {
+    navigate('/waiting');
+  };
+
+  // Show success screen with download options after all consents are signed
+  if (allConsentsSigned && patient) {
+    return (
+      <PageContainer maxWidth="md">
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+            <Check className="h-8 w-8 text-primary" />
+          </div>
+          <h1 className="text-2xl font-bold text-center mb-2">All Consents Signed!</h1>
+          <p className="text-muted-foreground text-center mb-2">
+            Visit #{createdVisitNumber} has been created for {patient.full_name}.
+          </p>
+          <p className="text-muted-foreground text-center mb-8">
+            Patient is now in the waiting area.
+          </p>
+
+          <div className="w-full max-w-sm space-y-4">
+            <p className="text-sm font-medium text-center mb-2">Download Consent Forms</p>
+            {signedConsents.map((consent, index) => (
+              <TabletButton
+                key={consent.packageId}
+                fullWidth
+                variant="outline"
+                onClick={() => handleDownloadConsent(consent)}
+                leftIcon={<Download />}
+              >
+                {consent.treatmentName} Consent
+              </TabletButton>
+            ))}
+
+            <div className="pt-4">
+              <TabletButton
+                fullWidth
+                onClick={handleContinueToWaiting}
+              >
+                Continue to Waiting Area
+              </TabletButton>
+            </div>
+          </div>
         </div>
       </PageContainer>
     );
