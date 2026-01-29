@@ -11,6 +11,28 @@ import SignatureCanvas from 'react-signature-canvas';
 import type { Patient, Package, Treatment, ConsentTemplate } from '@/types/database';
 import { generateConsentPDF } from '@/utils/generateConsentPDF';
 import { downloadPDF, getFirstName, getConsentFileName } from '@/utils/pdfDownload';
+import { format } from 'date-fns';
+
+// Helper function to replace placeholders in consent text
+const replaceConsentPlaceholders = (
+  consentText: string,
+  patientName: string,
+  treatmentName: string,
+  date: Date
+): string => {
+  const formattedDate = format(date, 'd MMMM yyyy');
+  return consentText
+    .replace(/\[PATIENT_NAME\]/g, patientName)
+    .replace(/\[patient_name\]/gi, patientName)
+    .replace(/\[patient name\]/gi, patientName)
+    .replace(/\[patient's name\]/gi, patientName)
+    .replace(/\[DATE\]/g, formattedDate)
+    .replace(/\[date\]/gi, formattedDate)
+    .replace(/\[TREATMENT_NAME\]/g, treatmentName)
+    .replace(/\[treatment_name\]/gi, treatmentName)
+    .replace(/\[treatment name\]/gi, treatmentName)
+    .replace(/\[treatment\]/gi, treatmentName);
+};
 
 interface PackageWithTreatment extends Package {
   treatment: Treatment & {
@@ -498,7 +520,14 @@ export default function ConsentSigning() {
             <TabletCardContent>
               <div className="prose prose-sm max-w-none text-foreground">
                 <div className="whitespace-pre-wrap bg-muted/50 p-4 rounded-lg max-h-64 overflow-y-auto">
-                  {consentTemplate?.consent_text || 'No consent text available.'}
+                  {patient && consentTemplate?.consent_text 
+                    ? replaceConsentPlaceholders(
+                        consentTemplate.consent_text,
+                        patient.full_name,
+                        currentPackage?.treatment.treatment_name || '',
+                        new Date()
+                      )
+                    : 'No consent text available.'}
                 </div>
               </div>
             </TabletCardContent>
