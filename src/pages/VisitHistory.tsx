@@ -413,14 +413,14 @@ export default function VisitHistory() {
                               key={cf.id}
                               size="sm"
                               variant="outline"
+                              disabled={generatingPDF === cf.id}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                // Prefer PDF if available, otherwise fall back to signature
-                                window.open(cf.pdf_url || cf.signature_url, '_blank');
+                                handleDownloadConsentPDF(cf);
                               }}
-                              leftIcon={<FileSignature className="h-4 w-4" />}
+                              leftIcon={generatingPDF === cf.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                             >
-                              {cf.treatment?.treatment_name || 'Consent'} {cf.pdf_url ? 'PDF' : 'Signature'}
+                              {generatingPDF === cf.id ? 'Generating...' : `${cf.treatment?.treatment_name || 'Consent'} PDF`}
                             </TabletButton>
                           ))}
                         </div>
