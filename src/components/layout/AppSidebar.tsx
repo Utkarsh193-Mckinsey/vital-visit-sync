@@ -142,15 +142,10 @@ export function AppSidebar() {
   }, []);
 
   const isActive = (url: string) => {
-    // For hash links, check if we're on the waiting page
-    if (url.includes('#')) {
-      const basePath = url.split('#')[0];
-      return location.pathname === basePath;
-    }
     if (url.includes('?')) {
       return location.pathname + location.search === url;
     }
-    return location.pathname === url || location.pathname.startsWith(url + '/');
+    return location.pathname === url;
   };
 
   const filteredItems = navigationItems.filter(item => 
@@ -160,18 +155,6 @@ export function AppSidebar() {
   const handleLogout = async () => {
     await signOut();
     navigate('/login');
-  };
-
-  const handleNavClick = (url: string) => {
-    if (url.includes('#')) {
-      const [path, hash] = url.split('#');
-      navigate(path);
-      // Scroll to section after navigation
-      setTimeout(() => {
-        const element = document.getElementById(hash);
-        element?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
-    }
   };
 
   const getCount = (key?: 'waiting' | 'inProgress' | 'completed') => {
