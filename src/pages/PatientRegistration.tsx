@@ -116,14 +116,17 @@ export default function PatientRegistration() {
     setIsSubmitting(true);
 
     try {
-      // Check if phone number already exists
-      const { data: existingPatient } = await supabase
+      // Check if phone number already exists - use maybeSingle to handle 0 rows
+      const { data: existingPatients, error: checkError } = await supabase
         .from('patients')
         .select('id')
-        .eq('phone_number', formData.phone_number.trim())
-        .single();
+        .eq('phone_number', formData.phone_number.trim());
 
-      if (existingPatient) {
+      if (checkError) {
+        throw checkError;
+      }
+
+      if (existingPatients && existingPatients.length > 0) {
         toast({
           title: 'Patient Exists',
           description: 'A patient with this phone number already exists.',
