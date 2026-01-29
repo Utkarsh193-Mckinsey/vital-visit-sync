@@ -8,21 +8,20 @@ import { TabletInput } from '@/components/ui/tablet-input';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, CheckCircle, Syringe, FileText, User } from 'lucide-react';
-import type { Visit, Patient, Package, Treatment } from '@/types/database';
+import { ArrowLeft, CheckCircle, Syringe, FileText, User, Package } from 'lucide-react';
+import type { Visit, Patient, Treatment } from '@/types/database';
 
-interface ConsentFormWithTreatment {
-  id: string;
-  treatment_id: string;
-  treatment: Treatment;
-}
-
-interface VisitWithDetails extends Omit<Visit, 'consent_forms'> {
+interface VisitWithPatient extends Omit<Visit, 'consent_forms'> {
   patient: Patient;
-  consent_forms: ConsentFormWithTreatment[];
 }
 
-interface PackageWithTreatment extends Package {
+interface PackageWithTreatment {
+  id: string;
+  patient_id: string;
+  treatment_id: string;
+  sessions_purchased: number;
+  sessions_remaining: number;
+  status: string;
   treatment: Treatment;
 }
 
@@ -33,12 +32,12 @@ interface TreatmentEntry {
   doseAdministered: string;
   doseUnit: string;
   administrationDetails: string;
+  sessionsRemaining: number;
 }
 
 export default function TreatmentAdmin() {
   const { visitId } = useParams<{ visitId: string }>();
-  const [visit, setVisit] = useState<VisitWithDetails | null>(null);
-  const [packages, setPackages] = useState<PackageWithTreatment[]>([]);
+  const [visit, setVisit] = useState<VisitWithPatient | null>(null);
   const [treatments, setTreatments] = useState<TreatmentEntry[]>([]);
   const [doctorNotes, setDoctorNotes] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -55,56 +54,45 @@ export default function TreatmentAdmin() {
     if (!visitId) return;
 
     try {
-      // Fetch visit with patient and consent forms
+      // Fetch visit with patient
       const { data: visitData, error: visitError } = await supabase
         .from('visits')
         .select(`
           *,
-          patient:patients (*),
-          consent_forms (
-            id,
-            treatment_id,
-            treatment:treatments (*)
-          )
+          patient:patients (*)
         `)
         .eq('id', visitId)
         .single();
 
       if (visitError) throw visitError;
-      setVisit(visitData as unknown as VisitWithDetails);
+      setVisit(visitData as unknown as VisitWithPatient);
       setDoctorNotes(visitData.doctor_notes || '');
 
-      // Fetch active packages for the patient's treatments
-      const treatmentIds = visitData.consent_forms.map((cf: any) => cf.treatment_id);
+      // Fetch ALL active packages for this patient (not just consent form ones)
+      const { data: packagesData, error: packagesError } = await supabase
+        .from('packages')
+        .select(`
+          *,
+          treatment:treatments (*)
+        `)
+        .eq('patient_id', visitData.patient_id)
+        .eq('status', 'active')
+        .gt('sessions_remaining', 0);
+
+      if (packagesError) throw packagesError;
+
+      // Initialize treatment entries from ALL packages
+      const entries: TreatmentEntry[] = (packagesData as unknown as PackageWithTreatment[]).map((pkg) => ({
+        packageId: pkg.id,
+        treatmentId: pkg.treatment_id,
+        treatmentName: pkg.treatment?.treatment_name || 'Unknown Treatment',
+        doseAdministered: '', // Empty by default - optional
+        doseUnit: pkg.treatment?.dosage_unit || 'Session',
+        administrationDetails: '',
+        sessionsRemaining: pkg.sessions_remaining,
+      }));
       
-      if (treatmentIds.length > 0) {
-        const { data: packagesData, error: packagesError } = await supabase
-          .from('packages')
-          .select(`
-            *,
-            treatment:treatments (*)
-          `)
-          .eq('patient_id', visitData.patient_id)
-          .eq('status', 'active')
-          .in('treatment_id', treatmentIds);
-
-        if (packagesError) throw packagesError;
-        setPackages(packagesData as unknown as PackageWithTreatment[]);
-
-        // Initialize treatment entries
-        const entries: TreatmentEntry[] = visitData.consent_forms.map((cf: any) => {
-          const pkg = packagesData?.find((p: any) => p.treatment_id === cf.treatment_id);
-          return {
-            packageId: pkg?.id || '',
-            treatmentId: cf.treatment_id,
-            treatmentName: cf.treatment?.treatment_name || '',
-            doseAdministered: '',
-            doseUnit: cf.treatment?.dosage_unit || 'Session',
-            administrationDetails: '',
-          };
-        });
-        setTreatments(entries);
-      }
+      setTreatments(entries);
     } catch (error) {
       console.error('Error fetching visit:', error);
       toast({
@@ -128,32 +116,14 @@ export default function TreatmentAdmin() {
   const handleCompleteVisit = async () => {
     if (!visit || !staff) return;
 
-    // Validate treatments have doses
-    const incompleteTreatments = treatments.filter(t => !t.doseAdministered);
-    if (incompleteTreatments.length > 0) {
-      toast({
-        title: 'Incomplete',
-        description: 'Please enter dose for all treatments.',
-        variant: 'destructive',
-      });
-      return;
-    }
+    // Filter only treatments that have a dose entered (non-empty)
+    const treatmentsToAdminister = treatments.filter(t => t.doseAdministered.trim() !== '');
 
     setIsSaving(true);
 
     try {
-      // Insert visit treatments and deduct sessions
-      for (const treatment of treatments) {
-        if (!treatment.packageId) {
-          toast({
-            title: 'Error',
-            description: `No active package found for ${treatment.treatmentName}`,
-            variant: 'destructive',
-          });
-          setIsSaving(false);
-          return;
-        }
-
+      // Insert visit treatments and deduct sessions ONLY for treatments with dose
+      for (const treatment of treatmentsToAdminister) {
         // Insert visit treatment
         const { error: treatmentError } = await supabase
           .from('visit_treatments')
@@ -171,19 +141,16 @@ export default function TreatmentAdmin() {
         if (treatmentError) throw treatmentError;
 
         // Deduct session from package
-        const pkg = packages.find(p => p.id === treatment.packageId);
-        if (pkg) {
-          const newRemaining = pkg.sessions_remaining - 1;
-          const { error: pkgError } = await supabase
-            .from('packages')
-            .update({
-              sessions_remaining: newRemaining,
-              status: newRemaining <= 0 ? 'depleted' : 'active',
-            })
-            .eq('id', treatment.packageId);
+        const newRemaining = treatment.sessionsRemaining - 1;
+        const { error: pkgError } = await supabase
+          .from('packages')
+          .update({
+            sessions_remaining: newRemaining,
+            status: newRemaining <= 0 ? 'depleted' : 'active',
+          })
+          .eq('id', treatment.packageId);
 
-          if (pkgError) throw pkgError;
-        }
+        if (pkgError) throw pkgError;
       }
 
       // Update visit as completed
@@ -201,9 +168,12 @@ export default function TreatmentAdmin() {
 
       if (visitError) throw visitError;
 
+      const treatmentCount = treatmentsToAdminister.length;
       toast({
         title: 'Visit Completed',
-        description: 'Treatment recorded and visit has been completed.',
+        description: treatmentCount > 0 
+          ? `${treatmentCount} treatment(s) recorded and visit completed.`
+          : 'Visit completed with no treatments administered.',
       });
 
       // Navigate back based on role
@@ -250,6 +220,8 @@ export default function TreatmentAdmin() {
     );
   }
 
+  const treatmentsWithDose = treatments.filter(t => t.doseAdministered.trim() !== '');
+
   return (
     <PageContainer maxWidth="lg">
       <PageHeader 
@@ -287,7 +259,7 @@ export default function TreatmentAdmin() {
         <TabletCard className="mb-6">
           <TabletCardContent className="p-4">
             <h4 className="font-medium mb-3 flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-success" />
+              <CheckCircle className="h-4 w-4 text-green-600" />
               Vitals Recorded
             </h4>
             <div className="grid grid-cols-3 gap-4 text-sm">
@@ -314,31 +286,41 @@ export default function TreatmentAdmin() {
         </TabletCard>
       )}
 
-      {/* Treatments */}
+      {/* Available Packages / Treatments */}
       <div className="space-y-4 mb-6">
         <h4 className="font-medium flex items-center gap-2">
-          <Syringe className="h-4 w-4" />
-          Treatments to Administer
+          <Package className="h-4 w-4" />
+          Patient's Active Packages
+          <span className="text-sm text-muted-foreground font-normal">
+            (Enter dose only for treatments to administer)
+          </span>
         </h4>
 
-        {treatments.map((treatment, index) => {
-          const pkg = packages.find(p => p.treatment_id === treatment.treatmentId);
-          
-          return (
-            <TabletCard key={treatment.treatmentId}>
+        {treatments.length === 0 ? (
+          <TabletCard>
+            <TabletCardContent className="p-6 text-center">
+              <p className="text-muted-foreground">No active packages found for this patient.</p>
+            </TabletCardContent>
+          </TabletCard>
+        ) : (
+          treatments.map((treatment, index) => (
+            <TabletCard key={treatment.packageId}>
               <TabletCardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h5 className="font-semibold">{treatment.treatmentName}</h5>
-                  {pkg && (
-                    <span className="text-sm text-muted-foreground">
-                      {pkg.sessions_remaining} sessions left
-                    </span>
-                  )}
+                  <h5 className="font-semibold flex items-center gap-2">
+                    <Syringe className="h-4 w-4 text-primary" />
+                    {treatment.treatmentName}
+                  </h5>
+                  <span className="text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded">
+                    {treatment.sessionsRemaining} of {treatment.sessionsRemaining} sessions left
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-sm font-medium mb-1 block">Dose</label>
+                    <label className="text-sm font-medium mb-1 block">
+                      Dose <span className="text-muted-foreground font-normal">(leave empty to skip)</span>
+                    </label>
                     <div className="flex gap-2">
                       <TabletInput
                         type="text"
@@ -364,8 +346,8 @@ export default function TreatmentAdmin() {
                 </div>
               </TabletCardContent>
             </TabletCard>
-          );
-        })}
+          ))
+        )}
       </div>
 
       {/* Doctor Notes */}
@@ -385,6 +367,18 @@ export default function TreatmentAdmin() {
         </TabletCardContent>
       </TabletCard>
 
+      {/* Summary */}
+      {treatmentsWithDose.length > 0 && (
+        <div className="mb-4 p-3 bg-primary/5 rounded-lg border border-primary/20">
+          <p className="text-sm">
+            <strong>{treatmentsWithDose.length}</strong> treatment(s) will be administered:
+            <span className="text-muted-foreground ml-1">
+              {treatmentsWithDose.map(t => t.treatmentName).join(', ')}
+            </span>
+          </p>
+        </div>
+      )}
+
       {/* Complete Button */}
       <TabletButton
         fullWidth
@@ -393,7 +387,10 @@ export default function TreatmentAdmin() {
         isLoading={isSaving}
         leftIcon={<CheckCircle />}
       >
-        Complete Visit
+        {treatmentsWithDose.length > 0 
+          ? `Complete Visit (${treatmentsWithDose.length} treatment${treatmentsWithDose.length > 1 ? 's' : ''})`
+          : 'Complete Visit (No Treatments)'
+        }
       </TabletButton>
     </PageContainer>
   );
