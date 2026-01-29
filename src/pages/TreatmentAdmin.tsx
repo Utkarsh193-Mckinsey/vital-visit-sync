@@ -8,7 +8,7 @@ import { TabletInput } from '@/components/ui/tablet-input';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, CheckCircle, Syringe, FileText, User, Package, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Syringe, FileText, User, Package, AlertTriangle, FileSignature } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -26,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { InlineConsentModal } from '@/components/treatment/InlineConsentModal';
 import type { Visit, Patient, Treatment } from '@/types/database';
 
 interface VisitWithPatient extends Omit<Visit, 'consent_forms'> {
