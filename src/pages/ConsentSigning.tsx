@@ -6,15 +6,23 @@ import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletCard, TabletCardContent, TabletCardHeader, TabletCardTitle } from '@/components/ui/tablet-card';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Check, FileSignature, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Check, FileSignature, AlertCircle, Download } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import type { Patient, Package, Treatment, ConsentTemplate } from '@/types/database';
 import { generateConsentPDF } from '@/utils/generateConsentPDF';
+import { downloadPDF, getFirstName, getConsentFileName } from '@/utils/pdfDownload';
 
 interface PackageWithTreatment extends Package {
   treatment: Treatment & {
     consent_template?: ConsentTemplate;
   };
+}
+
+interface SignedConsentData {
+  packageId: string;
+  treatmentName: string;
+  pdfBlob: Blob;
+  visitNumber: number;
 }
 
 export default function ConsentSigning() {
@@ -27,6 +35,9 @@ export default function ConsentSigning() {
   const [isSigning, setIsSigning] = useState(false);
   const [signedPackages, setSignedPackages] = useState<Set<string>>(new Set());
   const [signatureData, setSignatureData] = useState<Map<string, { signatureUrl: string; pdfUrl: string }>>(new Map());
+  const [signedConsents, setSignedConsents] = useState<SignedConsentData[]>([]);
+  const [allConsentsSigned, setAllConsentsSigned] = useState(false);
+  const [createdVisitNumber, setCreatedVisitNumber] = useState<number | null>(null);
   const signatureRef = useRef<SignatureCanvas>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
