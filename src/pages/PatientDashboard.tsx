@@ -14,22 +14,34 @@ import {
   Phone, 
   Mail, 
   Calendar,
-  Package as PackageIcon
+  Package as PackageIcon,
+  Clock,
+  Activity,
+  CheckCircle,
+  UserCheck
 } from 'lucide-react';
-import type { Patient, Package, Treatment } from '@/types/database';
+import type { Patient, Package, Treatment, Visit } from '@/types/database';
 import AddPackageModal from '@/components/patient/AddPackageModal';
+import TreatmentSelectionModal from '@/components/patient/TreatmentSelectionModal';
 
 interface PackageWithTreatment extends Package {
   treatment: Treatment;
+}
+
+interface VisitWithDetails extends Visit {
+  nurse_staff?: { full_name: string } | null;
+  doctor_staff?: { full_name: string } | null;
 }
 
 export default function PatientDashboard() {
   const { patientId } = useParams<{ patientId: string }>();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [packages, setPackages] = useState<PackageWithTreatment[]>([]);
+  const [activeVisits, setActiveVisits] = useState<VisitWithDetails[]>([]);
   const [nextVisitNumber, setNextVisitNumber] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddPackage, setShowAddPackage] = useState(false);
+  const [showTreatmentSelection, setShowTreatmentSelection] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { staff } = useAuth();
@@ -61,6 +73,21 @@ export default function PatientDashboard() {
 
       if (packagesError) throw packagesError;
       setPackages(packagesData as unknown as PackageWithTreatment[]);
+
+      // Fetch active visits (not completed)
+      const { data: visitsData, error: visitsError } = await supabase
+        .from('visits')
+        .select(`
+          *,
+          nurse_staff:staff!visits_nurse_staff_id_fkey (full_name),
+          doctor_staff:staff!visits_doctor_staff_id_fkey (full_name)
+        `)
+        .eq('patient_id', patientId)
+        .order('visit_date', { ascending: false })
+        .limit(10);
+
+      if (visitsError) throw visitsError;
+      setActiveVisits(visitsData as unknown as VisitWithDetails[]);
 
       // Get next visit number
       const { data: visitData } = await supabase
@@ -107,7 +134,16 @@ export default function PatientDashboard() {
       });
       return;
     }
-    navigate(`/patient/${patientId}/consent`);
+    // Show treatment selection modal first
+    setShowTreatmentSelection(true);
+  };
+
+  const handleTreatmentSelected = (selectedPackageIds: string[]) => {
+    setShowTreatmentSelection(false);
+    // Navigate to consent with selected packages
+    const params = new URLSearchParams();
+    params.set('packages', selectedPackageIds.join(','));
+    navigate(`/patient/${patientId}/consent?${params.toString()}`);
   };
 
   const formatDate = (dateString: string) => {
@@ -117,6 +153,51 @@ export default function PatientDashboard() {
       day: 'numeric',
     });
   };
+
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('en-AE', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const getWaitingTime = (dateString: string) => {
+    const diff = Date.now() - new Date(dateString).getTime();
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 60) return `${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    return `${hours}h ${minutes % 60}m`;
+  };
+
+  const getStatusBadge = (visit: VisitWithDetails) => {
+    if (visit.current_status === 'completed') {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-xs font-medium text-success">
+          <CheckCircle className="h-3 w-3" />
+          Completed
+        </span>
+      );
+    }
+    if (visit.current_status === 'in_progress') {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+          <Activity className="h-3 w-3" />
+          In Progress
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning">
+        <Clock className="h-3 w-3" />
+        Waiting ({getWaitingTime(visit.visit_date)})
+      </span>
+    );
+  };
+
+  // Categorize visits
+  const waitingVisits = activeVisits.filter(v => v.current_status === 'waiting');
+  const inProgressVisits = activeVisits.filter(v => v.current_status === 'in_progress');
+  const completedVisits = activeVisits.filter(v => v.current_status === 'completed');
 
   if (isLoading) {
     return (
@@ -210,7 +291,7 @@ export default function PatientDashboard() {
           onClick={handleStartVisit}
           leftIcon={<FileSignature />}
         >
-          Sign Consent & Start Visit
+          Start New Visit
         </TabletButton>
         
         <TabletButton
@@ -222,6 +303,108 @@ export default function PatientDashboard() {
           View Visit History
         </TabletButton>
       </div>
+
+      {/* Visit Status Sections */}
+      {(waitingVisits.length > 0 || inProgressVisits.length > 0) && (
+        <TabletCard className="mb-6">
+          <TabletCardHeader>
+            <div className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              <TabletCardTitle>Active Visits</TabletCardTitle>
+            </div>
+          </TabletCardHeader>
+          <TabletCardContent className="space-y-4">
+            {/* Waiting */}
+            {waitingVisits.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Waiting ({waitingVisits.length})
+                </h4>
+                <div className="space-y-2">
+                  {waitingVisits.map(visit => (
+                    <div key={visit.id} className="flex items-center justify-between p-3 rounded-lg bg-warning/5 border border-warning/20">
+                      <div>
+                        <span className="font-medium">Visit #{visit.visit_number}</span>
+                        <span className="text-sm text-muted-foreground ml-2">
+                          {formatTime(visit.visit_date)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {getStatusBadge(visit)}
+                        {staff?.role === 'nurse' && !visit.vitals_completed && (
+                          <TabletButton size="sm" onClick={() => navigate(`/visit/${visit.id}/vitals`)}>
+                            Take Vitals
+                          </TabletButton>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* In Progress */}
+            {inProgressVisits.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                  <Activity className="h-4 w-4" />
+                  In Treatment ({inProgressVisits.length})
+                </h4>
+                <div className="space-y-2">
+                  {inProgressVisits.map(visit => (
+                    <div key={visit.id} className="flex items-center justify-between p-3 rounded-lg bg-primary/5 border border-primary/20">
+                      <div>
+                        <span className="font-medium">Visit #{visit.visit_number}</span>
+                        {visit.nurse_staff && (
+                          <span className="text-sm text-muted-foreground ml-2">
+                            Vitals by {visit.nurse_staff.full_name}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {getStatusBadge(visit)}
+                        {(staff?.role === 'doctor' || staff?.role === 'admin') && (
+                          <TabletButton size="sm" onClick={() => navigate(`/visit/${visit.id}/treatment`)}>
+                            Administer Treatment
+                          </TabletButton>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </TabletCardContent>
+        </TabletCard>
+      )}
+
+      {/* Recent Completed Visits */}
+      {completedVisits.length > 0 && (
+        <TabletCard className="mb-6">
+          <TabletCardHeader>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-success" />
+              <TabletCardTitle>Recent Completed</TabletCardTitle>
+            </div>
+          </TabletCardHeader>
+          <TabletCardContent>
+            <div className="space-y-2">
+              {completedVisits.slice(0, 3).map(visit => (
+                <div key={visit.id} className="flex items-center justify-between p-3 rounded-lg bg-success/5 border border-success/20">
+                  <div>
+                    <span className="font-medium">Visit #{visit.visit_number}</span>
+                    <span className="text-sm text-muted-foreground ml-2">
+                      {formatDate(visit.completed_date || visit.visit_date)}
+                    </span>
+                  </div>
+                  {getStatusBadge(visit)}
+                </div>
+              ))}
+            </div>
+          </TabletCardContent>
+        </TabletCard>
+      )}
 
       {/* Active Packages */}
       <TabletCard>
@@ -301,6 +484,14 @@ export default function PatientDashboard() {
         onOpenChange={setShowAddPackage}
         patientId={patientId!}
         onSuccess={handlePackageAdded}
+      />
+
+      {/* Treatment Selection Modal */}
+      <TreatmentSelectionModal
+        open={showTreatmentSelection}
+        onOpenChange={setShowTreatmentSelection}
+        patientId={patientId!}
+        onConfirm={handleTreatmentSelected}
       />
     </PageContainer>
   );
