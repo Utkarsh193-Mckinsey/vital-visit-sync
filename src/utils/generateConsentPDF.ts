@@ -87,12 +87,18 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
   pdf.setFont('helvetica', 'normal');
 
   // Replace placeholders in consent text
+  // Handle various placeholder formats: [PATIENT_NAME], [patient name], [patient's name], etc.
   let processedConsentText = data.consentText
+    .replace(/\[PATIENT_NAME\]/g, data.patientName)
+    .replace(/\[patient_name\]/gi, data.patientName)
     .replace(/\[patient name\]/gi, data.patientName)
     .replace(/\[patient's name\]/gi, data.patientName)
     .replace(/I patient name/gi, `I, ${data.patientName},`)
     .replace(/I, patient name,/gi, `I, ${data.patientName},`)
+    .replace(/\[DATE\]/g, formatDate(data.signedDate.toISOString()))
     .replace(/\[date\]/gi, formatDate(data.signedDate.toISOString()))
+    .replace(/\[TREATMENT_NAME\]/g, data.treatmentName)
+    .replace(/\[treatment_name\]/gi, data.treatmentName)
     .replace(/\[treatment name\]/gi, data.treatmentName)
     .replace(/\[treatment\]/gi, data.treatmentName);
 
