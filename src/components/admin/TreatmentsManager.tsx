@@ -94,6 +94,7 @@ export default function TreatmentsManager() {
       category: treatment.category,
       dosage_unit: treatment.dosage_unit,
       administration_method: treatment.administration_method || '',
+      common_doses: treatment.common_doses || [],
     });
   };
 
