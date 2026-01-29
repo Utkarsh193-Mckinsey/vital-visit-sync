@@ -8,11 +8,33 @@ import { TabletInput } from '@/components/ui/tablet-input';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, CheckCircle, Syringe, FileText, User, Package } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Syringe, FileText, User, Package, AlertTriangle } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import type { Visit, Patient, Treatment } from '@/types/database';
 
 interface VisitWithPatient extends Omit<Visit, 'consent_forms'> {
   patient: Patient;
+}
+
+interface ConsentFormRecord {
+  id: string;
+  treatment_id: string;
 }
 
 interface PackageWithTreatment {
@@ -34,6 +56,8 @@ interface TreatmentEntry {
   administrationDetails: string;
   sessionsRemaining: number;
   sessionsPurchased: number;
+  commonDoses: string[];
+  hasConsentSigned: boolean;
 }
 
 export default function TreatmentAdmin() {
@@ -43,6 +67,7 @@ export default function TreatmentAdmin() {
   const [doctorNotes, setDoctorNotes] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [consentWarning, setConsentWarning] = useState<{ treatmentName: string; index: number } | null>(null);
   const { staff } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -69,7 +94,19 @@ export default function TreatmentAdmin() {
       setVisit(visitData as unknown as VisitWithPatient);
       setDoctorNotes(visitData.doctor_notes || '');
 
-      // Fetch ALL active packages for this patient (not just consent form ones)
+      // Fetch consent forms for this visit to know which treatments have signed consent
+      const { data: consentFormsData, error: consentError } = await supabase
+        .from('consent_forms')
+        .select('id, treatment_id')
+        .eq('visit_id', visitId);
+
+      if (consentError) throw consentError;
+      
+      const signedTreatmentIds = new Set(
+        (consentFormsData as ConsentFormRecord[]).map(cf => cf.treatment_id)
+      );
+
+      // Fetch ALL active packages for this patient
       const { data: packagesData, error: packagesError } = await supabase
         .from('packages')
         .select(`
@@ -87,11 +124,13 @@ export default function TreatmentAdmin() {
         packageId: pkg.id,
         treatmentId: pkg.treatment_id,
         treatmentName: pkg.treatment?.treatment_name || 'Unknown Treatment',
-        doseAdministered: '', // Empty by default - optional
+        doseAdministered: '',
         doseUnit: pkg.treatment?.dosage_unit || 'Session',
         administrationDetails: '',
         sessionsRemaining: pkg.sessions_remaining,
         sessionsPurchased: pkg.sessions_purchased,
+        commonDoses: (pkg.treatment?.common_doses as string[]) || [],
+        hasConsentSigned: signedTreatmentIds.has(pkg.treatment_id),
       }));
       
       setTreatments(entries);
@@ -107,10 +146,26 @@ export default function TreatmentAdmin() {
     }
   };
 
-  const updateTreatment = (index: number, field: keyof TreatmentEntry, value: string) => {
+  const handleDoseChange = (index: number, value: string) => {
+    const treatment = treatments[index];
+    
+    // If trying to set a dose but consent not signed, show warning
+    if (value && !treatment.hasConsentSigned) {
+      setConsentWarning({ treatmentName: treatment.treatmentName, index });
+      return;
+    }
+    
     setTreatments(prev => {
       const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
+      updated[index] = { ...updated[index], doseAdministered: value };
+      return updated;
+    });
+  };
+
+  const updateTreatmentDetails = (index: number, value: string) => {
+    setTreatments(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], administrationDetails: value };
       return updated;
     });
   };
@@ -176,7 +231,6 @@ export default function TreatmentAdmin() {
         .eq('id', visitId);
 
       if (lockError) {
-        // Non-critical: log but don't fail the whole operation
         console.warn('Could not lock visit:', lockError);
       }
 
@@ -304,7 +358,7 @@ export default function TreatmentAdmin() {
           <Package className="h-4 w-4" />
           Patient's Active Packages
           <span className="text-sm text-muted-foreground font-normal">
-            (Enter dose only for treatments to administer)
+            (Select dose for treatments to administer)
           </span>
         </h4>
 
@@ -316,12 +370,21 @@ export default function TreatmentAdmin() {
           </TabletCard>
         ) : (
           treatments.map((treatment, index) => (
-            <TabletCard key={treatment.packageId}>
+            <TabletCard 
+              key={treatment.packageId}
+              className={!treatment.hasConsentSigned ? 'border-warning/50' : ''}
+            >
               <TabletCardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h5 className="font-semibold flex items-center gap-2">
                     <Syringe className="h-4 w-4 text-primary" />
                     {treatment.treatmentName}
+                    {!treatment.hasConsentSigned && (
+                      <span className="inline-flex items-center gap-1 text-xs text-warning bg-warning/10 px-2 py-0.5 rounded-full">
+                        <AlertTriangle className="h-3 w-3" />
+                        No consent
+                      </span>
+                    )}
                   </h5>
                   <span className="text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded">
                     {treatment.sessionsRemaining} of {treatment.sessionsPurchased} sessions left
@@ -333,18 +396,59 @@ export default function TreatmentAdmin() {
                     <label className="text-sm font-medium mb-1 block">
                       Dose <span className="text-muted-foreground font-normal">(leave empty to skip)</span>
                     </label>
-                    <div className="flex gap-2">
-                      <TabletInput
-                        type="text"
-                        placeholder="Amount"
+                    {treatment.commonDoses.length > 0 ? (
+                      <Select
                         value={treatment.doseAdministered}
-                        onChange={(e) => updateTreatment(index, 'doseAdministered', e.target.value)}
-                        className="flex-1"
-                      />
-                      <span className="flex items-center px-3 bg-muted rounded-lg text-sm">
-                        {treatment.doseUnit}
-                      </span>
-                    </div>
+                        onValueChange={(value) => handleDoseChange(index, value)}
+                      >
+                        <SelectTrigger className="h-12">
+                          <SelectValue placeholder="Select dose" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="" className="text-muted-foreground">
+                            -- Skip (no dose) --
+                          </SelectItem>
+                          {treatment.commonDoses.map((dose) => (
+                            <SelectItem key={dose} value={dose} className="py-3">
+                              {dose} {treatment.doseUnit}
+                            </SelectItem>
+                          ))}
+                          <SelectItem value="custom" className="py-3 text-muted-foreground">
+                            Custom dose...
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="flex gap-2">
+                        <TabletInput
+                          type="text"
+                          placeholder="Amount"
+                          value={treatment.doseAdministered}
+                          onChange={(e) => handleDoseChange(index, e.target.value)}
+                          className="flex-1"
+                        />
+                        <span className="flex items-center px-3 bg-muted rounded-lg text-sm">
+                          {treatment.doseUnit}
+                        </span>
+                      </div>
+                    )}
+                    {treatment.doseAdministered === 'custom' && treatment.commonDoses.length > 0 && (
+                      <div className="flex gap-2 mt-2">
+                        <TabletInput
+                          type="text"
+                          placeholder="Enter custom dose"
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              handleDoseChange(index, e.target.value);
+                            }
+                          }}
+                          className="flex-1"
+                        />
+                        <span className="flex items-center px-3 bg-muted rounded-lg text-sm">
+                          {treatment.doseUnit}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1 block">Details (optional)</label>
@@ -352,7 +456,7 @@ export default function TreatmentAdmin() {
                       type="text"
                       placeholder="e.g. IV, Left arm"
                       value={treatment.administrationDetails}
-                      onChange={(e) => updateTreatment(index, 'administrationDetails', e.target.value)}
+                      onChange={(e) => updateTreatmentDetails(index, e.target.value)}
                     />
                   </div>
                 </div>
@@ -385,7 +489,7 @@ export default function TreatmentAdmin() {
           <p className="text-sm">
             <strong>{treatmentsWithDose.length}</strong> treatment(s) will be administered:
             <span className="text-muted-foreground ml-1">
-              {treatmentsWithDose.map(t => t.treatmentName).join(', ')}
+              {treatmentsWithDose.map(t => `${t.treatmentName} (${t.doseAdministered} ${t.doseUnit})`).join(', ')}
             </span>
           </p>
         </div>
@@ -404,6 +508,33 @@ export default function TreatmentAdmin() {
           : 'Complete Visit (No Treatments)'
         }
       </TabletButton>
+
+      {/* Consent Warning Dialog */}
+      <AlertDialog open={!!consentWarning} onOpenChange={() => setConsentWarning(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-warning">
+              <AlertTriangle className="h-5 w-5" />
+              Consent Not Signed
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              The patient has not signed consent for <strong>{consentWarning?.treatmentName}</strong> during this visit.
+              Please have the patient sign the consent form before administering this treatment.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Understood</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              // Navigate to consent signing
+              if (visit) {
+                navigate(`/patient/${visit.patient_id}`);
+              }
+            }}>
+              Go to Patient Dashboard
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageContainer>
   );
 }
