@@ -520,7 +520,14 @@ export default function ConsentSigning() {
             <TabletCardContent>
               <div className="prose prose-sm max-w-none text-foreground">
                 <div className="whitespace-pre-wrap bg-muted/50 p-4 rounded-lg max-h-64 overflow-y-auto">
-                  {consentTemplate?.consent_text || 'No consent text available.'}
+                  {patient && consentTemplate?.consent_text 
+                    ? replaceConsentPlaceholders(
+                        consentTemplate.consent_text,
+                        patient.full_name,
+                        currentPackage?.treatment.treatment_name || '',
+                        new Date()
+                      )
+                    : 'No consent text available.'}
                 </div>
               </div>
             </TabletCardContent>
