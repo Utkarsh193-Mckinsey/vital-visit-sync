@@ -350,19 +350,11 @@ export default function WaitingArea() {
               </div>
             )}
           </section>
-
-          {/* Treatment in Progress Section */}
-          <section>
-            <div className="flex items-center gap-2 mb-4">
-              <Activity className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-semibold">Treatment in Progress</h2>
-              <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-sm font-medium text-primary">
-                {inProgressVisits.length}
-              </span>
-            </div>
-
-            {inProgressVisits.length === 0 ? (
-              <TabletCard>
+        </div>
+      )}
+    </PageContainer>
+  );
+}
                 <TabletCardContent className="p-8 text-center">
                   <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
                     <Stethoscope className="h-7 w-7 text-muted-foreground" />
