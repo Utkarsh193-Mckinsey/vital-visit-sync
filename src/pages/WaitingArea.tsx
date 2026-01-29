@@ -54,14 +54,14 @@ export default function WaitingArea() {
   };
 
   useEffect(() => {
-    fetchAllVisits();
+    fetchWaitingVisits();
 
     // Poll every 10 seconds
-    const interval = setInterval(fetchAllVisits, 10000);
+    const interval = setInterval(fetchWaitingVisits, 10000);
 
     // Also set up realtime subscription
     const channel = supabase
-      .channel('all-visits')
+      .channel('waiting-visits')
       .on(
         'postgres_changes',
         {
@@ -70,7 +70,7 @@ export default function WaitingArea() {
           table: 'visits',
         },
         () => {
-          fetchAllVisits();
+          fetchWaitingVisits();
         }
       )
       .subscribe();
