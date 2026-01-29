@@ -156,13 +156,11 @@ export default function WaitingArea() {
     navigate('/patients');
   };
 
-  const totalActivePatients = waitingVisits.length + inProgressVisits.length;
-
   return (
     <PageContainer maxWidth="xl">
       <PageHeader 
         title="Waiting Area"
-        subtitle={`${totalActivePatients} active patient${totalActivePatients !== 1 ? 's' : ''}`}
+        subtitle={`${waitingVisits.length} patient${waitingVisits.length !== 1 ? 's' : ''} waiting`}
         action={
           <div className="flex gap-2">
             {hasRole(['admin', 'reception']) && (
