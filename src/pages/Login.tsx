@@ -6,7 +6,7 @@ import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletCard, TabletCardContent, TabletCardHeader, TabletCardTitle, TabletCardDescription } from '@/components/ui/tablet-card';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
-import { Stethoscope } from 'lucide-react';
+import cosmiqueLogo from '@/assets/cosmique-symbol.png';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -55,12 +55,12 @@ export default function Login() {
     <PageContainer maxWidth="sm" className="flex items-center justify-center">
       <TabletCard className="w-full">
         <TabletCardHeader className="text-center pb-2">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-            <Stethoscope className="h-8 w-8 text-primary" />
+          <div className="mx-auto mb-4">
+            <img src={cosmiqueLogo} alt="Cosmique" className="h-20 w-20 object-contain" />
           </div>
-          <TabletCardTitle className="text-2xl">Cosmique Clinic</TabletCardTitle>
+          <TabletCardTitle className="text-2xl">COSMIQUE</TabletCardTitle>
           <TabletCardDescription className="text-base mt-2">
-            Patient Visit & Package Manager
+            Aesthetics and Dermatology Clinic
           </TabletCardDescription>
         </TabletCardHeader>
         <TabletCardContent className="pt-4">

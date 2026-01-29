@@ -19,7 +19,6 @@ import { NavLink } from '@/components/NavLink';
 import { 
   Users, 
   Clock, 
-  Stethoscope, 
   Settings, 
   LogOut,
   Syringe,
@@ -27,6 +26,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { TabletButton } from '@/components/ui/tablet-button';
+import cosmiqueLogo from '@/assets/cosmique-symbol.png';
 
 import type { StaffRole } from '@/types/database';
 
@@ -166,13 +166,11 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-border">
       <SidebarHeader className="p-4 border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Stethoscope className="h-5 w-5" />
-          </div>
+          <img src={cosmiqueLogo} alt="Cosmique" className="h-10 w-10 object-contain" />
           {!collapsed && (
             <div className="flex flex-col">
-              <span className="font-semibold text-foreground">Cosmique</span>
-              <span className="text-xs text-muted-foreground">Clinic Management</span>
+              <span className="font-semibold text-foreground">COSMIQUE</span>
+              <span className="text-xs text-muted-foreground">Aesthetics & Dermatology</span>
             </div>
           )}
         </div>
