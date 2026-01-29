@@ -6,7 +6,7 @@ import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletCard, TabletCardContent, TabletCardHeader, TabletCardTitle, TabletCardDescription } from '@/components/ui/tablet-card';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
-import { Stethoscope } from 'lucide-react';
+import cosmiqueLogo from '@/assets/cosmique-symbol.png';
 
 export default function Login() {
   const [email, setEmail] = useState('');
