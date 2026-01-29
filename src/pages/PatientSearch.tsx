@@ -7,7 +7,7 @@ import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletCard, TabletCardContent } from '@/components/ui/tablet-card';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
-import { Search, UserPlus, Phone, LogOut } from 'lucide-react';
+import { Search, UserPlus, Phone, LogOut, Settings } from 'lucide-react';
 import type { Patient, Package } from '@/types/database';
 
 interface PatientWithPackages extends Patient {
@@ -84,14 +84,26 @@ export default function PatientSearch() {
         title="Patient Check-In"
         subtitle={`Welcome, ${staff?.full_name}`}
         action={
-          <TabletButton 
-            variant="ghost" 
-            size="icon" 
-            onClick={handleLogout}
-            aria-label="Logout"
-          >
-            <LogOut className="h-5 w-5" />
-          </TabletButton>
+          <div className="flex gap-2">
+            {staff?.role === 'admin' && (
+              <TabletButton 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => navigate('/settings')}
+                aria-label="Settings"
+              >
+                <Settings className="h-5 w-5" />
+              </TabletButton>
+            )}
+            <TabletButton 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleLogout}
+              aria-label="Logout"
+            >
+              <LogOut className="h-5 w-5" />
+            </TabletButton>
+          </div>
         }
       />
 
