@@ -54,6 +54,7 @@ export default function TreatmentsManager() {
   const [formData, setFormData] = useState<TreatmentFormData>(emptyForm);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [newDose, setNewDose] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
