@@ -16,25 +16,15 @@ import {
   UserCheck,
   Stethoscope,
   PlayCircle,
-  Download,
   FileSignature,
-  ClipboardList
+  ClipboardList,
+  Download
 } from 'lucide-react';
 import type { Patient, Visit } from '@/types/database';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 
-interface ConsentFormWithDetails {
-  id: string;
-  signature_url: string;
-  pdf_url: string | null;
-  signed_date: string;
-  treatment: {
-    treatment_name: string;
-  } | null;
-}
-
-interface VisitWithDetails extends Omit<Visit, 'consent_forms'> {
+interface VisitWithDetails extends Visit {
   visit_treatments?: {
     id: string;
     dose_administered: string;
@@ -43,7 +33,6 @@ interface VisitWithDetails extends Omit<Visit, 'consent_forms'> {
       treatment_name: string;
     };
   }[];
-  consent_forms?: ConsentFormWithDetails[];
 }
 
 export default function VisitHistory() {
@@ -74,7 +63,7 @@ export default function VisitHistory() {
       if (patientError) throw patientError;
       setPatient(patientData as Patient);
 
-      // Fetch visits with treatments and consent forms
+      // Fetch visits with treatments
       const { data: visitsData, error: visitsError } = await supabase
         .from('visits')
         .select(`
@@ -83,15 +72,6 @@ export default function VisitHistory() {
             id,
             dose_administered,
             dose_unit,
-            treatment:treatments (
-              treatment_name
-            )
-          ),
-          consent_forms (
-            id,
-            signature_url,
-            pdf_url,
-            signed_date,
             treatment:treatments (
               treatment_name
             )
@@ -163,16 +143,6 @@ export default function VisitHistory() {
       };
     }
     return null;
-  };
-
-  const handleDownload = (url: string, filename: string) => {
-    window.open(url, '_blank');
-  };
-
-  const downloadRegistrationForm = () => {
-    if (patient?.registration_signature_url) {
-      window.open(patient.registration_signature_url, '_blank');
-    }
   };
 
   if (isLoading) {
@@ -360,11 +330,12 @@ export default function VisitHistory() {
                               variant="outline"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleDownload(cf.pdf_url || cf.signature_url, `consent-${cf.treatment?.treatment_name}`);
+                                // Prefer PDF if available, otherwise fall back to signature
+                                window.open(cf.pdf_url || cf.signature_url, '_blank');
                               }}
                               leftIcon={<FileSignature className="h-4 w-4" />}
                             >
-                              {cf.treatment?.treatment_name} Consent
+                              {cf.treatment?.treatment_name || 'Consent'} {cf.pdf_url ? 'PDF' : 'Signature'}
                             </TabletButton>
                           ))}
                         </div>
@@ -380,11 +351,11 @@ export default function VisitHistory() {
                           variant="outline"
                           onClick={(e) => {
                             e.stopPropagation();
-                            downloadRegistrationForm();
+                            window.open(patient.registration_signature_url, '_blank');
                           }}
                           leftIcon={<ClipboardList className="h-4 w-4" />}
                         >
-                          Registration Form
+                          Registration Signature
                         </TabletButton>
                       </div>
                     )}
