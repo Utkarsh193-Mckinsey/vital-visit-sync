@@ -197,8 +197,7 @@ export function AppSidebar() {
                       tooltip={item.countKey && count > 0 ? `${item.title} (${count})` : item.title}
                     >
                       <NavLink 
-                        to={item.url.split('#')[0]} 
-                        onClick={() => item.url.includes('#') && handleNavClick(item.url)}
+                        to={item.url} 
                         className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-muted relative"
                         activeClassName="bg-primary/10 text-primary font-medium"
                       >
