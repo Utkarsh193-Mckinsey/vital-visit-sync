@@ -315,7 +315,49 @@ export default function VisitHistory() {
                       </div>
                     )}
 
-                    {!visit.vitals_completed && !visit.visit_treatments?.length && !visit.doctor_notes && (
+                    {/* Consent Forms Downloads */}
+                    {visit.consent_forms && visit.consent_forms.length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="text-sm font-medium mb-2">Consent Forms</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {visit.consent_forms.map((cf) => (
+                            <TabletButton
+                              key={cf.id}
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Prefer PDF if available, otherwise fall back to signature
+                                window.open(cf.pdf_url || cf.signature_url, '_blank');
+                              }}
+                              leftIcon={<FileSignature className="h-4 w-4" />}
+                            >
+                              {cf.treatment?.treatment_name || 'Consent'} {cf.pdf_url ? 'PDF' : 'Signature'}
+                            </TabletButton>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Registration Form Download - show on first visit */}
+                    {visit.visit_number === 1 && patient?.registration_signature_url && (
+                      <div className="mb-4">
+                        <h4 className="text-sm font-medium mb-2">Registration</h4>
+                        <TabletButton
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(patient.registration_signature_url, '_blank');
+                          }}
+                          leftIcon={<ClipboardList className="h-4 w-4" />}
+                        >
+                          Registration Signature
+                        </TabletButton>
+                      </div>
+                    )}
+
+                    {!visit.vitals_completed && !visit.visit_treatments?.length && !visit.doctor_notes && !visit.consent_forms?.length && (
                       <p className="text-sm text-muted-foreground text-center py-4">
                         No details recorded for this visit yet.
                       </p>
