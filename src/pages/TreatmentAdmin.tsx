@@ -163,13 +163,6 @@ export default function TreatmentAdmin() {
       return updated;
     });
   };
-    
-    setTreatments(prev => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], doseAdministered: value };
-      return updated;
-    });
-  };
 
   const updateTreatmentDetails = (index: number, value: string) => {
     setTreatments(prev => {
