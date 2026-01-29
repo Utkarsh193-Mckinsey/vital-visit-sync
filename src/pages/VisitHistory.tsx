@@ -15,13 +15,26 @@ import {
   ChevronRight,
   UserCheck,
   Stethoscope,
-  PlayCircle
+  PlayCircle,
+  Download,
+  FileSignature,
+  ClipboardList
 } from 'lucide-react';
 import type { Patient, Visit } from '@/types/database';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 
-interface VisitWithDetails extends Visit {
+interface ConsentFormWithDetails {
+  id: string;
+  signature_url: string;
+  pdf_url: string | null;
+  signed_date: string;
+  treatment: {
+    treatment_name: string;
+  } | null;
+}
+
+interface VisitWithDetails extends Omit<Visit, 'consent_forms'> {
   visit_treatments?: {
     id: string;
     dose_administered: string;
@@ -30,6 +43,7 @@ interface VisitWithDetails extends Visit {
       treatment_name: string;
     };
   }[];
+  consent_forms?: ConsentFormWithDetails[];
 }
 
 export default function VisitHistory() {
@@ -60,7 +74,7 @@ export default function VisitHistory() {
       if (patientError) throw patientError;
       setPatient(patientData as Patient);
 
-      // Fetch visits with treatments
+      // Fetch visits with treatments and consent forms
       const { data: visitsData, error: visitsError } = await supabase
         .from('visits')
         .select(`
@@ -69,6 +83,15 @@ export default function VisitHistory() {
             id,
             dose_administered,
             dose_unit,
+            treatment:treatments (
+              treatment_name
+            )
+          ),
+          consent_forms (
+            id,
+            signature_url,
+            pdf_url,
+            signed_date,
             treatment:treatments (
               treatment_name
             )
@@ -140,6 +163,16 @@ export default function VisitHistory() {
       };
     }
     return null;
+  };
+
+  const handleDownload = (url: string, filename: string) => {
+    window.open(url, '_blank');
+  };
+
+  const downloadRegistrationForm = () => {
+    if (patient?.registration_signature_url) {
+      window.open(patient.registration_signature_url, '_blank');
+    }
   };
 
   if (isLoading) {
@@ -315,7 +348,48 @@ export default function VisitHistory() {
                       </div>
                     )}
 
-                    {!visit.vitals_completed && !visit.visit_treatments?.length && !visit.doctor_notes && (
+                    {/* Consent Forms Downloads */}
+                    {visit.consent_forms && visit.consent_forms.length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="text-sm font-medium mb-2">Consent Forms</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {visit.consent_forms.map((cf) => (
+                            <TabletButton
+                              key={cf.id}
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDownload(cf.pdf_url || cf.signature_url, `consent-${cf.treatment?.treatment_name}`);
+                              }}
+                              leftIcon={<FileSignature className="h-4 w-4" />}
+                            >
+                              {cf.treatment?.treatment_name} Consent
+                            </TabletButton>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Registration Form Download - show on first visit */}
+                    {visit.visit_number === 1 && patient?.registration_signature_url && (
+                      <div className="mb-4">
+                        <h4 className="text-sm font-medium mb-2">Registration</h4>
+                        <TabletButton
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            downloadRegistrationForm();
+                          }}
+                          leftIcon={<ClipboardList className="h-4 w-4" />}
+                        >
+                          Registration Form
+                        </TabletButton>
+                      </div>
+                    )}
+
+                    {!visit.vitals_completed && !visit.visit_treatments?.length && !visit.doctor_notes && !visit.consent_forms?.length && (
                       <p className="text-sm text-muted-foreground text-center py-4">
                         No details recorded for this visit yet.
                       </p>
