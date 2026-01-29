@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Sidebar,
   SidebarContent,
@@ -21,7 +23,8 @@ import {
   Settings, 
   LogOut,
   Syringe,
-  Menu
+  Activity,
+  CheckCircle
 } from 'lucide-react';
 import { TabletButton } from '@/components/ui/tablet-button';
 
@@ -32,6 +35,7 @@ interface NavItem {
   url: string;
   icon: React.ComponentType<{ className?: string }>;
   roles: StaffRole[];
+  countKey?: 'waiting' | 'inProgress' | 'completed';
 }
 
 const navigationItems: NavItem[] = [
@@ -45,7 +49,22 @@ const navigationItems: NavItem[] = [
     title: 'Waiting Area', 
     url: '/waiting', 
     icon: Clock,
-    roles: ['admin', 'nurse', 'doctor']
+    roles: ['admin', 'nurse', 'doctor', 'reception'],
+    countKey: 'waiting'
+  },
+  { 
+    title: 'In Treatment', 
+    url: '/waiting#in-progress', 
+    icon: Activity,
+    roles: ['admin', 'nurse', 'doctor'],
+    countKey: 'inProgress'
+  },
+  { 
+    title: 'Completed', 
+    url: '/waiting#completed', 
+    icon: CheckCircle,
+    roles: ['admin', 'nurse', 'doctor'],
+    countKey: 'completed'
   },
   { 
     title: 'Treatments', 
@@ -61,14 +80,73 @@ const navigationItems: NavItem[] = [
   },
 ];
 
+interface VisitCounts {
+  waiting: number;
+  inProgress: number;
+  completed: number;
+}
+
 export function AppSidebar() {
   const { staff, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
+  
+  const [counts, setCounts] = useState<VisitCounts>({
+    waiting: 0,
+    inProgress: 0,
+    completed: 0
+  });
+
+  // Fetch visit counts
+  const fetchCounts = async () => {
+    // Get today's date range for completed
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const [waitingRes, inProgressRes, completedRes] = await Promise.all([
+      supabase.from('visits').select('id', { count: 'exact', head: true }).eq('current_status', 'waiting'),
+      supabase.from('visits').select('id', { count: 'exact', head: true }).eq('current_status', 'in_progress'),
+      supabase.from('visits').select('id', { count: 'exact', head: true })
+        .eq('current_status', 'completed')
+        .gte('completed_date', today.toISOString())
+        .lt('completed_date', tomorrow.toISOString()),
+    ]);
+
+    setCounts({
+      waiting: waitingRes.count || 0,
+      inProgress: inProgressRes.count || 0,
+      completed: completedRes.count || 0,
+    });
+  };
+
+  useEffect(() => {
+    fetchCounts();
+
+    // Poll every 10 seconds
+    const interval = setInterval(fetchCounts, 10000);
+
+    // Realtime subscription
+    const channel = supabase
+      .channel('sidebar-counts')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'visits' }, fetchCounts)
+      .subscribe();
+
+    return () => {
+      clearInterval(interval);
+      channel.unsubscribe();
+    };
+  }, []);
 
   const isActive = (url: string) => {
+    // For hash links, check if we're on the waiting page
+    if (url.includes('#')) {
+      const basePath = url.split('#')[0];
+      return location.pathname === basePath;
+    }
     if (url.includes('?')) {
       return location.pathname + location.search === url;
     }
@@ -82,6 +160,23 @@ export function AppSidebar() {
   const handleLogout = async () => {
     await signOut();
     navigate('/login');
+  };
+
+  const handleNavClick = (url: string) => {
+    if (url.includes('#')) {
+      const [path, hash] = url.split('#');
+      navigate(path);
+      // Scroll to section after navigation
+      setTimeout(() => {
+        const element = document.getElementById(hash);
+        element?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  };
+
+  const getCount = (key?: 'waiting' | 'inProgress' | 'completed') => {
+    if (!key) return 0;
+    return counts[key];
   };
 
   return (
@@ -107,24 +202,62 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {filteredItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton 
-                    asChild
-                    isActive={isActive(item.url)}
-                    tooltip={item.title}
-                  >
-                    <NavLink 
-                      to={item.url} 
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-muted"
-                      activeClassName="bg-primary/10 text-primary font-medium"
+              {filteredItems.map((item) => {
+                const count = getCount(item.countKey);
+                const showLiveIndicator = item.countKey && count > 0 && item.countKey !== 'completed';
+                
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton 
+                      asChild
+                      isActive={isActive(item.url)}
+                      tooltip={item.countKey && count > 0 ? `${item.title} (${count})` : item.title}
                     >
-                      <item.icon className="h-5 w-5 flex-shrink-0" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+                      <NavLink 
+                        to={item.url.split('#')[0]} 
+                        onClick={() => item.url.includes('#') && handleNavClick(item.url)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-muted relative"
+                        activeClassName="bg-primary/10 text-primary font-medium"
+                      >
+                        <div className="relative">
+                          <item.icon className="h-5 w-5 flex-shrink-0" />
+                          {/* Live blinking indicator */}
+                          {showLiveIndicator && collapsed && (
+                            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-destructive"></span>
+                            </span>
+                          )}
+                        </div>
+                        {!collapsed && (
+                          <>
+                            <span className="flex-1">{item.title}</span>
+                            {item.countKey && count > 0 && (
+                              <div className="flex items-center gap-1.5">
+                                {showLiveIndicator && (
+                                  <span className="flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-destructive opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span>
+                                  </span>
+                                )}
+                                <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${
+                                  item.countKey === 'waiting' 
+                                    ? 'bg-warning/10 text-warning' 
+                                    : item.countKey === 'inProgress'
+                                    ? 'bg-primary/10 text-primary'
+                                    : 'bg-success/10 text-success'
+                                }`}>
+                                  {count}
+                                </span>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
