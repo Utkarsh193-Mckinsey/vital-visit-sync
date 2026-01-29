@@ -15,6 +15,7 @@ import ConsentSigning from "./pages/ConsentSigning";
 import VisitHistory from "./pages/VisitHistory";
 import WaitingArea from "./pages/WaitingArea";
 import VitalsEntry from "./pages/VitalsEntry";
+import TreatmentAdmin from "./pages/TreatmentAdmin";
 import AdminSettings from "./pages/AdminSettings";
 import NotFound from "./pages/NotFound";
 
@@ -151,6 +152,12 @@ function AppRoutes() {
       <Route path="/visit/:visitId/vitals" element={
         <ProtectedRoute allowedRoles={['admin', 'nurse', 'doctor']}>
           <VitalsEntry />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/visit/:visitId/treatment" element={
+        <ProtectedRoute allowedRoles={['admin', 'doctor']}>
+          <TreatmentAdmin />
         </ProtectedRoute>
       } />
 
