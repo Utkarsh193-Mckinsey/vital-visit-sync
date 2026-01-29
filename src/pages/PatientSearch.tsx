@@ -8,10 +8,11 @@ import { TabletCard, TabletCardContent } from '@/components/ui/tablet-card';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
 import { Search, UserPlus, Phone, LogOut, Settings } from 'lucide-react';
-import type { Patient, Package } from '@/types/database';
+import type { Patient, Package, Visit } from '@/types/database';
 
 interface PatientWithPackages extends Patient {
   packages: Package[];
+  visits: Visit[];
 }
 
 export default function PatientSearch() {
@@ -45,6 +46,12 @@ export default function PatientSearch() {
         packages (
           *,
           treatment:treatments (*)
+        ),
+        visits (
+          id,
+          visit_number,
+          current_status,
+          visit_date
         )
       `)
       .eq('phone_number', phoneNumber.trim())
@@ -77,6 +84,9 @@ export default function PatientSearch() {
   };
 
   const activePackages = searchResult?.packages?.filter(p => p.status === 'active') || [];
+  const completedVisits = searchResult?.visits?.filter(v => v.current_status === 'completed') || [];
+  const totalVisits = searchResult?.visits?.length || 0;
+  const nextVisitNumber = totalVisits + 1;
 
   return (
     <PageContainer maxWidth="md">
@@ -155,13 +165,24 @@ export default function PatientSearch() {
                     </div>
                     <p className="text-sm text-muted-foreground">{searchResult.email}</p>
                   </div>
-                  {activePackages.length > 0 && (
-                    <div className="text-right">
+                  <div className="text-right space-y-2">
+                    {activePackages.length > 0 && (
                       <span className="inline-flex items-center rounded-full bg-success/10 px-3 py-1 text-sm font-medium text-success">
                         {activePackages.length} Active Package{activePackages.length !== 1 ? 's' : ''}
                       </span>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                </div>
+
+                {/* Visit History Summary */}
+                <div className="mt-3 flex items-center gap-3 rounded-lg bg-primary/5 px-3 py-2">
+                  <span className="text-sm font-medium text-primary">
+                    {completedVisits.length} Visit{completedVisits.length !== 1 ? 's' : ''} Completed
+                  </span>
+                  <span className="text-muted-foreground">•</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    Next: Visit #{nextVisitNumber}
+                  </span>
                 </div>
 
                 {activePackages.length > 0 && (
