@@ -117,24 +117,52 @@ export default function ConsentSigning() {
       const canvas = signatureRef.current.getCanvas();
       const signatureDataUrl = canvas.toDataURL('image/png');
       
-      // Convert to blob
-      const response = await fetch(signatureDataUrl);
-      const blob = await response.blob();
+      // Convert to blob for signature upload
+      const signatureResponse = await fetch(signatureDataUrl);
+      const signatureBlob = await signatureResponse.blob();
 
       // Upload signature
       const signatureFileName = `consent-signatures/${patientId}/${currentPackage.treatment_id}/${Date.now()}.png`;
       const { error: uploadError } = await supabase.storage
         .from('signatures')
-        .upload(signatureFileName, blob, { contentType: 'image/png' });
+        .upload(signatureFileName, signatureBlob, { contentType: 'image/png' });
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
+      const { data: signatureUrlData } = supabase.storage
         .from('signatures')
         .getPublicUrl(signatureFileName);
 
-      // Store the signature URL for this package
-      setSignatures(prev => new Map(prev).set(currentPackage.id, urlData.publicUrl));
+      // Generate PDF with full consent form
+      const consentTemplate = currentPackage.treatment?.consent_template;
+      const pdfBlob = await generateConsentPDF({
+        patientName: patient.full_name,
+        patientDOB: patient.date_of_birth,
+        patientPhone: patient.phone_number,
+        treatmentName: currentPackage.treatment.treatment_name,
+        consentFormName: consentTemplate?.form_name || 'Consent Form',
+        consentText: consentTemplate?.consent_text || '',
+        signatureDataUrl: signatureDataUrl,
+        signedDate: new Date(),
+      });
+
+      // Upload PDF
+      const pdfFileName = `consent-pdfs/${patientId}/${currentPackage.treatment_id}/${Date.now()}.pdf`;
+      const { error: pdfUploadError } = await supabase.storage
+        .from('clinic-documents')
+        .upload(pdfFileName, pdfBlob, { contentType: 'application/pdf' });
+
+      if (pdfUploadError) throw pdfUploadError;
+
+      const { data: pdfUrlData } = supabase.storage
+        .from('clinic-documents')
+        .getPublicUrl(pdfFileName);
+
+      // Store both URLs for this package
+      setSignatureData(prev => new Map(prev).set(currentPackage.id, {
+        signatureUrl: signatureUrlData.publicUrl,
+        pdfUrl: pdfUrlData.publicUrl,
+      }));
       
       // Mark this package as signed
       setSignedPackages(prev => new Set([...prev, currentPackage.id]));
@@ -149,7 +177,10 @@ export default function ConsentSigning() {
         });
       } else {
         // All consents signed - create visit
-        await createVisit(urlData.publicUrl);
+        await createVisit({
+          signatureUrl: signatureUrlData.publicUrl,
+          pdfUrl: pdfUrlData.publicUrl,
+        });
       }
     } catch (error) {
       console.error('Error signing consent:', error);
