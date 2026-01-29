@@ -100,8 +100,13 @@ export default function VisitHistory() {
             signature_url,
             pdf_url,
             signed_date,
+            consent_template_id,
             treatment:treatments (
               treatment_name
+            ),
+            consent_template:consent_templates (
+              form_name,
+              consent_text
             )
           )
         `)
