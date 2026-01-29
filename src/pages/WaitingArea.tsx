@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { TabletButton } from '@/components/ui/tablet-button';
-import { TabletCard, TabletCardContent, TabletCardHeader, TabletCardTitle } from '@/components/ui/tablet-card';
+import { TabletCard, TabletCardContent } from '@/components/ui/tablet-card';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -12,12 +12,9 @@ import {
   AlertCircle, 
   UserCheck, 
   LogOut, 
-  Search,
-  Activity,
-  Stethoscope,
-  ClipboardCheck
+  Search
 } from 'lucide-react';
-import type { Visit, Patient, ConsentForm, Treatment, Staff } from '@/types/database';
+import type { Visit, Patient, ConsentForm, Treatment } from '@/types/database';
 
 interface WaitingVisit extends Visit {
   patient: Patient;
