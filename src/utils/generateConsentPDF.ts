@@ -75,8 +75,18 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
   pdf.setFontSize(9);
   pdf.setFont('helvetica', 'normal');
 
+  // Replace placeholders in consent text
+  let processedConsentText = data.consentText
+    .replace(/\[patient name\]/gi, data.patientName)
+    .replace(/\[patient's name\]/gi, data.patientName)
+    .replace(/I patient name/gi, `I, ${data.patientName},`)
+    .replace(/I, patient name,/gi, `I, ${data.patientName},`)
+    .replace(/\[date\]/gi, formatDate(data.signedDate.toISOString()))
+    .replace(/\[treatment name\]/gi, data.treatmentName)
+    .replace(/\[treatment\]/gi, data.treatmentName);
+
   // Split consent text into lines that fit the page width
-  const consentLines = pdf.splitTextToSize(data.consentText, contentWidth);
+  const consentLines = pdf.splitTextToSize(processedConsentText, contentWidth);
   
   for (const line of consentLines) {
     // Check if we need a new page
