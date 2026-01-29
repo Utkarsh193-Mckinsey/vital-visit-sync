@@ -70,7 +70,9 @@ export default function PatientRegistration() {
       return null;
     }
 
-    const dataUrl = signatureRef.current.getTrimmedCanvas().toDataURL('image/png');
+    // Use getCanvas().toDataURL() instead of getTrimmedCanvas() to avoid library bug
+    const canvas = signatureRef.current.getCanvas();
+    const dataUrl = canvas.toDataURL('image/png');
     const base64Data = dataUrl.split(',')[1];
     const byteCharacters = atob(base64Data);
     const byteNumbers = new Array(byteCharacters.length);
