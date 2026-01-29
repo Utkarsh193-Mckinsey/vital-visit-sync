@@ -127,7 +127,7 @@ export default function ConsentTemplatesManager() {
 
     try {
       if (isAdding) {
-        const { error } = await supabase
+        const { data: newTemplate, error } = await supabase
           .from('consent_templates')
           .insert({
             form_name: formData.form_name.trim(),
@@ -136,15 +136,32 @@ export default function ConsentTemplatesManager() {
             is_current_version: true,
             version_number: 1,
             status: 'active',
-          });
+          })
+          .select()
+          .single();
 
         if (error) throw error;
+
+        // Link the treatment to this consent template
+        if (formData.treatment_id && newTemplate) {
+          const { error: updateError } = await supabase
+            .from('treatments')
+            .update({ consent_template_id: newTemplate.id })
+            .eq('id', formData.treatment_id);
+          
+          if (updateError) {
+            console.error('Error linking treatment:', updateError);
+          }
+        }
 
         toast({
           title: 'Template Added',
           description: `${formData.form_name} has been added.`,
         });
       } else if (editingId) {
+        // Get previous template data to check if treatment changed
+        const oldTemplate = templates.find(t => t.id === editingId);
+        
         const { error } = await supabase
           .from('consent_templates')
           .update({
@@ -156,6 +173,22 @@ export default function ConsentTemplatesManager() {
           .eq('id', editingId);
 
         if (error) throw error;
+
+        // Unlink old treatment if it changed
+        if (oldTemplate?.treatment_id && oldTemplate.treatment_id !== formData.treatment_id) {
+          await supabase
+            .from('treatments')
+            .update({ consent_template_id: null })
+            .eq('id', oldTemplate.treatment_id);
+        }
+
+        // Link new treatment
+        if (formData.treatment_id) {
+          await supabase
+            .from('treatments')
+            .update({ consent_template_id: editingId })
+            .eq('id', formData.treatment_id);
+        }
 
         toast({
           title: 'Template Updated',
