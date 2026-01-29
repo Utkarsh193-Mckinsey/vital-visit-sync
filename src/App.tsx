@@ -11,6 +11,7 @@ import PatientSearch from "./pages/PatientSearch";
 import PatientRegistration from "./pages/PatientRegistration";
 import PatientDashboard from "./pages/PatientDashboard";
 import WaitingArea from "./pages/WaitingArea";
+import AdminSettings from "./pages/AdminSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -130,6 +131,13 @@ function AppRoutes() {
       <Route path="/waiting" element={
         <ProtectedRoute allowedRoles={['admin', 'nurse', 'doctor']}>
           <WaitingArea />
+        </ProtectedRoute>
+      } />
+
+      {/* Admin routes */}
+      <Route path="/settings" element={
+        <ProtectedRoute allowedRoles={['admin']}>
+          <AdminSettings />
         </ProtectedRoute>
       } />
 

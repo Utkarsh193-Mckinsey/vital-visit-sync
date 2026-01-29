@@ -172,8 +172,15 @@ export default function AddPackageModal({
             <TabletInput
               type="number"
               min={1}
-              value={sessions}
-              onChange={(e) => setSessions(parseInt(e.target.value) || 1)}
+              value={sessions === 0 ? '' : sessions}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === '') {
+                  setSessions(0);
+                } else {
+                  setSessions(parseInt(value) || 0);
+                }
+              }}
               placeholder="Custom number"
             />
           </div>
