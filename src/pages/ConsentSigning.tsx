@@ -194,7 +194,7 @@ export default function ConsentSigning() {
     }
   };
 
-  const createVisit = async (lastSignatureUrl: string) => {
+  const createVisit = async (lastData: { signatureUrl: string; pdfUrl: string }) => {
     if (!patient || !staff) return;
 
     try {
@@ -224,13 +224,17 @@ export default function ConsentSigning() {
 
       if (visitError) throw visitError;
 
-      // Create consent forms for each signed package with their respective signatures
-      const consentFormsToInsert = packages.map(pkg => ({
-        visit_id: newVisit.id,
-        treatment_id: pkg.treatment_id,
-        consent_template_id: pkg.treatment.consent_template_id!,
-        signature_url: signatures.get(pkg.id) || lastSignatureUrl,
-      }));
+      // Create consent forms for each signed package with their respective signatures and PDFs
+      const consentFormsToInsert = packages.map(pkg => {
+        const data = signatureData.get(pkg.id) || lastData;
+        return {
+          visit_id: newVisit.id,
+          treatment_id: pkg.treatment_id,
+          consent_template_id: pkg.treatment.consent_template_id!,
+          signature_url: data.signatureUrl,
+          pdf_url: data.pdfUrl,
+        };
+      });
 
       const { error: consentError } = await supabase
         .from('consent_forms')
