@@ -54,14 +54,14 @@ const navigationItems: NavItem[] = [
   },
   { 
     title: 'In Treatment', 
-    url: '/waiting#in-progress', 
+    url: '/in-treatment', 
     icon: Activity,
     roles: ['admin', 'nurse', 'doctor'],
     countKey: 'inProgress'
   },
   { 
     title: 'Completed', 
-    url: '/waiting#completed', 
+    url: '/completed', 
     icon: CheckCircle,
     roles: ['admin', 'nurse', 'doctor'],
     countKey: 'completed'
@@ -142,15 +142,10 @@ export function AppSidebar() {
   }, []);
 
   const isActive = (url: string) => {
-    // For hash links, check if we're on the waiting page
-    if (url.includes('#')) {
-      const basePath = url.split('#')[0];
-      return location.pathname === basePath;
-    }
     if (url.includes('?')) {
       return location.pathname + location.search === url;
     }
-    return location.pathname === url || location.pathname.startsWith(url + '/');
+    return location.pathname === url;
   };
 
   const filteredItems = navigationItems.filter(item => 
@@ -160,18 +155,6 @@ export function AppSidebar() {
   const handleLogout = async () => {
     await signOut();
     navigate('/login');
-  };
-
-  const handleNavClick = (url: string) => {
-    if (url.includes('#')) {
-      const [path, hash] = url.split('#');
-      navigate(path);
-      // Scroll to section after navigation
-      setTimeout(() => {
-        const element = document.getElementById(hash);
-        element?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
-    }
   };
 
   const getCount = (key?: 'waiting' | 'inProgress' | 'completed') => {
@@ -214,8 +197,7 @@ export function AppSidebar() {
                       tooltip={item.countKey && count > 0 ? `${item.title} (${count})` : item.title}
                     >
                       <NavLink 
-                        to={item.url.split('#')[0]} 
-                        onClick={() => item.url.includes('#') && handleNavClick(item.url)}
+                        to={item.url} 
                         className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-muted relative"
                         activeClassName="bg-primary/10 text-primary font-medium"
                       >

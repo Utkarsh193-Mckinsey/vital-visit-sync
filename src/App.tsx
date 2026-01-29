@@ -14,6 +14,8 @@ import PatientDashboard from "./pages/PatientDashboard";
 import ConsentSigning from "./pages/ConsentSigning";
 import VisitHistory from "./pages/VisitHistory";
 import WaitingArea from "./pages/WaitingArea";
+import InTreatment from "./pages/InTreatment";
+import CompletedToday from "./pages/CompletedToday";
 import VitalsEntry from "./pages/VitalsEntry";
 import TreatmentAdmin from "./pages/TreatmentAdmin";
 import AdminSettings from "./pages/AdminSettings";
@@ -144,8 +146,20 @@ function AppRoutes() {
       
       {/* Clinical routes */}
       <Route path="/waiting" element={
-        <ProtectedRoute allowedRoles={['admin', 'nurse', 'doctor']}>
+        <ProtectedRoute allowedRoles={['admin', 'nurse', 'doctor', 'reception']}>
           <WaitingArea />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/in-treatment" element={
+        <ProtectedRoute allowedRoles={['admin', 'nurse', 'doctor']}>
+          <InTreatment />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/completed" element={
+        <ProtectedRoute allowedRoles={['admin', 'nurse', 'doctor']}>
+          <CompletedToday />
         </ProtectedRoute>
       } />
 
