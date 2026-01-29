@@ -213,7 +213,11 @@ export default function ConsentSigning() {
     }
   };
 
-  const createVisit = async (lastData: { signatureUrl: string; pdfUrl: string }) => {
+  const createVisit = async (
+    lastData: { signatureUrl: string; pdfUrl: string },
+    lastPdfBlob?: Blob,
+    lastTreatmentName?: string
+  ) => {
     if (!patient || !staff) return;
 
     try {
@@ -261,12 +265,29 @@ export default function ConsentSigning() {
 
       if (consentError) throw consentError;
 
-      toast({
-        title: 'Visit Created',
-        description: `Visit #${nextVisitNumber} has been created. Patient is now in the waiting area.`,
+      // Update all signed consents with the correct visit number
+      setSignedConsents(prev => {
+        const updated = prev.map(sc => ({ ...sc, visitNumber: nextVisitNumber }));
+        // Add the last consent if we have it
+        if (lastPdfBlob && lastTreatmentName) {
+          const lastPackage = packages[packages.length - 1];
+          updated.push({
+            packageId: lastPackage.id,
+            treatmentName: lastTreatmentName,
+            pdfBlob: lastPdfBlob,
+            visitNumber: nextVisitNumber,
+          });
+        }
+        return updated;
       });
 
-      navigate('/waiting');
+      setCreatedVisitNumber(nextVisitNumber);
+      setAllConsentsSigned(true);
+
+      toast({
+        title: 'Visit Created',
+        description: `Visit #${nextVisitNumber} has been created. You can now download consent forms.`,
+      });
     } catch (error) {
       console.error('Error creating visit:', error);
       toast({
