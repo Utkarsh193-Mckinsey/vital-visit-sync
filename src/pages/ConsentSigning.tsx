@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { TabletButton } from '@/components/ui/tablet-button';
@@ -18,20 +18,25 @@ interface PackageWithTreatment extends Package {
 
 export default function ConsentSigning() {
   const { patientId } = useParams<{ patientId: string }>();
+  const [searchParams] = useSearchParams();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [packages, setPackages] = useState<PackageWithTreatment[]>([]);
   const [currentPackageIndex, setCurrentPackageIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSigning, setIsSigning] = useState(false);
   const [signedPackages, setSignedPackages] = useState<Set<string>>(new Set());
+  const [signatures, setSignatures] = useState<Map<string, string>>(new Map());
   const signatureRef = useRef<SignatureCanvas>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { staff } = useAuth();
 
+  // Get selected package IDs from URL
+  const selectedPackageIds = searchParams.get('packages')?.split(',').filter(Boolean) || [];
+
   useEffect(() => {
     fetchData();
-  }, [patientId]);
+  }, [patientId, selectedPackageIds.join(',')]);
 
   const fetchData = async () => {
     if (!patientId) return;
@@ -47,8 +52,8 @@ export default function ConsentSigning() {
       if (patientError) throw patientError;
       setPatient(patientData as Patient);
 
-      // Fetch active packages with treatments and their consent templates
-      const { data: packagesData, error: packagesError } = await supabase
+      // Fetch selected packages with treatments and their consent templates
+      let query = supabase
         .from('packages')
         .select(`
           *,
@@ -60,6 +65,13 @@ export default function ConsentSigning() {
         .eq('patient_id', patientId)
         .eq('status', 'active')
         .order('purchase_date', { ascending: true });
+
+      // Filter by selected package IDs if provided
+      if (selectedPackageIds.length > 0) {
+        query = query.in('id', selectedPackageIds);
+      }
+
+      const { data: packagesData, error: packagesError } = await query;
 
       if (packagesError) throw packagesError;
       
@@ -120,6 +132,9 @@ export default function ConsentSigning() {
         .from('signatures')
         .getPublicUrl(signatureFileName);
 
+      // Store the signature URL for this package
+      setSignatures(prev => new Map(prev).set(currentPackage.id, urlData.publicUrl));
+      
       // Mark this package as signed
       setSignedPackages(prev => new Set([...prev, currentPackage.id]));
       
@@ -177,12 +192,12 @@ export default function ConsentSigning() {
 
       if (visitError) throw visitError;
 
-      // Create consent forms for each signed package
+      // Create consent forms for each signed package with their respective signatures
       const consentFormsToInsert = packages.map(pkg => ({
         visit_id: newVisit.id,
         treatment_id: pkg.treatment_id,
         consent_template_id: pkg.treatment.consent_template_id!,
-        signature_url: lastSignatureUrl, // In real app, store each signature
+        signature_url: signatures.get(pkg.id) || lastSignatureUrl,
       }));
 
       const { error: consentError } = await supabase
@@ -299,13 +314,22 @@ export default function ConsentSigning() {
         }
       />
 
+      {/* Selected treatments summary */}
+      {selectedPackageIds.length > 0 && (
+        <div className="mb-4 p-3 bg-primary/5 rounded-lg border border-primary/20">
+          <p className="text-sm text-muted-foreground">
+            Selected treatments for today: <strong>{selectedPackageIds.length}</strong>
+          </p>
+        </div>
+      )}
+
       {packages.length === 0 ? (
         <TabletCard>
           <TabletCardContent className="p-8 text-center">
             <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No Consent Forms Required</h3>
             <p className="text-muted-foreground mb-6">
-              The active packages don't have consent forms configured.
+              The selected treatments don't have consent forms configured.
             </p>
             <div className="flex gap-4 justify-center">
               <TabletButton
