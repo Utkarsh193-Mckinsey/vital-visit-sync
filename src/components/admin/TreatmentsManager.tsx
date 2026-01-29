@@ -32,6 +32,7 @@ interface TreatmentFormData {
   category: string;
   dosage_unit: DosageUnit;
   administration_method: string;
+  common_doses: string[];
 }
 
 const emptyForm: TreatmentFormData = {
@@ -39,7 +40,11 @@ const emptyForm: TreatmentFormData = {
   category: '',
   dosage_unit: 'Session',
   administration_method: '',
+  common_doses: [],
 };
+
+// Units that support common doses (medical measurable units)
+const UNITS_WITH_DOSES: DosageUnit[] = ['mg', 'ml', 'Units', 'mcg'];
 
 export default function TreatmentsManager() {
   const [treatments, setTreatments] = useState<Treatment[]>([]);
