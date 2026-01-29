@@ -103,6 +103,7 @@ export default function TreatmentsManager() {
     setIsAdding(false);
     setEditingId(null);
     setFormData(emptyForm);
+    setNewDose('');
   };
 
   const handleSave = async () => {
