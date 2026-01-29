@@ -63,7 +63,7 @@ export default function VisitHistory() {
       if (patientError) throw patientError;
       setPatient(patientData as Patient);
 
-      // Fetch visits with treatments
+      // Fetch visits with treatments and consent forms
       const { data: visitsData, error: visitsError } = await supabase
         .from('visits')
         .select(`
@@ -72,6 +72,15 @@ export default function VisitHistory() {
             id,
             dose_administered,
             dose_unit,
+            treatment:treatments (
+              treatment_name
+            )
+          ),
+          consent_forms (
+            id,
+            signature_url,
+            pdf_url,
+            signed_date,
             treatment:treatments (
               treatment_name
             )
