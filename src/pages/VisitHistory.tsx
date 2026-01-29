@@ -18,13 +18,30 @@ import {
   PlayCircle,
   FileSignature,
   ClipboardList,
-  Download
+  Download,
+  Loader2
 } from 'lucide-react';
 import type { Patient, Visit } from '@/types/database';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { generateConsentPDF } from '@/utils/generateConsentPDF';
 
-interface VisitWithDetails extends Visit {
+interface ConsentFormWithDetails {
+  id: string;
+  signature_url: string;
+  pdf_url: string | null;
+  signed_date: string;
+  consent_template_id: string;
+  treatment: {
+    treatment_name: string;
+  } | null;
+  consent_template?: {
+    form_name: string;
+    consent_text: string;
+  } | null;
+}
+
+interface VisitWithDetails extends Omit<Visit, 'consent_forms'> {
   visit_treatments?: {
     id: string;
     dose_administered: string;
@@ -33,6 +50,7 @@ interface VisitWithDetails extends Visit {
       treatment_name: string;
     };
   }[];
+  consent_forms?: ConsentFormWithDetails[];
 }
 
 export default function VisitHistory() {
@@ -41,6 +59,7 @@ export default function VisitHistory() {
   const [visits, setVisits] = useState<VisitWithDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedVisit, setExpandedVisit] = useState<string | null>(null);
+  const [generatingPDF, setGeneratingPDF] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { hasRole } = useAuth();
