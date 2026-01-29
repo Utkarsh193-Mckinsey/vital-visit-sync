@@ -33,6 +33,7 @@ interface TreatmentEntry {
   doseUnit: string;
   administrationDetails: string;
   sessionsRemaining: number;
+  sessionsPurchased: number;
 }
 
 export default function TreatmentAdmin() {
@@ -90,6 +91,7 @@ export default function TreatmentAdmin() {
         doseUnit: pkg.treatment?.dosage_unit || 'Session',
         administrationDetails: '',
         sessionsRemaining: pkg.sessions_remaining,
+        sessionsPurchased: pkg.sessions_purchased,
       }));
       
       setTreatments(entries);
@@ -322,7 +324,7 @@ export default function TreatmentAdmin() {
                     {treatment.treatmentName}
                   </h5>
                   <span className="text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded">
-                    {treatment.sessionsRemaining} of {treatment.sessionsRemaining} sessions left
+                    {treatment.sessionsRemaining} of {treatment.sessionsPurchased} sessions left
                   </span>
                 </div>
 
