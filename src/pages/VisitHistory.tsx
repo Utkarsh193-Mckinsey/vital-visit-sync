@@ -178,6 +178,58 @@ export default function VisitHistory() {
     return null;
   };
 
+  const handleDownloadConsentPDF = async (cf: ConsentFormWithDetails) => {
+    // If PDF already exists, just open it
+    if (cf.pdf_url) {
+      window.open(cf.pdf_url, '_blank');
+      return;
+    }
+
+    // Generate PDF on-the-fly
+    if (!patient) return;
+
+    setGeneratingPDF(cf.id);
+
+    try {
+      const pdfBlob = await generateConsentPDF({
+        patientName: patient.full_name,
+        patientDOB: patient.date_of_birth,
+        patientPhone: patient.phone_number,
+        treatmentName: cf.treatment?.treatment_name || 'Treatment',
+        consentFormName: cf.consent_template?.form_name || 'Consent Form',
+        consentText: cf.consent_template?.consent_text || 'Consent terms on file.',
+        signatureDataUrl: cf.signature_url,
+        signedDate: new Date(cf.signed_date),
+      });
+
+      // Create download link
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `consent-${cf.treatment?.treatment_name || 'form'}-${new Date(cf.signed_date).toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: 'PDF Generated',
+        description: 'Consent form PDF has been downloaded.',
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      // Fallback to signature if PDF generation fails
+      window.open(cf.signature_url, '_blank');
+      toast({
+        title: 'PDF Generation Failed',
+        description: 'Opened signature image instead.',
+        variant: 'destructive',
+      });
+    } finally {
+      setGeneratingPDF(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <PageContainer>
