@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { TabletCard, TabletCardContent } from '@/components/ui/tablet-card';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
-import { CheckCircle, ClipboardCheck } from 'lucide-react';
+import { CheckCircle, ClipboardCheck, Package } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TodayConsumablesReport } from '@/components/reports/TodayConsumablesReport';
 import type { Visit, Patient, ConsentForm, Treatment, Staff } from '@/types/database';
 
 interface CompletedVisit extends Visit {
