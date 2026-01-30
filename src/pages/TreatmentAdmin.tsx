@@ -151,15 +151,18 @@ export default function TreatmentAdmin() {
   const handleDoseChange = (index: number, value: string) => {
     const treatment = treatments[index];
     
+    // Treat "__skip__" as empty (clearing the dose)
+    const actualValue = value === '__skip__' ? '' : value;
+    
     // If trying to set a dose but consent not signed, show warning
-    if (value && !treatment.hasConsentSigned) {
+    if (actualValue && !treatment.hasConsentSigned) {
       setConsentWarning({ treatmentName: treatment.treatmentName, treatmentId: treatment.treatmentId, index });
       return;
     }
     
     setTreatments(prev => {
       const updated = [...prev];
-      updated[index] = { ...updated[index], doseAdministered: value };
+      updated[index] = { ...updated[index], doseAdministered: actualValue };
       return updated;
     });
   };
