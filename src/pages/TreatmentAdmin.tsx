@@ -407,7 +407,7 @@ export default function TreatmentAdmin() {
                           <SelectValue placeholder="Select dose" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="" className="text-muted-foreground">
+                          <SelectItem value="__skip__" className="text-muted-foreground">
                             -- Skip (no dose) --
                           </SelectItem>
                           {treatment.commonDoses.map((dose) => (
