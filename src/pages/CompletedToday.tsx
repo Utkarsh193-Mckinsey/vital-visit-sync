@@ -73,65 +73,84 @@ export default function CompletedToday() {
     <PageContainer maxWidth="xl">
       <PageHeader 
         title="Completed Today"
-        subtitle={`${visits.length} treatment${visits.length !== 1 ? 's' : ''} completed`}
+        subtitle={`${visits.length} visit${visits.length !== 1 ? 's' : ''} completed`}
       />
 
-      {isLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <div className="text-center">
-            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            <p className="text-muted-foreground">Loading...</p>
-          </div>
-        </div>
-      ) : visits.length === 0 ? (
-        <TabletCard>
-          <TabletCardContent className="p-8 text-center">
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-              <ClipboardCheck className="h-7 w-7 text-muted-foreground" />
+      <Tabs defaultValue="visits" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="visits" className="gap-2">
+            <ClipboardCheck className="h-4 w-4" />
+            Visits
+          </TabsTrigger>
+          <TabsTrigger value="consumables" className="gap-2">
+            <Package className="h-4 w-4" />
+            Consumables
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="visits">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="text-center">
+                <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                <p className="text-muted-foreground">Loading...</p>
+              </div>
             </div>
-            <p className="text-muted-foreground">No completed treatments today</p>
-          </TabletCardContent>
-        </TabletCard>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {visits.map((visit) => (
-            <TabletCard key={visit.id} className="overflow-hidden border-l-4 border-l-success">
-              <TabletCardContent className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold">{visit.patient.full_name}</span>
-                  <span className="text-sm text-muted-foreground">
-                    Visit #{visit.visit_number}
-                  </span>
+          ) : visits.length === 0 ? (
+            <TabletCard>
+              <TabletCardContent className="p-8 text-center">
+                <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+                  <ClipboardCheck className="h-7 w-7 text-muted-foreground" />
                 </div>
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                  {visit.consent_forms.map((cf) => (
-                    <span 
-                      key={cf.id}
-                      className="rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success"
-                    >
-                      {cf.treatment?.treatment_name}
-                    </span>
-                  ))}
-                </div>
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <CheckCircle className="h-3.5 w-3.5 text-success" />
-                    Completed
-                  </span>
-                  {visit.completed_date && (
-                    <span>
-                      {new Date(visit.completed_date).toLocaleTimeString('en-AE', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </span>
-                  )}
-                </div>
+                <p className="text-muted-foreground">No completed treatments today</p>
               </TabletCardContent>
             </TabletCard>
-          ))}
-        </div>
-      )}
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {visits.map((visit) => (
+                <TabletCard key={visit.id} className="overflow-hidden border-l-4 border-l-success">
+                  <TabletCardContent className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-semibold">{visit.patient.full_name}</span>
+                      <span className="text-sm text-muted-foreground">
+                        Visit #{visit.visit_number}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      {visit.consent_forms.map((cf) => (
+                        <span 
+                          key={cf.id}
+                          className="rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success"
+                        >
+                          {cf.treatment?.treatment_name}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <CheckCircle className="h-3.5 w-3.5 text-success" />
+                        Completed
+                      </span>
+                      {visit.completed_date && (
+                        <span>
+                          {new Date(visit.completed_date).toLocaleTimeString('en-AE', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      )}
+                    </div>
+                  </TabletCardContent>
+                </TabletCard>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="consumables">
+          <TodayConsumablesReport />
+        </TabsContent>
+      </Tabs>
     </PageContainer>
   );
 }
