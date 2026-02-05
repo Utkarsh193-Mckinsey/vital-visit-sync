@@ -6,7 +6,7 @@ import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletCard, TabletCardContent, TabletCardHeader, TabletCardTitle } from '@/components/ui/tablet-card';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Check, FileSignature, AlertCircle, Download } from 'lucide-react';
+import { ArrowLeft, Check, FileSignature, AlertCircle, Download, Camera } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import type { Patient, Package, Treatment, ConsentTemplate } from '@/types/database';
 import { generateConsentPDF } from '@/utils/generateConsentPDF';
@@ -47,6 +47,16 @@ interface SignedConsentData {
   visitNumber: number;
 }
 
+interface TreatmentSignatureData {
+  packageId: string;
+  treatmentId: string;
+  signatureDataUrl: string;
+  consentTemplate: ConsentTemplate;
+  treatmentName: string;
+}
+
+type ConsentStep = 'treatment' | 'photo_video' | 'complete';
+
 export default function ConsentSigning() {
   const { patientId } = useParams<{ patientId: string }>();
   const [searchParams] = useSearchParams();
@@ -56,10 +66,11 @@ export default function ConsentSigning() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSigning, setIsSigning] = useState(false);
   const [signedPackages, setSignedPackages] = useState<Set<string>>(new Set());
-  const [signatureData, setSignatureData] = useState<Map<string, { signatureUrl: string; pdfUrl: string }>>(new Map());
+  const [treatmentSignatures, setTreatmentSignatures] = useState<TreatmentSignatureData[]>([]);
   const [signedConsents, setSignedConsents] = useState<SignedConsentData[]>([]);
   const [allConsentsSigned, setAllConsentsSigned] = useState(false);
   const [createdVisitNumber, setCreatedVisitNumber] = useState<number | null>(null);
+  const [currentStep, setCurrentStep] = useState<ConsentStep>('treatment');
   const signatureRef = useRef<SignatureCanvas>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -130,7 +141,7 @@ export default function ConsentSigning() {
     signatureRef.current?.clear();
   };
 
-  const handleSignConsent = async () => {
+  const handleSignTreatmentConsent = async () => {
     if (!signatureRef.current || signatureRef.current.isEmpty()) {
       toast({
         title: 'Signature Required',
@@ -141,108 +152,65 @@ export default function ConsentSigning() {
     }
 
     const currentPackage = packages[currentPackageIndex];
-    if (!currentPackage || !patient || !staff) return;
+    if (!currentPackage || !patient) return;
+
+    // Get signature as data URL
+    const canvas = signatureRef.current.getCanvas();
+    const signatureDataUrl = canvas.toDataURL('image/png');
+    
+    const consentTemplate = currentPackage.treatment?.consent_template;
+    if (!consentTemplate) return;
+
+    // Store treatment signature
+    setTreatmentSignatures(prev => [...prev, {
+      packageId: currentPackage.id,
+      treatmentId: currentPackage.treatment_id,
+      signatureDataUrl,
+      consentTemplate,
+      treatmentName: currentPackage.treatment.treatment_name,
+    }]);
+    
+    // Mark this package as signed
+    setSignedPackages(prev => new Set([...prev, currentPackage.id]));
+    
+    // Move to next package or to photo/video consent step
+    if (currentPackageIndex < packages.length - 1) {
+      setCurrentPackageIndex(prev => prev + 1);
+      clearSignature();
+      toast({
+        title: 'Consent Signed',
+        description: `Signed for ${currentPackage.treatment.treatment_name}. Please sign the next consent.`,
+      });
+    } else {
+      // All treatment consents signed - move to photo/video consent
+      setCurrentStep('photo_video');
+      clearSignature();
+      toast({
+        title: 'Treatment Consents Complete',
+        description: 'Please sign the photo/video consent form.',
+      });
+    }
+  };
+
+  const handleSignPhotoVideoConsent = async () => {
+    if (!signatureRef.current || signatureRef.current.isEmpty()) {
+      toast({
+        title: 'Signature Required',
+        description: 'Please sign the photo/video consent form.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!patient || !staff) return;
 
     setIsSigning(true);
 
     try {
-      // Get signature as data URL
+      // Get photo/video signature
       const canvas = signatureRef.current.getCanvas();
-      const signatureDataUrl = canvas.toDataURL('image/png');
-      
-      // Convert to blob for signature upload
-      const signatureResponse = await fetch(signatureDataUrl);
-      const signatureBlob = await signatureResponse.blob();
+      const photoVideoSignatureDataUrl = canvas.toDataURL('image/png');
 
-      // Upload signature
-      const signatureFileName = `consent-signatures/${patientId}/${currentPackage.treatment_id}/${Date.now()}.png`;
-      const { error: uploadError } = await supabase.storage
-        .from('signatures')
-        .upload(signatureFileName, signatureBlob, { contentType: 'image/png' });
-
-      if (uploadError) throw uploadError;
-
-      const { data: signatureUrlData } = supabase.storage
-        .from('signatures')
-        .getPublicUrl(signatureFileName);
-
-      // Generate PDF with full consent form
-      const consentTemplate = currentPackage.treatment?.consent_template;
-      const pdfBlob = await generateConsentPDF({
-        patientName: patient.full_name,
-        patientDOB: patient.date_of_birth,
-        patientPhone: patient.phone_number,
-        treatmentName: currentPackage.treatment.treatment_name,
-        consentFormName: consentTemplate?.form_name || 'Consent Form',
-        consentText: consentTemplate?.consent_text || '',
-        signatureDataUrl: signatureDataUrl,
-        signedDate: new Date(),
-      });
-
-      // Upload PDF
-      const pdfFileName = `consent-pdfs/${patientId}/${currentPackage.treatment_id}/${Date.now()}.pdf`;
-      const { error: pdfUploadError } = await supabase.storage
-        .from('clinic-documents')
-        .upload(pdfFileName, pdfBlob, { contentType: 'application/pdf' });
-
-      if (pdfUploadError) throw pdfUploadError;
-
-      const { data: pdfUrlData } = supabase.storage
-        .from('clinic-documents')
-        .getPublicUrl(pdfFileName);
-
-      // Store both URLs for this package
-      setSignatureData(prev => new Map(prev).set(currentPackage.id, {
-        signatureUrl: signatureUrlData.publicUrl,
-        pdfUrl: pdfUrlData.publicUrl,
-      }));
-      
-      // Mark this package as signed
-      setSignedPackages(prev => new Set([...prev, currentPackage.id]));
-      
-      // Store PDF blob for download (we'll get visit number after createVisit)
-      setSignedConsents(prev => [...prev, {
-        packageId: currentPackage.id,
-        treatmentName: currentPackage.treatment.treatment_name,
-        pdfBlob: pdfBlob,
-        visitNumber: 0, // Will be updated after createVisit
-      }]);
-      
-      // Move to next package or finish
-      if (currentPackageIndex < packages.length - 1) {
-        setCurrentPackageIndex(prev => prev + 1);
-        clearSignature();
-        toast({
-          title: 'Consent Signed',
-          description: `Signed for ${currentPackage.treatment.treatment_name}. Please sign the next consent.`,
-        });
-      } else {
-        // All consents signed - create visit
-        await createVisit({
-          signatureUrl: signatureUrlData.publicUrl,
-          pdfUrl: pdfUrlData.publicUrl,
-        }, pdfBlob, currentPackage.treatment.treatment_name);
-      }
-    } catch (error) {
-      console.error('Error signing consent:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save consent signature.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSigning(false);
-    }
-  };
-
-  const createVisit = async (
-    lastData: { signatureUrl: string; pdfUrl: string },
-    lastPdfBlob?: Blob,
-    lastTreatmentName?: string
-  ) => {
-    if (!patient || !staff) return;
-
-    try {
       // Get next visit number
       const { data: visitData } = await supabase
         .from('visits')
@@ -269,41 +237,94 @@ export default function ConsentSigning() {
 
       if (visitError) throw visitError;
 
-      // Create consent forms for each signed package with their respective signatures and PDFs
-      const consentFormsToInsert = packages.map(pkg => {
-        const data = signatureData.get(pkg.id) || lastData;
-        return {
-          visit_id: newVisit.id,
-          treatment_id: pkg.treatment_id,
-          consent_template_id: pkg.treatment.consent_template_id!,
-          signature_url: data.signatureUrl,
-          pdf_url: data.pdfUrl,
-        };
-      });
+      // Generate PDFs and upload for each treatment
+      const consentFormsToInsert = [];
+      const signedConsentsList: SignedConsentData[] = [];
 
+      for (const treatmentSig of treatmentSignatures) {
+        // Upload treatment signature
+        const signatureResponse = await fetch(treatmentSig.signatureDataUrl);
+        const signatureBlob = await signatureResponse.blob();
+
+        const signatureFileName = `consent-signatures/${patientId}/${treatmentSig.treatmentId}/${Date.now()}.png`;
+        const { error: uploadError } = await supabase.storage
+          .from('signatures')
+          .upload(signatureFileName, signatureBlob, { contentType: 'image/png' });
+
+        if (uploadError) throw uploadError;
+
+        const { data: signatureUrlData } = supabase.storage
+          .from('signatures')
+          .getPublicUrl(signatureFileName);
+
+        // Generate PDF with BOTH English and Arabic text, plus photo/video signature
+        const pdfBlob = await generateConsentPDF({
+          patientName: patient.full_name,
+          patientDOB: patient.date_of_birth,
+          patientPhone: patient.phone_number,
+          treatmentName: treatmentSig.treatmentName,
+          consentFormName: treatmentSig.consentTemplate.form_name,
+          consentText: treatmentSig.consentTemplate.consent_text,
+          consentTextAr: treatmentSig.consentTemplate.consent_text_ar || undefined,
+          signatureDataUrl: treatmentSig.signatureDataUrl,
+          signedDate: new Date(),
+          photoVideoSignatureDataUrl: photoVideoSignatureDataUrl,
+        });
+
+        // Upload PDF
+        const pdfFileName = `consent-pdfs/${patientId}/${treatmentSig.treatmentId}/${Date.now()}.pdf`;
+        const { error: pdfUploadError } = await supabase.storage
+          .from('clinic-documents')
+          .upload(pdfFileName, pdfBlob, { contentType: 'application/pdf' });
+
+        if (pdfUploadError) throw pdfUploadError;
+
+        const { data: pdfUrlData } = supabase.storage
+          .from('clinic-documents')
+          .getPublicUrl(pdfFileName);
+
+        consentFormsToInsert.push({
+          visit_id: newVisit.id,
+          treatment_id: treatmentSig.treatmentId,
+          consent_template_id: treatmentSig.consentTemplate.id,
+          signature_url: signatureUrlData.publicUrl,
+          pdf_url: pdfUrlData.publicUrl,
+        });
+
+        signedConsentsList.push({
+          packageId: treatmentSig.packageId,
+          treatmentName: treatmentSig.treatmentName,
+          pdfBlob: pdfBlob,
+          visitNumber: nextVisitNumber,
+        });
+      }
+
+      // Insert all consent forms
       const { error: consentError } = await supabase
         .from('consent_forms')
         .insert(consentFormsToInsert);
 
       if (consentError) throw consentError;
 
-      // Update all signed consents with the correct visit number
-      setSignedConsents(prev => prev.map(sc => ({ ...sc, visitNumber: nextVisitNumber })));
-
+      setSignedConsents(signedConsentsList);
       setCreatedVisitNumber(nextVisitNumber);
+      setCurrentStep('complete');
       setAllConsentsSigned(true);
 
       toast({
-        title: 'Visit Created',
+        title: 'All Consents Signed',
         description: `Visit #${nextVisitNumber} has been created. You can now download consent forms.`,
       });
+
     } catch (error) {
-      console.error('Error creating visit:', error);
+      console.error('Error signing consent:', error);
       toast({
         title: 'Error',
-        description: 'Failed to create visit.',
+        description: 'Failed to save consent signatures.',
         variant: 'destructive',
       });
+    } finally {
+      setIsSigning(false);
     }
   };
 
@@ -395,7 +416,7 @@ export default function ConsentSigning() {
   };
 
   // Show success screen with download options after all consents are signed
-  if (allConsentsSigned && patient) {
+  if (currentStep === 'complete' && allConsentsSigned && patient) {
     return (
       <PageContainer maxWidth="md">
         <div className="flex flex-col items-center justify-center py-12">
@@ -412,7 +433,7 @@ export default function ConsentSigning() {
 
           <div className="w-full max-w-sm space-y-4">
             <p className="text-sm font-medium text-center mb-2">Download Consent Forms</p>
-            {signedConsents.map((consent, index) => (
+            {signedConsents.map((consent) => (
               <TabletButton
                 key={consent.packageId}
                 fullWidth
@@ -433,6 +454,119 @@ export default function ConsentSigning() {
               </TabletButton>
             </div>
           </div>
+        </div>
+      </PageContainer>
+    );
+  }
+
+  // Show photo/video consent step
+  if (currentStep === 'photo_video') {
+    return (
+      <PageContainer maxWidth="lg">
+        <PageHeader 
+          title="Photo & Video Consent"
+          subtitle={patient.full_name}
+          backButton={
+            <TabletButton 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => {
+                setCurrentStep('treatment');
+                setCurrentPackageIndex(packages.length - 1);
+              }}
+              aria-label="Back"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </TabletButton>
+          }
+        />
+
+        {/* Progress indicator */}
+        <div className="mb-6 flex items-center gap-2">
+          <div className="flex-1 h-2 rounded-full bg-primary" />
+          <div className="flex-1 h-2 rounded-full bg-primary/50" />
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Step 2 of 2: Photo & Video Consent
+        </p>
+
+        {/* Photo/Video consent text */}
+        <TabletCard className="mb-6">
+          <TabletCardHeader>
+            <TabletCardTitle className="flex items-center gap-2">
+              <Camera className="h-5 w-5" />
+              Video & Photographic Consent / الموافقة على التصوير والفيديو
+            </TabletCardTitle>
+          </TabletCardHeader>
+          <TabletCardContent>
+            <div className="prose prose-sm max-w-none text-foreground space-y-4">
+              <div className="whitespace-pre-wrap bg-muted/50 p-4 rounded-lg">
+                <p className="font-medium mb-2">English:</p>
+                <p>
+                  I consent to the taking of photographs/videos during my treatment for educational, 
+                  promotional, or medical purposes. My identity will be kept confidential unless I give 
+                  explicit consent to share.
+                </p>
+              </div>
+              <div className="whitespace-pre-wrap bg-muted/50 p-4 rounded-lg" dir="rtl">
+                <p className="font-medium mb-2 text-right">العربية:</p>
+                <p className="text-right">
+                  أوافق على التقاط الصور/الفيديو أثناء علاجي لأغراض تعليمية أو ترويجية أو طبية. 
+                  ستظل هويتي سرية إلا إذا منحت موافقة صريحة للمشاركة.
+                </p>
+              </div>
+            </div>
+          </TabletCardContent>
+        </TabletCard>
+
+        {/* Signature pad */}
+        <TabletCard className="mb-6">
+          <TabletCardHeader>
+            <div className="flex items-center justify-between">
+              <TabletCardTitle>Patient Signature (Photo/Video Consent)</TabletCardTitle>
+              <TabletButton variant="ghost" size="sm" onClick={clearSignature}>
+                Clear
+              </TabletButton>
+            </div>
+          </TabletCardHeader>
+          <TabletCardContent>
+            <div className="border-2 border-dashed border-border rounded-lg overflow-hidden bg-white">
+              <SignatureCanvas
+                ref={signatureRef}
+                canvasProps={{
+                  className: 'w-full h-48',
+                  style: { width: '100%', height: '192px' }
+                }}
+                backgroundColor="white"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              Please sign above to confirm you consent to photos/videos
+            </p>
+          </TabletCardContent>
+        </TabletCard>
+
+        {/* Actions */}
+        <div className="flex gap-4">
+          <TabletButton
+            variant="outline"
+            fullWidth
+            onClick={() => {
+              setCurrentStep('treatment');
+              setCurrentPackageIndex(packages.length - 1);
+            }}
+            disabled={isSigning}
+          >
+            Back
+          </TabletButton>
+          <TabletButton
+            fullWidth
+            onClick={handleSignPhotoVideoConsent}
+            disabled={isSigning}
+            leftIcon={<Camera />}
+          >
+            {isSigning ? 'Processing...' : 'Complete & Download'}
+          </TabletButton>
         </div>
       </PageContainer>
     );
@@ -504,22 +638,24 @@ export default function ConsentSigning() {
                 }`}
               />
             ))}
+            {/* Photo/video consent indicator */}
+            <div className="flex-1 h-2 rounded-full bg-muted" />
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            Consent {currentPackageIndex + 1} of {packages.length}: {currentPackage?.treatment.treatment_name}
+            Step 1: Treatment Consent {currentPackageIndex + 1} of {packages.length} - {currentPackage?.treatment.treatment_name}
           </p>
 
-          {/* Consent text */}
-          <TabletCard className="mb-6">
+          {/* Consent text - English */}
+          <TabletCard className="mb-4">
             <TabletCardHeader>
               <TabletCardTitle className="flex items-center gap-2">
                 <FileSignature className="h-5 w-5" />
-                {consentTemplate?.form_name || 'Consent Form'}
+                {consentTemplate?.form_name || 'Consent Form'} (English)
               </TabletCardTitle>
             </TabletCardHeader>
             <TabletCardContent>
               <div className="prose prose-sm max-w-none text-foreground">
-                <div className="whitespace-pre-wrap bg-muted/50 p-4 rounded-lg max-h-64 overflow-y-auto">
+                <div className="whitespace-pre-wrap bg-muted/50 p-4 rounded-lg max-h-48 overflow-y-auto">
                   {patient && consentTemplate?.consent_text 
                     ? replaceConsentPlaceholders(
                         consentTemplate.consent_text,
@@ -533,11 +669,37 @@ export default function ConsentSigning() {
             </TabletCardContent>
           </TabletCard>
 
+          {/* Consent text - Arabic */}
+          {consentTemplate?.consent_text_ar && (
+            <TabletCard className="mb-6">
+              <TabletCardHeader>
+                <TabletCardTitle className="flex items-center gap-2">
+                  <FileSignature className="h-5 w-5" />
+                  {consentTemplate?.form_name || 'Consent Form'} (العربية)
+                </TabletCardTitle>
+              </TabletCardHeader>
+              <TabletCardContent>
+                <div className="prose prose-sm max-w-none text-foreground">
+                  <div className="whitespace-pre-wrap bg-muted/50 p-4 rounded-lg max-h-48 overflow-y-auto text-right" dir="rtl">
+                    {patient && consentTemplate?.consent_text_ar 
+                      ? replaceConsentPlaceholders(
+                          consentTemplate.consent_text_ar,
+                          patient.full_name,
+                          currentPackage?.treatment.treatment_name || '',
+                          new Date()
+                        )
+                      : 'لا يوجد نص موافقة متاح.'}
+                  </div>
+                </div>
+              </TabletCardContent>
+            </TabletCard>
+          )}
+
           {/* Signature pad */}
           <TabletCard className="mb-6">
             <TabletCardHeader>
               <div className="flex items-center justify-between">
-                <TabletCardTitle>Patient Signature</TabletCardTitle>
+                <TabletCardTitle>Patient Signature (Treatment Consent)</TabletCardTitle>
                 <TabletButton variant="ghost" size="sm" onClick={clearSignature}>
                   Clear
                 </TabletButton>
@@ -571,15 +733,13 @@ export default function ConsentSigning() {
             </TabletButton>
             <TabletButton
               fullWidth
-              onClick={handleSignConsent}
+              onClick={handleSignTreatmentConsent}
               disabled={isSigning}
               leftIcon={<Check />}
             >
-              {isSigning 
-                ? 'Signing...' 
-                : currentPackageIndex < packages.length - 1 
-                  ? 'Sign & Continue' 
-                  : 'Sign & Start Visit'
+              {currentPackageIndex < packages.length - 1 
+                ? 'Sign & Continue' 
+                : 'Next: Photo Consent'
               }
             </TabletButton>
           </div>
