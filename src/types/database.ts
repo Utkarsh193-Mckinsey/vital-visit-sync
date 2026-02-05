@@ -144,6 +144,27 @@ export interface AlertRule {
   message: string;
 }
 
+ export interface StockItem {
+   id: string;
+   item_name: string;
+   category: string;
+   unit: string;
+   status: string;
+   created_date: string;
+ }
+ 
+ export interface VisitConsumable {
+   id: string;
+   visit_id: string;
+   stock_item_id: string;
+   quantity_used: number;
+   notes?: string;
+   recorded_by?: string;
+   created_date: string;
+   // Joined data
+   stock_item?: StockItem;
+ }
+ 
 // Auth context types
 export interface AuthState {
   user: { id: string; email: string } | null;
