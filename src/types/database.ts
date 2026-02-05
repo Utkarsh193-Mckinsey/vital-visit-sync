@@ -149,6 +149,8 @@ export interface AlertRule {
    item_name: string;
    category: string;
    unit: string;
+   brand?: string;
+   current_stock?: number;
    status: string;
    created_date: string;
  }
