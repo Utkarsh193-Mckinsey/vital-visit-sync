@@ -27,6 +27,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { InlineConsentModal } from '@/components/treatment/InlineConsentModal';
+ import { ConsumablesSelector, SelectedConsumable } from '@/components/treatment/ConsumablesSelector';
 import type { Visit, Patient, Treatment } from '@/types/database';
 
 interface VisitWithPatient extends Omit<Visit, 'consent_forms'> {
@@ -70,6 +71,7 @@ export default function TreatmentAdmin() {
   const [isSaving, setIsSaving] = useState(false);
   const [consentWarning, setConsentWarning] = useState<{ treatmentName: string; treatmentId: string; index: number } | null>(null);
   const [showConsentModal, setShowConsentModal] = useState(false);
+   const [selectedConsumables, setSelectedConsumables] = useState<SelectedConsumable[]>([]);
   const { staff } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -239,11 +241,30 @@ export default function TreatmentAdmin() {
         console.warn('Could not lock visit:', lockError);
       }
 
+       // Insert consumables used
+       if (selectedConsumables.length > 0) {
+         for (const consumable of selectedConsumables) {
+           const { error: consumableError } = await supabase
+             .from('visit_consumables')
+             .insert({
+               visit_id: visitId,
+               stock_item_id: consumable.stockItemId,
+               quantity_used: consumable.quantity,
+               notes: consumable.notes || null,
+               recorded_by: staff.id,
+             });
+ 
+           if (consumableError) {
+             console.error('Error recording consumable:', consumableError);
+           }
+         }
+       }
+ 
       const treatmentCount = treatmentsToAdminister.length;
       toast({
         title: 'Visit Completed',
         description: treatmentCount > 0 
-          ? `${treatmentCount} treatment(s) recorded and visit completed.`
+           ? `${treatmentCount} treatment(s) and ${selectedConsumables.length} consumable(s) recorded.`
           : 'Visit completed with no treatments administered.',
       });
 
@@ -472,7 +493,16 @@ export default function TreatmentAdmin() {
       </div>
 
       {/* Doctor Notes */}
-      <TabletCard className="mb-6">
+       {/* Consumables Selection */}
+       <div className="mb-6">
+         <ConsumablesSelector
+           selectedConsumables={selectedConsumables}
+           onConsumablesChange={setSelectedConsumables}
+         />
+       </div>
+ 
+       {/* Doctor Notes */}
+       <TabletCard className="mb-6">
         <TabletCardContent className="p-4">
           <h4 className="font-medium mb-3 flex items-center gap-2">
             <FileText className="h-4 w-4" />
