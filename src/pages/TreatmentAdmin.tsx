@@ -498,6 +498,7 @@ export default function TreatmentAdmin() {
          <ConsumablesSelector
            selectedConsumables={selectedConsumables}
            onConsumablesChange={setSelectedConsumables}
+           treatmentIds={treatments.map(t => t.treatmentId)}
          />
        </div>
  
