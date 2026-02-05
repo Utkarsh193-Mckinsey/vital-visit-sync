@@ -248,8 +248,11 @@ export type Database = {
           current_stock: number | null
           id: string
           item_name: string
+          packaging_unit: string | null
           status: string
           unit: string
+          units_per_package: number | null
+          variant: string | null
         }
         Insert: {
           brand?: string | null
@@ -258,8 +261,11 @@ export type Database = {
           current_stock?: number | null
           id?: string
           item_name: string
+          packaging_unit?: string | null
           status?: string
           unit?: string
+          units_per_package?: number | null
+          variant?: string | null
         }
         Update: {
           brand?: string | null
@@ -268,8 +274,11 @@ export type Database = {
           current_stock?: number | null
           id?: string
           item_name?: string
+          packaging_unit?: string | null
           status?: string
           unit?: string
+          units_per_package?: number | null
+          variant?: string | null
         }
         Relationships: []
       }
