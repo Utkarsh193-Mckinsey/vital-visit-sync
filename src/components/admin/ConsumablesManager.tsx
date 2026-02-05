@@ -288,12 +288,6 @@ export default function ConsumablesManager() {
       });
     }
   };
-        title: 'Error',
-        description: 'Failed to update stock.',
-        variant: 'destructive',
-      });
-    }
-  };
 
   const filteredBrands = uniqueBrands.filter(brand =>
     brand.toLowerCase().includes(brandSearch.toLowerCase())
