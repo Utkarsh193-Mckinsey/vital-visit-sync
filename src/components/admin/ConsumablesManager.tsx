@@ -544,7 +544,8 @@ export default function ConsumablesManager() {
       ) : (
         <div className="space-y-2">
           {filteredActiveItems.map((item) => {
-            const hasPackaging = item.packaging_unit && (item.units_per_package || 1) > 1;
+            // Item has packaging configured if packaging_unit is set
+            const hasPackaging = !!item.packaging_unit;
             
             return (
             <TabletCard key={item.id} className={editingId === item.id ? 'hidden' : ''}>
