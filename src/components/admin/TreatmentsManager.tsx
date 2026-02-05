@@ -367,6 +367,34 @@ export default function TreatmentsManager() {
                 <p className="text-xs text-muted-foreground">
                   Press Enter or click Add to add a dose. These will appear as dropdown options for doctors.
                 </p>
+
+                {/* Default Dose Selector */}
+                {formData.common_doses.length > 0 && (
+                  <div className="mt-4 pt-4 border-t">
+                    <label className="block text-sm font-medium mb-2">
+                      Default Dose
+                      <span className="text-muted-foreground font-normal ml-1">- pre-selected for doctors</span>
+                    </label>
+                    <Select
+                      value={formData.default_dose}
+                      onValueChange={(value) => setFormData({ ...formData, default_dose: value })}
+                    >
+                      <SelectTrigger className="h-14">
+                        <SelectValue placeholder="Select default dose (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="" className="py-3">
+                          No default
+                        </SelectItem>
+                        {formData.common_doses.map((dose) => (
+                          <SelectItem key={dose} value={dose} className="py-3">
+                            {dose} {formData.dosage_unit}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             )}
 
