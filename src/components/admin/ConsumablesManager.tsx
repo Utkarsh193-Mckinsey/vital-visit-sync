@@ -210,8 +210,42 @@ export default function ConsumablesManager() {
 
       setDeleteConfirm(null);
       fetchItems();
+    }
+  };
+
+  const handleAddStock = async (itemId: string) => {
+    if (stockToAdd <= 0) {
+      toast({
+        title: 'Invalid Amount',
+        description: 'Please enter a valid stock amount.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const item = items.find(i => i.id === itemId);
+      if (!item) return;
+
+      const newStock = (item.current_stock || 0) + stockToAdd;
+      
+      const { error } = await supabase
+        .from('stock_items')
+        .update({ current_stock: newStock })
+        .eq('id', itemId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Stock Added',
+        description: `Added ${stockToAdd} ${item.unit} to ${item.item_name}. New total: ${newStock}`,
+      });
+
+      setAddStockId(null);
+      setStockToAdd(0);
+      fetchItems();
     } catch (error) {
-      console.error('Error deactivating consumable:', error);
+      console.error('Error adding stock:', error);
       toast({
         title: 'Error',
         description: 'Failed to deactivate consumable.',
