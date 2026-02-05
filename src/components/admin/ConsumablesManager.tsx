@@ -119,6 +119,9 @@ export default function ConsumablesManager() {
       unit: item.unit,
       brand: item.brand || '',
       current_stock: item.current_stock || 0,
+      packaging_unit: item.packaging_unit || '',
+      units_per_package: item.units_per_package || 1,
+      variant: item.variant || '',
     });
   };
 
