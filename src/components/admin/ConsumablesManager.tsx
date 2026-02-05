@@ -36,6 +36,7 @@ const CATEGORIES = [
 ];
 
 const UNITS = ['pcs', 'ml', 'mg', 'vial', 'amp', 'pack', 'box'];
+const PACKAGING_UNITS = ['Box', 'Pack', 'Vial', 'Bottle', 'Piece', 'Carton', 'Strip'];
 
 interface ConsumableFormData {
   item_name: string;
@@ -43,6 +44,9 @@ interface ConsumableFormData {
   unit: string;
   brand: string;
   current_stock: number;
+  packaging_unit: string;
+  units_per_package: number;
+  variant: string;
 }
 
 const emptyForm: ConsumableFormData = {
@@ -51,6 +55,9 @@ const emptyForm: ConsumableFormData = {
   unit: 'pcs',
   brand: '',
   current_stock: 0,
+  packaging_unit: '',
+  units_per_package: 1,
+  variant: '',
 };
 
 export default function ConsumablesManager() {
