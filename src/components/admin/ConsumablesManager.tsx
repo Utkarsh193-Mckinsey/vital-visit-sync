@@ -4,7 +4,8 @@ import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletInput } from '@/components/ui/tablet-input';
 import { TabletCard, TabletCardContent, TabletCardHeader, TabletCardTitle } from '@/components/ui/tablet-card';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit2, Trash2, Save, X, Package, PackagePlus } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, Package, PackagePlus, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
