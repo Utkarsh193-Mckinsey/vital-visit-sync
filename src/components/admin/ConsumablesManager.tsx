@@ -362,26 +362,40 @@ export default function ConsumablesManager() {
         )}
       </div>
 
-      {/* Category Filter */}
+      {/* Search and Category Filter */}
       {!isAdding && !editingId && activeItems.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          <Badge
-            variant={filterCategory === 'all' ? 'default' : 'outline'}
-            className="cursor-pointer"
-            onClick={() => setFilterCategory('all')}
-          >
-            All ({activeItems.length})
-          </Badge>
-          {Object.entries(categoryCounts).map(([category, count]) => (
+        <div className="space-y-3">
+          {/* Search Input */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search consumables by name, brand, or variant..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-12"
+            />
+          </div>
+          
+          {/* Category Filter */}
+          <div className="flex flex-wrap gap-2">
             <Badge
-              key={category}
-              variant={filterCategory === category ? 'default' : 'outline'}
+              variant={filterCategory === 'all' ? 'default' : 'outline'}
               className="cursor-pointer"
-              onClick={() => setFilterCategory(category)}
+              onClick={() => setFilterCategory('all')}
             >
-              {category} ({count})
+              All ({searchedItems.length})
             </Badge>
-          ))}
+            {Object.entries(categoryCounts).map(([category, count]) => (
+              <Badge
+                key={category}
+                variant={filterCategory === category ? 'default' : 'outline'}
+                className="cursor-pointer"
+                onClick={() => setFilterCategory(category)}
+              >
+                {category} ({count})
+              </Badge>
+            ))}
+          </div>
         </div>
       )}
 
