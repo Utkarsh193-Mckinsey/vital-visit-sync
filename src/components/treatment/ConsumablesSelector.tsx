@@ -47,8 +47,21 @@ export function ConsumablesSelector({
   treatmentIds = [],
 }: ConsumablesSelectorProps) {
   const [stockItems, setStockItems] = useState<StockItem[]>([]);
+  const [defaultConsumables, setDefaultConsumables] = useState<{ stock_item_id: string; default_quantity: number; item_name: string; unit: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [hasLoadedDefaults, setHasLoadedDefaults] = useState(false);
+
+  useEffect(() => {
+    fetchStockItems();
+  }, []);
+
+  // Load default consumables when treatmentIds change
+  useEffect(() => {
+    if (treatmentIds.length > 0 && !hasLoadedDefaults) {
+      loadDefaultConsumables();
+    }
+  }, [treatmentIds, hasLoadedDefaults]);
 
   useEffect(() => {
     fetchStockItems();
