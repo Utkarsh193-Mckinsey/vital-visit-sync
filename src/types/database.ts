@@ -169,8 +169,19 @@ export interface AlertRule {
    recorded_by?: string;
    created_date: string;
    // Joined data
-   stock_item?: StockItem;
- }
+  stock_item?: StockItem;
+}
+
+export interface TreatmentConsumable {
+  id: string;
+  treatment_id: string;
+  stock_item_id: string;
+  default_quantity: number;
+  notes?: string;
+  created_date: string;
+  // Joined data
+  stock_item?: StockItem;
+}
  
 // Auth context types
 export interface AuthState {
