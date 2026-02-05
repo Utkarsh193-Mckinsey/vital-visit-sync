@@ -402,30 +402,50 @@ export default function TreatmentsManager() {
         <div className="space-y-2">
           {activeTreatments.map((treatment) => (
             <TabletCard key={treatment.id} className={editingId === treatment.id ? 'hidden' : ''}>
-              <TabletCardContent className="flex items-center justify-between py-4">
-                <div>
-                  <div className="font-medium text-lg">{treatment.treatment_name}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {treatment.category} • {treatment.dosage_unit}
-                    {treatment.administration_method && ` • ${treatment.administration_method}`}
+              <TabletCardContent className="py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="font-medium text-lg">{treatment.treatment_name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {treatment.category} • {treatment.dosage_unit}
+                      {treatment.administration_method && ` • ${treatment.administration_method}`}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <TabletButton
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setExpandedId(expandedId === treatment.id ? null : treatment.id)}
+                      leftIcon={expandedId === treatment.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    >
+                      Consumables
+                    </TabletButton>
+                    <TabletButton
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEdit(treatment)}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </TabletButton>
+                    <TabletButton
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setDeleteConfirm(treatment.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </TabletButton>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <TabletButton
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleEdit(treatment)}
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </TabletButton>
-                  <TabletButton
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setDeleteConfirm(treatment.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </TabletButton>
-                </div>
+                
+                {/* Expandable consumables section */}
+                {expandedId === treatment.id && (
+                  <div className="mt-4 pt-4 border-t">
+                    <TreatmentConsumablesEditor 
+                      treatmentId={treatment.id} 
+                      treatmentName={treatment.treatment_name}
+                    />
+                  </div>
+                )}
               </TabletCardContent>
             </TabletCard>
           ))}
