@@ -74,7 +74,9 @@ export default function ConsumablesManager() {
   const [stockToAdd, setStockToAdd] = useState<number>(0);
   const [packagesToAdd, setPackagesToAdd] = useState<number>(0);
   const [inlinePackagingUnit, setInlinePackagingUnit] = useState<string>('');
+  const [inlineBaseUnit, setInlineBaseUnit] = useState<string>('');
   const [inlineUnitsPerPackage, setInlineUnitsPerPackage] = useState<number>(1);
+  const [addStockStep, setAddStockStep] = useState<'packaging' | 'base_unit' | 'quantity'>('packaging');
   const [brandSearch, setBrandSearch] = useState('');
   const [showBrandDropdown, setShowBrandDropdown] = useState(false);
   const { toast } = useToast();
