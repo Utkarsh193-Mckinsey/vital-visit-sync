@@ -248,11 +248,15 @@ export default function ConsumablesManager() {
       console.error('Error adding stock:', error);
       toast({
         title: 'Error',
-        description: 'Failed to deactivate consumable.',
+        description: 'Failed to update stock.',
         variant: 'destructive',
       });
     }
   };
+
+  const filteredBrands = uniqueBrands.filter(brand =>
+    brand.toLowerCase().includes(brandSearch.toLowerCase())
+  );
 
   const activeItems = items.filter(i => i.status === 'active');
   const inactiveItems = items.filter(i => i.status === 'inactive');
