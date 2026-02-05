@@ -72,6 +72,8 @@ export default function ConsumablesManager() {
   const [addStockId, setAddStockId] = useState<string | null>(null);
   const [stockToAdd, setStockToAdd] = useState<number>(0);
   const [packagesToAdd, setPackagesToAdd] = useState<number>(0);
+  const [inlinePackagingUnit, setInlinePackagingUnit] = useState<string>('');
+  const [inlineUnitsPerPackage, setInlineUnitsPerPackage] = useState<number>(1);
   const [brandSearch, setBrandSearch] = useState('');
   const [showBrandDropdown, setShowBrandDropdown] = useState(false);
   const { toast } = useToast();
@@ -241,10 +243,17 @@ export default function ConsumablesManager() {
     const item = items.find(i => i.id === itemId);
     if (!item) return;
 
-    // If item has packaging, use packages to add; otherwise use direct units
-    const hasPackaging = item.packaging_unit && (item.units_per_package || 1) > 1;
+    // Check if item has packaging set, or if user is setting it now
+    const existingPackaging = item.packaging_unit && (item.units_per_package || 1) > 1;
+    const newPackaging = inlinePackagingUnit && inlineUnitsPerPackage > 1;
+    const hasPackaging = existingPackaging || newPackaging;
+    
+    const unitsPerPkg = existingPackaging 
+      ? (item.units_per_package || 1) 
+      : (newPackaging ? inlineUnitsPerPackage : 1);
+    
     const quantityToAdd = hasPackaging 
-      ? packagesToAdd * (item.units_per_package || 1)
+      ? packagesToAdd * unitsPerPkg
       : stockToAdd;
 
     if (quantityToAdd <= 0) {
@@ -259,15 +268,23 @@ export default function ConsumablesManager() {
     try {
       const newStock = (item.current_stock || 0) + quantityToAdd;
       
+      // Update stock and save packaging config if newly set
+      const updateData: Record<string, unknown> = { current_stock: newStock };
+      if (newPackaging && !existingPackaging) {
+        updateData.packaging_unit = inlinePackagingUnit;
+        updateData.units_per_package = inlineUnitsPerPackage;
+      }
+      
       const { error } = await supabase
         .from('stock_items')
-        .update({ current_stock: newStock })
+        .update(updateData)
         .eq('id', itemId);
 
       if (error) throw error;
 
+      const pkgUnit = existingPackaging ? item.packaging_unit : inlinePackagingUnit;
       const addedDesc = hasPackaging 
-        ? `Added ${packagesToAdd} ${item.packaging_unit}(s) (${quantityToAdd} ${item.unit})`
+        ? `Added ${packagesToAdd} ${pkgUnit}(s) (${quantityToAdd} ${item.unit})`
         : `Added ${stockToAdd} ${item.unit}`;
 
       toast({
@@ -275,9 +292,7 @@ export default function ConsumablesManager() {
         description: `${addedDesc} to ${item.item_name}. New total: ${newStock} ${item.unit}`,
       });
 
-      setAddStockId(null);
-      setStockToAdd(0);
-      setPackagesToAdd(0);
+      resetAddStockState();
       fetchItems();
     } catch (error) {
       console.error('Error adding stock:', error);
@@ -287,6 +302,14 @@ export default function ConsumablesManager() {
         variant: 'destructive',
       });
     }
+  };
+
+  const resetAddStockState = () => {
+    setAddStockId(null);
+    setStockToAdd(0);
+    setPackagesToAdd(0);
+    setInlinePackagingUnit('');
+    setInlineUnitsPerPackage(1);
   };
 
   const filteredBrands = uniqueBrands.filter(brand =>
@@ -545,8 +568,45 @@ export default function ConsumablesManager() {
                 
                 {/* Add Stock Modal */}
                 {addStockId === item.id ? (
-                  <div className="flex flex-col gap-2">
-                    {hasPackaging ? (
+                  <div className="flex flex-col gap-3 min-w-[280px] p-3 bg-muted/50 rounded-lg">
+                    {/* If no packaging configured, show config options */}
+                    {!hasPackaging && (
+                      <>
+                        <div className="text-sm font-medium text-muted-foreground">How does this item come?</div>
+                        <div className="flex gap-2">
+                          <Select
+                            value={inlinePackagingUnit}
+                            onValueChange={setInlinePackagingUnit}
+                          >
+                            <SelectTrigger className="h-10 flex-1">
+                              <SelectValue placeholder="Packaging (Box, Vial...)" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {PACKAGING_UNITS.map((pu) => (
+                                <SelectItem key={pu} value={pu}>
+                                  {pu}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <TabletInput
+                            type="number"
+                            placeholder={`${item.unit} per pkg`}
+                            className="w-24"
+                            value={inlineUnitsPerPackage.toString()}
+                            onChange={(e) => setInlineUnitsPerPackage(parseFloat(e.target.value) || 1)}
+                          />
+                        </div>
+                        {inlinePackagingUnit && inlineUnitsPerPackage > 1 && (
+                          <div className="text-xs text-muted-foreground">
+                            1 {inlinePackagingUnit} = {inlineUnitsPerPackage} {item.unit}
+                          </div>
+                        )}
+                      </>
+                    )}
+                    
+                    {/* Quantity input */}
+                    {(hasPackaging || (inlinePackagingUnit && inlineUnitsPerPackage > 1)) ? (
                       <div className="flex items-center gap-2">
                         <TabletInput
                           type="number"
@@ -554,33 +614,37 @@ export default function ConsumablesManager() {
                           className="w-20"
                           value={packagesToAdd.toString()}
                           onChange={(e) => setPackagesToAdd(parseFloat(e.target.value) || 0)}
-                          autoFocus
+                          autoFocus={hasPackaging}
                         />
                         <span className="text-sm text-muted-foreground whitespace-nowrap">
-                          {item.packaging_unit}(s) = {packagesToAdd * (item.units_per_package || 1)} {item.unit}
+                          {hasPackaging ? item.packaging_unit : inlinePackagingUnit}(s) = {packagesToAdd * (hasPackaging ? (item.units_per_package || 1) : inlineUnitsPerPackage)} {item.unit}
                         </span>
                       </div>
                     ) : (
-                      <TabletInput
-                        type="number"
-                        placeholder="Qty"
-                        className="w-20"
-                        value={stockToAdd.toString()}
-                        onChange={(e) => setStockToAdd(parseFloat(e.target.value) || 0)}
-                        autoFocus
-                      />
+                      <div className="flex items-center gap-2">
+                        <TabletInput
+                          type="number"
+                          placeholder={`Qty in ${item.unit}`}
+                          className="w-24"
+                          value={stockToAdd.toString()}
+                          onChange={(e) => setStockToAdd(parseFloat(e.target.value) || 0)}
+                          autoFocus
+                        />
+                        <span className="text-sm text-muted-foreground">{item.unit}</span>
+                      </div>
                     )}
+                    
                     <div className="flex gap-2">
                       <TabletButton
                         size="sm"
                         onClick={() => handleAddStock(item.id)}
                       >
-                        Add
+                        Add Stock
                       </TabletButton>
                       <TabletButton
                         size="sm"
                         variant="ghost"
-                        onClick={() => { setAddStockId(null); setStockToAdd(0); setPackagesToAdd(0); }}
+                        onClick={resetAddStockState}
                       >
                         <X className="h-4 w-4" />
                       </TabletButton>
