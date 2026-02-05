@@ -243,10 +243,17 @@ export default function ConsumablesManager() {
     const item = items.find(i => i.id === itemId);
     if (!item) return;
 
-    // If item has packaging, use packages to add; otherwise use direct units
-    const hasPackaging = item.packaging_unit && (item.units_per_package || 1) > 1;
+    // Check if item has packaging set, or if user is setting it now
+    const existingPackaging = item.packaging_unit && (item.units_per_package || 1) > 1;
+    const newPackaging = inlinePackagingUnit && inlineUnitsPerPackage > 1;
+    const hasPackaging = existingPackaging || newPackaging;
+    
+    const unitsPerPkg = existingPackaging 
+      ? (item.units_per_package || 1) 
+      : (newPackaging ? inlineUnitsPerPackage : 1);
+    
     const quantityToAdd = hasPackaging 
-      ? packagesToAdd * (item.units_per_package || 1)
+      ? packagesToAdd * unitsPerPkg
       : stockToAdd;
 
     if (quantityToAdd <= 0) {
@@ -261,15 +268,23 @@ export default function ConsumablesManager() {
     try {
       const newStock = (item.current_stock || 0) + quantityToAdd;
       
+      // Update stock and save packaging config if newly set
+      const updateData: Record<string, unknown> = { current_stock: newStock };
+      if (newPackaging && !existingPackaging) {
+        updateData.packaging_unit = inlinePackagingUnit;
+        updateData.units_per_package = inlineUnitsPerPackage;
+      }
+      
       const { error } = await supabase
         .from('stock_items')
-        .update({ current_stock: newStock })
+        .update(updateData)
         .eq('id', itemId);
 
       if (error) throw error;
 
+      const pkgUnit = existingPackaging ? item.packaging_unit : inlinePackagingUnit;
       const addedDesc = hasPackaging 
-        ? `Added ${packagesToAdd} ${item.packaging_unit}(s) (${quantityToAdd} ${item.unit})`
+        ? `Added ${packagesToAdd} ${pkgUnit}(s) (${quantityToAdd} ${item.unit})`
         : `Added ${stockToAdd} ${item.unit}`;
 
       toast({
@@ -277,9 +292,7 @@ export default function ConsumablesManager() {
         description: `${addedDesc} to ${item.item_name}. New total: ${newStock} ${item.unit}`,
       });
 
-      setAddStockId(null);
-      setStockToAdd(0);
-      setPackagesToAdd(0);
+      resetAddStockState();
       fetchItems();
     } catch (error) {
       console.error('Error adding stock:', error);
@@ -289,6 +302,14 @@ export default function ConsumablesManager() {
         variant: 'destructive',
       });
     }
+  };
+
+  const resetAddStockState = () => {
+    setAddStockId(null);
+    setStockToAdd(0);
+    setPackagesToAdd(0);
+    setInlinePackagingUnit('');
+    setInlineUnitsPerPackage(1);
   };
 
   const filteredBrands = uniqueBrands.filter(brand =>
