@@ -248,12 +248,15 @@ export default function ConsumablesManager() {
 
     // Check if item has packaging set, or if user is setting it now
     const existingPackaging = item.packaging_unit && (item.units_per_package || 1) > 1;
-    const newPackaging = inlinePackagingUnit && inlineUnitsPerPackage > 1;
+    const newPackaging = inlinePackagingUnit && inlineBaseUnit && inlineUnitsPerPackage > 0;
     const hasPackaging = existingPackaging || newPackaging;
     
     const unitsPerPkg = existingPackaging 
       ? (item.units_per_package || 1) 
       : (newPackaging ? inlineUnitsPerPackage : 1);
+    
+    // Determine the effective base unit
+    const effectiveBaseUnit = existingPackaging ? item.unit : (newPackaging ? inlineBaseUnit : item.unit);
     
     const quantityToAdd = hasPackaging 
       ? packagesToAdd * unitsPerPkg
@@ -276,6 +279,7 @@ export default function ConsumablesManager() {
       if (newPackaging && !existingPackaging) {
         updateData.packaging_unit = inlinePackagingUnit;
         updateData.units_per_package = inlineUnitsPerPackage;
+        updateData.unit = inlineBaseUnit; // Update base unit
       }
       
       const { error } = await supabase
@@ -287,12 +291,12 @@ export default function ConsumablesManager() {
 
       const pkgUnit = existingPackaging ? item.packaging_unit : inlinePackagingUnit;
       const addedDesc = hasPackaging 
-        ? `Added ${packagesToAdd} ${pkgUnit}(s) (${quantityToAdd} ${item.unit})`
+        ? `Added ${packagesToAdd} ${pkgUnit}(s) (${quantityToAdd} ${effectiveBaseUnit})`
         : `Added ${stockToAdd} ${item.unit}`;
 
       toast({
         title: 'Stock Added',
-        description: `${addedDesc} to ${item.item_name}. New total: ${newStock} ${item.unit}`,
+        description: `${addedDesc} to ${item.item_name}. New total: ${newStock} ${effectiveBaseUnit}`,
       });
 
       resetAddStockState();
