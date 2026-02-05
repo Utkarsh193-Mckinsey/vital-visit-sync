@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           consent_template_id: string
           id: string
+          language: string | null
           pdf_url: string | null
           signature_url: string
           signed_date: string
@@ -27,6 +28,7 @@ export type Database = {
         Insert: {
           consent_template_id: string
           id?: string
+          language?: string | null
           pdf_url?: string | null
           signature_url: string
           signed_date?: string
@@ -36,6 +38,7 @@ export type Database = {
         Update: {
           consent_template_id?: string
           id?: string
+          language?: string | null
           pdf_url?: string | null
           signature_url?: string
           signed_date?: string
@@ -69,6 +72,7 @@ export type Database = {
       consent_templates: {
         Row: {
           consent_text: string
+          consent_text_ar: string | null
           created_date: string
           form_name: string
           id: string
@@ -80,6 +84,7 @@ export type Database = {
         }
         Insert: {
           consent_text: string
+          consent_text_ar?: string | null
           created_date?: string
           form_name: string
           id?: string
@@ -91,6 +96,7 @@ export type Database = {
         }
         Update: {
           consent_text?: string
+          consent_text_ar?: string | null
           created_date?: string
           form_name?: string
           id?: string
