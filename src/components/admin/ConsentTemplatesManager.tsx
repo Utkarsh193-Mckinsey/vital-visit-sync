@@ -171,6 +171,7 @@ export default function ConsentTemplatesManager() {
           .update({
             form_name: formData.form_name.trim(),
             consent_text: formData.consent_text.trim(),
+            consent_text_ar: formData.consent_text_ar.trim() || null,
             treatment_id: formData.treatment_id || null,
             last_updated: new Date().toISOString(),
           })
