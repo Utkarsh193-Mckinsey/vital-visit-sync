@@ -687,6 +687,9 @@ export default function ConsumablesManager() {
                               >
                                 Next
                               </TabletButton>
+                              <TabletButton size="sm" variant="ghost" onClick={resetAddStockState}>
+                                <X className="h-4 w-4" />
+                              </TabletButton>
                             </div>
                           </>
                         )}
@@ -725,6 +728,9 @@ export default function ConsumablesManager() {
                                 disabled={packagesToAdd <= 0}
                               >
                                 Add Stock
+                              </TabletButton>
+                              <TabletButton size="sm" variant="ghost" onClick={resetAddStockState}>
+                                <X className="h-4 w-4" />
                               </TabletButton>
                             </div>
                           </>
