@@ -149,6 +149,8 @@ export default function ConsumablesManager() {
             item_name: formData.item_name.trim(),
             category: formData.category,
             unit: formData.unit,
+            brand: formData.brand.trim() || null,
+            current_stock: formData.current_stock,
             status: 'active',
           });
 
@@ -165,6 +167,8 @@ export default function ConsumablesManager() {
             item_name: formData.item_name.trim(),
             category: formData.category,
             unit: formData.unit,
+            brand: formData.brand.trim() || null,
+            current_stock: formData.current_stock,
           })
           .eq('id', editingId);
 
