@@ -41,12 +41,16 @@ interface ConsumableFormData {
   item_name: string;
   category: string;
   unit: string;
+  brand: string;
+  current_stock: number;
 }
 
 const emptyForm: ConsumableFormData = {
   item_name: '',
   category: '',
   unit: 'pcs',
+  brand: '',
+  current_stock: 0,
 };
 
 export default function ConsumablesManager() {
