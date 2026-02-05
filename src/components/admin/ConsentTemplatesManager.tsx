@@ -305,9 +305,9 @@ export default function ConsentTemplatesManager() {
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-medium">Consent Text *</label>
+              <label className="block text-sm font-medium">Consent Text (English) *</label>
               <Textarea
-                placeholder="Enter the full consent form text here. This will be shown to patients before treatment..."
+                placeholder="Enter the full consent form text in English..."
                 value={formData.consent_text}
                 onChange={(e) => setFormData({ ...formData, consent_text: e.target.value })}
                 rows={10}
@@ -315,6 +315,21 @@ export default function ConsentTemplatesManager() {
               />
               <p className="text-xs text-muted-foreground">
                 Use clear, patient-friendly language. Include risks, benefits, and alternatives.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium">Consent Text (Arabic) - اﻟﻨﺺ اﻟﻌﺮﺑﻲ</label>
+              <Textarea
+                placeholder="أدخل نص نموذج الموافقة بالعربية..."
+                value={formData.consent_text_ar}
+                onChange={(e) => setFormData({ ...formData, consent_text_ar: e.target.value })}
+                rows={10}
+                className="min-h-[200px] text-base"
+                dir="rtl"
+              />
+              <p className="text-xs text-muted-foreground">
+                Optional: Arabic version will be shown when patient selects Arabic language.
               </p>
             </div>
 
