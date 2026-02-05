@@ -123,12 +123,12 @@ export default function TreatmentAdmin() {
 
       if (packagesError) throw packagesError;
 
-      // Initialize treatment entries from ALL packages
+      // Initialize treatment entries from ALL packages with default doses pre-filled
       const entries: TreatmentEntry[] = (packagesData as unknown as PackageWithTreatment[]).map((pkg) => ({
         packageId: pkg.id,
         treatmentId: pkg.treatment_id,
         treatmentName: pkg.treatment?.treatment_name || 'Unknown Treatment',
-        doseAdministered: '',
+        doseAdministered: (pkg.treatment as any)?.default_dose || '',  // Pre-fill with default dose
         doseUnit: pkg.treatment?.dosage_unit || 'Session',
         administrationDetails: '',
         sessionsRemaining: pkg.sessions_remaining,
