@@ -403,26 +403,39 @@ function parseConsentSections(englishText: string, arabicText?: string): Consent
 function parseTextToSections(text: string): { title: string; content: string }[] {
   const sections: { title: string; content: string }[] = [];
   
-  // Split by numbered sections (1. Title, 2. Title, etc.)
-  const regex = /(\d+\.\s*[^\n]+)\n([\s\S]*?)(?=\d+\.\s|$)/g;
+  // Split by numbered sections - supports both English (1. 2. 3.) and Arabic numerals
+  // Match pattern: number followed by period, then title text, then content until next number or end
+  const regex = /(?:^|\n)([\d٠-٩]+\.\s*[^\n]+)\n([\s\S]*?)(?=(?:^|\n)[\d٠-٩]+\.\s|$)/gm;
   let match;
   
   while ((match = regex.exec(text)) !== null) {
     const titleLine = match[1].trim();
     const content = match[2].trim();
     
-    // Extract title (remove the number prefix)
-    const title = titleLine.replace(/^\d+\.\s*/, '');
+    // Extract title (remove the number prefix - both Arabic and English numerals)
+    const title = titleLine.replace(/^[\d٠-٩]+\.\s*/, '');
     
-    sections.push({ title, content });
+    if (title && content) {
+      sections.push({ title, content });
+    }
   }
   
   // If no numbered sections found, treat as single section
   if (sections.length === 0 && text.trim()) {
-    sections.push({
-      title: 'Consent Information',
-      content: text.trim()
-    });
+    // Try to split by double newlines as paragraphs
+    const paragraphs = text.split(/\n\n+/).filter(p => p.trim());
+    if (paragraphs.length > 1) {
+      // First paragraph might be a title
+      sections.push({
+        title: 'معلومات الموافقة',
+        content: text.trim()
+      });
+    } else {
+      sections.push({
+        title: 'Consent Information',
+        content: text.trim()
+      });
+    }
   }
   
   return sections;
