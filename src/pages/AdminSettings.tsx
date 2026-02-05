@@ -4,9 +4,10 @@ import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletCard, TabletCardContent, TabletCardHeader, TabletCardTitle } from '@/components/ui/tablet-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Pill, FileText } from 'lucide-react';
+import { ArrowLeft, Pill, FileText, Package } from 'lucide-react';
 import TreatmentsManager from '@/components/admin/TreatmentsManager';
 import ConsentTemplatesManager from '@/components/admin/ConsentTemplatesManager';
+import ConsumablesManager from '@/components/admin/ConsumablesManager';
 
 export default function AdminSettings() {
   const navigate = useNavigate();
@@ -29,10 +30,14 @@ export default function AdminSettings() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 h-14">
+        <TabsList className="grid w-full grid-cols-3 h-14">
           <TabsTrigger value="treatments" className="h-12 text-base flex items-center gap-2">
             <Pill className="h-4 w-4" />
             Treatments
+          </TabsTrigger>
+          <TabsTrigger value="consumables" className="h-12 text-base flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Consumables
           </TabsTrigger>
           <TabsTrigger value="consent" className="h-12 text-base flex items-center gap-2">
             <FileText className="h-4 w-4" />
@@ -42,6 +47,10 @@ export default function AdminSettings() {
 
         <TabsContent value="treatments" className="mt-4">
           <TreatmentsManager />
+        </TabsContent>
+
+        <TabsContent value="consumables" className="mt-4">
+          <ConsumablesManager />
         </TabsContent>
 
         <TabsContent value="consent" className="mt-4">
