@@ -4,8 +4,9 @@ import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletInput } from '@/components/ui/tablet-input';
 import { TabletCard, TabletCardContent, TabletCardHeader, TabletCardTitle } from '@/components/ui/tablet-card';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit2, Trash2, Save, X, Pill } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, Pill, ChevronDown, ChevronUp } from 'lucide-react';
 import type { Treatment, DosageUnit } from '@/types/database';
+import { TreatmentConsumablesEditor } from './TreatmentConsumablesEditor';
 import {
   Select,
   SelectContent,
