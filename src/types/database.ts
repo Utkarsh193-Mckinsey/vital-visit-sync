@@ -52,6 +52,7 @@ export interface ConsentTemplate {
   form_name: string;
   treatment_id?: string;
   consent_text: string;
+  consent_text_ar?: string;
   version_number: number;
   is_current_version: boolean;
   status: ConsentStatus;
