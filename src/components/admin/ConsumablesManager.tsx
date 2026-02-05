@@ -448,28 +448,75 @@ export default function ConsumablesManager() {
           {filteredActiveItems.map((item) => (
             <TabletCard key={item.id} className={editingId === item.id ? 'hidden' : ''}>
               <TabletCardContent className="flex items-center justify-between py-4">
-                <div>
-                  <div className="font-medium text-lg">{item.item_name}</div>
+                <div className="flex-1">
+                  <div className="font-medium text-lg flex items-center gap-2">
+                    {item.item_name}
+                    <Badge variant="outline" className="text-xs">
+                      {item.unit}
+                    </Badge>
+                  </div>
                   <div className="text-sm text-muted-foreground">
-                    {item.category} • {item.unit}
+                    {item.category}
+                    {item.brand && <span> • {item.brand}</span>}
+                  </div>
+                  <div className="text-sm mt-1">
+                    <span className={`font-medium ${(item.current_stock || 0) <= 0 ? 'text-destructive' : 'text-primary'}`}>
+                      Stock: {item.current_stock || 0} {item.unit}
+                    </span>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <TabletButton
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleEdit(item)}
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </TabletButton>
-                  <TabletButton
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setDeleteConfirm(item.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </TabletButton>
-                </div>
+                
+                {/* Add Stock Modal */}
+                {addStockId === item.id ? (
+                  <div className="flex items-center gap-2">
+                    <TabletInput
+                      type="number"
+                      placeholder="Qty"
+                      className="w-20"
+                      value={stockToAdd.toString()}
+                      onChange={(e) => setStockToAdd(parseFloat(e.target.value) || 0)}
+                      autoFocus
+                    />
+                    <TabletButton
+                      size="sm"
+                      onClick={() => handleAddStock(item.id)}
+                    >
+                      Add
+                    </TabletButton>
+                    <TabletButton
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => { setAddStockId(null); setStockToAdd(0); }}
+                    >
+                      <X className="h-4 w-4" />
+                    </TabletButton>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <TabletButton
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAddStockId(item.id)}
+                      leftIcon={<PackagePlus className="h-4 w-4" />}
+                    >
+                      Add Stock
+                    </TabletButton>
+                    <TabletButton
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEdit(item)}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </TabletButton>
+                    <TabletButton
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setDeleteConfirm(item.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </TabletButton>
+                  </div>
+                )}
               </TabletCardContent>
             </TabletCard>
           ))}
