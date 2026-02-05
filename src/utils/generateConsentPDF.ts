@@ -26,11 +26,56 @@ async function getAmiriFont(): Promise<string> {
   return cachedAmiriFont;
 }
 
-// Load logo image
+// Load and convert logo to black and white
 async function loadLogoImage(): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.onload = () => resolve(img);
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      // Convert to black and white using canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(img);
+        return;
+      }
+      
+      // Draw the image
+      ctx.drawImage(img, 0, 0);
+      
+      // Get image data and convert to grayscale/black
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        const alpha = data[i + 3];
+        
+        // Skip transparent pixels
+        if (alpha < 10) continue;
+        
+        // Convert to grayscale then to black
+        const gray = (r * 0.299 + g * 0.587 + b * 0.114);
+        // Make it pure black for non-transparent pixels
+        const bw = gray < 200 ? 0 : 0; // Force black for the logo
+        
+        data[i] = bw;
+        data[i + 1] = bw;
+        data[i + 2] = bw;
+      }
+      
+      ctx.putImageData(imageData, 0, 0);
+      
+      // Create new image from canvas
+      const bwImg = new Image();
+      bwImg.onload = () => resolve(bwImg);
+      bwImg.onerror = reject;
+      bwImg.src = canvas.toDataURL('image/png');
+    };
     img.onerror = reject;
     img.src = cosmiqueSymbol;
   });
@@ -403,26 +448,39 @@ function parseConsentSections(englishText: string, arabicText?: string): Consent
 function parseTextToSections(text: string): { title: string; content: string }[] {
   const sections: { title: string; content: string }[] = [];
   
-  // Split by numbered sections (1. Title, 2. Title, etc.)
-  const regex = /(\d+\.\s*[^\n]+)\n([\s\S]*?)(?=\d+\.\s|$)/g;
+  // Split by numbered sections - supports both English (1. 2. 3.) and Arabic numerals
+  // Match pattern: number followed by period, then title text, then content until next number or end
+  const regex = /(?:^|\n)([\d٠-٩]+\.\s*[^\n]+)\n([\s\S]*?)(?=(?:^|\n)[\d٠-٩]+\.\s|$)/gm;
   let match;
   
   while ((match = regex.exec(text)) !== null) {
     const titleLine = match[1].trim();
     const content = match[2].trim();
     
-    // Extract title (remove the number prefix)
-    const title = titleLine.replace(/^\d+\.\s*/, '');
+    // Extract title (remove the number prefix - both Arabic and English numerals)
+    const title = titleLine.replace(/^[\d٠-٩]+\.\s*/, '');
     
-    sections.push({ title, content });
+    if (title && content) {
+      sections.push({ title, content });
+    }
   }
   
   // If no numbered sections found, treat as single section
   if (sections.length === 0 && text.trim()) {
-    sections.push({
-      title: 'Consent Information',
-      content: text.trim()
-    });
+    // Try to split by double newlines as paragraphs
+    const paragraphs = text.split(/\n\n+/).filter(p => p.trim());
+    if (paragraphs.length > 1) {
+      // First paragraph might be a title
+      sections.push({
+        title: 'معلومات الموافقة',
+        content: text.trim()
+      });
+    } else {
+      sections.push({
+        title: 'Consent Information',
+        content: text.trim()
+      });
+    }
   }
   
   return sections;
