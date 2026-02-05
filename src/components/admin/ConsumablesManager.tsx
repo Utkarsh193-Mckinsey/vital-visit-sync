@@ -330,8 +330,18 @@ export default function ConsumablesManager() {
   const activeItems = items.filter(i => i.status === 'active');
   const inactiveItems = items.filter(i => i.status === 'inactive');
 
+  // Apply search filter
+  const searchedItems = searchQuery.trim() 
+    ? activeItems.filter(i => 
+        i.item_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        i.brand?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        i.variant?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        i.category.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : activeItems;
+
   const filteredActiveItems = filterCategory === 'all' 
-    ? activeItems 
+    ? searchedItems 
     : activeItems.filter(i => i.category === filterCategory);
 
   const categoryCounts = activeItems.reduce((acc, item) => {
