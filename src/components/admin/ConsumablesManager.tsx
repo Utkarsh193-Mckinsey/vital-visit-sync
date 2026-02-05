@@ -62,7 +62,14 @@ export default function ConsumablesManager() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [addStockId, setAddStockId] = useState<string | null>(null);
+  const [stockToAdd, setStockToAdd] = useState<number>(0);
+  const [brandSearch, setBrandSearch] = useState('');
+  const [showBrandDropdown, setShowBrandDropdown] = useState(false);
   const { toast } = useToast();
+
+  // Get unique brands for autocomplete
+  const uniqueBrands = [...new Set(items.map(i => i.brand).filter(Boolean))] as string[];
 
   useEffect(() => {
     fetchItems();
