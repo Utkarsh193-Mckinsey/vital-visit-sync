@@ -511,12 +511,20 @@ export default function ConsumablesManager() {
         </TabletCard>
       ) : (
         <div className="space-y-2">
-          {filteredActiveItems.map((item) => (
+          {filteredActiveItems.map((item) => {
+            const hasPackaging = item.packaging_unit && (item.units_per_package || 1) > 1;
+            
+            return (
             <TabletCard key={item.id} className={editingId === item.id ? 'hidden' : ''}>
               <TabletCardContent className="flex items-center justify-between py-4">
                 <div className="flex-1">
-                  <div className="font-medium text-lg flex items-center gap-2">
+                  <div className="font-medium text-lg flex items-center gap-2 flex-wrap">
                     {item.item_name}
+                    {item.variant && (
+                      <Badge variant="secondary" className="text-xs">
+                        {item.variant}
+                      </Badge>
+                    )}
                     <Badge variant="outline" className="text-xs">
                       {item.unit}
                     </Badge>
@@ -524,6 +532,9 @@ export default function ConsumablesManager() {
                   <div className="text-sm text-muted-foreground">
                     {item.category}
                     {item.brand && <span> • {item.brand}</span>}
+                    {hasPackaging && (
+                      <span> • 1 {item.packaging_unit} = {item.units_per_package} {item.unit}</span>
+                    )}
                   </div>
                   <div className="text-sm mt-1">
                     <span className={`font-medium ${(item.current_stock || 0) <= 0 ? 'text-destructive' : 'text-primary'}`}>
@@ -534,28 +545,46 @@ export default function ConsumablesManager() {
                 
                 {/* Add Stock Modal */}
                 {addStockId === item.id ? (
-                  <div className="flex items-center gap-2">
-                    <TabletInput
-                      type="number"
-                      placeholder="Qty"
-                      className="w-20"
-                      value={stockToAdd.toString()}
-                      onChange={(e) => setStockToAdd(parseFloat(e.target.value) || 0)}
-                      autoFocus
-                    />
-                    <TabletButton
-                      size="sm"
-                      onClick={() => handleAddStock(item.id)}
-                    >
-                      Add
-                    </TabletButton>
-                    <TabletButton
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => { setAddStockId(null); setStockToAdd(0); }}
-                    >
-                      <X className="h-4 w-4" />
-                    </TabletButton>
+                  <div className="flex flex-col gap-2">
+                    {hasPackaging ? (
+                      <div className="flex items-center gap-2">
+                        <TabletInput
+                          type="number"
+                          placeholder="Qty"
+                          className="w-20"
+                          value={packagesToAdd.toString()}
+                          onChange={(e) => setPackagesToAdd(parseFloat(e.target.value) || 0)}
+                          autoFocus
+                        />
+                        <span className="text-sm text-muted-foreground whitespace-nowrap">
+                          {item.packaging_unit}(s) = {packagesToAdd * (item.units_per_package || 1)} {item.unit}
+                        </span>
+                      </div>
+                    ) : (
+                      <TabletInput
+                        type="number"
+                        placeholder="Qty"
+                        className="w-20"
+                        value={stockToAdd.toString()}
+                        onChange={(e) => setStockToAdd(parseFloat(e.target.value) || 0)}
+                        autoFocus
+                      />
+                    )}
+                    <div className="flex gap-2">
+                      <TabletButton
+                        size="sm"
+                        onClick={() => handleAddStock(item.id)}
+                      >
+                        Add
+                      </TabletButton>
+                      <TabletButton
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => { setAddStockId(null); setStockToAdd(0); setPackagesToAdd(0); }}
+                      >
+                        <X className="h-4 w-4" />
+                      </TabletButton>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex gap-2">
