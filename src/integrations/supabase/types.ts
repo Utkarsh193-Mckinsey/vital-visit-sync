@@ -337,6 +337,7 @@ export type Database = {
           common_doses: Json | null
           consent_template_id: string | null
           created_date: string
+          default_dose: string | null
           dosage_unit: Database["public"]["Enums"]["dosage_unit"]
           id: string
           status: Database["public"]["Enums"]["treatment_status"]
@@ -348,6 +349,7 @@ export type Database = {
           common_doses?: Json | null
           consent_template_id?: string | null
           created_date?: string
+          default_dose?: string | null
           dosage_unit?: Database["public"]["Enums"]["dosage_unit"]
           id?: string
           status?: Database["public"]["Enums"]["treatment_status"]
@@ -359,6 +361,7 @@ export type Database = {
           common_doses?: Json | null
           consent_template_id?: string | null
           created_date?: string
+          default_dose?: string | null
           dosage_unit?: Database["public"]["Enums"]["dosage_unit"]
           id?: string
           status?: Database["public"]["Enums"]["treatment_status"]

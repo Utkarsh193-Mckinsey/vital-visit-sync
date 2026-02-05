@@ -34,6 +34,7 @@ interface TreatmentFormData {
   dosage_unit: DosageUnit;
   administration_method: string;
   common_doses: string[];
+  default_dose: string;
 }
 
 const emptyForm: TreatmentFormData = {
@@ -42,6 +43,7 @@ const emptyForm: TreatmentFormData = {
   dosage_unit: 'Session',
   administration_method: '',
   common_doses: [],
+  default_dose: '',
 };
 
 // Units that support common doses (medical measurable units)
@@ -98,6 +100,7 @@ export default function TreatmentsManager() {
       dosage_unit: treatment.dosage_unit,
       administration_method: treatment.administration_method || '',
       common_doses: treatment.common_doses || [],
+      default_dose: (treatment as any).default_dose || '',
     });
   };
 
@@ -139,6 +142,7 @@ export default function TreatmentsManager() {
             dosage_unit: formData.dosage_unit,
             administration_method: formData.administration_method.trim() || null,
             common_doses: formData.common_doses.length > 0 ? formData.common_doses : null,
+            default_dose: formData.default_dose.trim() || null,
             status: 'active',
           });
 
@@ -157,6 +161,7 @@ export default function TreatmentsManager() {
             dosage_unit: formData.dosage_unit,
             administration_method: formData.administration_method.trim() || null,
             common_doses: formData.common_doses.length > 0 ? formData.common_doses : null,
+            default_dose: formData.default_dose.trim() || null,
           })
           .eq('id', editingId);
 
@@ -362,6 +367,34 @@ export default function TreatmentsManager() {
                 <p className="text-xs text-muted-foreground">
                   Press Enter or click Add to add a dose. These will appear as dropdown options for doctors.
                 </p>
+
+                {/* Default Dose Selector */}
+                {formData.common_doses.length > 0 && (
+                  <div className="mt-4 pt-4 border-t">
+                    <label className="block text-sm font-medium mb-2">
+                      Default Dose
+                      <span className="text-muted-foreground font-normal ml-1">- pre-selected for doctors</span>
+                    </label>
+                    <Select
+                      value={formData.default_dose}
+                      onValueChange={(value) => setFormData({ ...formData, default_dose: value })}
+                    >
+                      <SelectTrigger className="h-14">
+                        <SelectValue placeholder="Select default dose (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="" className="py-3">
+                          No default
+                        </SelectItem>
+                        {formData.common_doses.map((dose) => (
+                          <SelectItem key={dose} value={dose} className="py-3">
+                            {dose} {formData.dosage_unit}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             )}
 

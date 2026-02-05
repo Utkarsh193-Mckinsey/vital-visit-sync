@@ -41,6 +41,7 @@ export interface Treatment {
   category: string;
   dosage_unit: DosageUnit;
   common_doses?: string[];
+  default_dose?: string;
   administration_method?: string;
   consent_template_id?: string;
   status: TreatmentStatus;
