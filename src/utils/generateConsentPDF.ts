@@ -9,9 +9,12 @@ interface ConsentPDFData {
   consentText: string;
   signatureDataUrl: string;
   signedDate: Date;
+  language?: 'en' | 'ar';
 }
 
 export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
+  const isArabic = data.language === 'ar';
+  
   const pdf = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -54,22 +57,27 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
   // Patient Information Section
   pdf.setFontSize(12);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('PATIENT INFORMATION', margin, yPosition);
+  const patientInfoTitle = isArabic ? 'Patient Information / معلومات المريض' : 'PATIENT INFORMATION';
+  pdf.text(patientInfoTitle, margin, yPosition);
   yPosition += 8;
 
   pdf.setFontSize(10);
   pdf.setFont('helvetica', 'normal');
   
-  pdf.text(`Patient Name: ${data.patientName}`, margin, yPosition);
+  const patientNameLabel = isArabic ? `Patient Name / اسم المريض: ${data.patientName}` : `Patient Name: ${data.patientName}`;
+  pdf.text(patientNameLabel, margin, yPosition);
   yPosition += 6;
   
-  pdf.text(`Date of Birth: ${formatDate(data.patientDOB)}`, margin, yPosition);
+  const dobLabel = isArabic ? `Date of Birth / تاريخ الميلاد: ${formatDate(data.patientDOB)}` : `Date of Birth: ${formatDate(data.patientDOB)}`;
+  pdf.text(dobLabel, margin, yPosition);
   yPosition += 6;
   
-  pdf.text(`Phone: ${data.patientPhone}`, margin, yPosition);
+  const phoneLabel = isArabic ? `Contact Number / رقم التواصل: ${data.patientPhone}` : `Phone: ${data.patientPhone}`;
+  pdf.text(phoneLabel, margin, yPosition);
   yPosition += 6;
   
-  pdf.text(`Treatment: ${data.treatmentName}`, margin, yPosition);
+  const procedureDateLabel = isArabic ? `Procedure Date / تاريخ الإجراء: ${formatDate(data.signedDate.toISOString())}` : `Treatment: ${data.treatmentName}`;
+  pdf.text(procedureDateLabel, margin, yPosition);
   yPosition += 12;
 
   // Divider line
@@ -80,14 +88,14 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
   // Consent Text Section
   pdf.setFontSize(12);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('CONSENT TERMS', margin, yPosition);
+  const consentTermsTitle = isArabic ? 'CONSENT TERMS / شروط الموافقة' : 'CONSENT TERMS';
+  pdf.text(consentTermsTitle, margin, yPosition);
   yPosition += 8;
 
   pdf.setFontSize(9);
   pdf.setFont('helvetica', 'normal');
 
   // Replace placeholders in consent text
-  // Handle various placeholder formats: [PATIENT_NAME], [patient name], [patient's name], etc.
   let processedConsentText = data.consentText
     .replace(/\[PATIENT_NAME\]/g, data.patientName)
     .replace(/\[patient_name\]/gi, data.patientName)
@@ -131,16 +139,16 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
   // Signature Section
   pdf.setFontSize(12);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('PATIENT SIGNATURE', margin, yPosition);
+  const signatureTitle = isArabic ? 'PATIENT SIGNATURE / توقيع المريض' : 'PATIENT SIGNATURE';
+  pdf.text(signatureTitle, margin, yPosition);
   yPosition += 8;
 
   pdf.setFontSize(10);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(
-    'By signing below, I acknowledge that I have read, understood, and agree to the terms above.',
-    margin,
-    yPosition
-  );
+  const signatureAcknowledgement = isArabic 
+    ? 'By signing below, I acknowledge that I have read, understood, and agree to the terms above.'
+    : 'By signing below, I acknowledge that I have read, understood, and agree to the terms above.';
+  pdf.text(signatureAcknowledgement, margin, yPosition);
   yPosition += 10;
 
   // Add signature image
@@ -160,10 +168,12 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
   pdf.line(margin, yPosition, margin + 80, yPosition);
   yPosition += 5;
   pdf.setFontSize(8);
-  pdf.text('Patient Signature', margin, yPosition);
+  const patientSigLabel = isArabic ? 'Patient Signature / توقيع المريض' : 'Patient Signature';
+  pdf.text(patientSigLabel, margin, yPosition);
   
   // Date
-  pdf.text(`Date: ${formatDateTime(data.signedDate)}`, margin + 100, yPosition);
+  const dateLabel = isArabic ? `Date / التاريخ: ${formatDateTime(data.signedDate)}` : `Date: ${formatDateTime(data.signedDate)}`;
+  pdf.text(dateLabel, margin + 100, yPosition);
   yPosition += 15;
 
   // Footer
