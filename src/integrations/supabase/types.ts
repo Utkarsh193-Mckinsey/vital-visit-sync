@@ -288,6 +288,48 @@ export type Database = {
         }
         Relationships: []
       }
+      treatment_consumables: {
+        Row: {
+          created_date: string
+          default_quantity: number
+          id: string
+          notes: string | null
+          stock_item_id: string
+          treatment_id: string
+        }
+        Insert: {
+          created_date?: string
+          default_quantity?: number
+          id?: string
+          notes?: string | null
+          stock_item_id: string
+          treatment_id: string
+        }
+        Update: {
+          created_date?: string
+          default_quantity?: number
+          id?: string
+          notes?: string | null
+          stock_item_id?: string
+          treatment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treatment_consumables_stock_item_id_fkey"
+            columns: ["stock_item_id"]
+            isOneToOne: false
+            referencedRelation: "stock_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treatment_consumables_treatment_id_fkey"
+            columns: ["treatment_id"]
+            isOneToOne: false
+            referencedRelation: "treatments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       treatments: {
         Row: {
           administration_method: string | null

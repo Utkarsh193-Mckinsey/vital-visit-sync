@@ -4,7 +4,8 @@ import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletInput } from '@/components/ui/tablet-input';
 import { TabletCard, TabletCardContent, TabletCardHeader, TabletCardTitle } from '@/components/ui/tablet-card';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit2, Trash2, Save, X, Package, PackagePlus } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, Package, PackagePlus, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -70,6 +71,7 @@ export default function ConsumablesManager() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [addStockId, setAddStockId] = useState<string | null>(null);
   const [stockToAdd, setStockToAdd] = useState<number>(0);
   const [packagesToAdd, setPackagesToAdd] = useState<number>(0);
@@ -328,8 +330,18 @@ export default function ConsumablesManager() {
   const activeItems = items.filter(i => i.status === 'active');
   const inactiveItems = items.filter(i => i.status === 'inactive');
 
+  // Apply search filter
+  const searchedItems = searchQuery.trim() 
+    ? activeItems.filter(i => 
+        i.item_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        i.brand?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        i.variant?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        i.category.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : activeItems;
+
   const filteredActiveItems = filterCategory === 'all' 
-    ? activeItems 
+    ? searchedItems 
     : activeItems.filter(i => i.category === filterCategory);
 
   const categoryCounts = activeItems.reduce((acc, item) => {
@@ -350,26 +362,40 @@ export default function ConsumablesManager() {
         )}
       </div>
 
-      {/* Category Filter */}
+      {/* Search and Category Filter */}
       {!isAdding && !editingId && activeItems.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          <Badge
-            variant={filterCategory === 'all' ? 'default' : 'outline'}
-            className="cursor-pointer"
-            onClick={() => setFilterCategory('all')}
-          >
-            All ({activeItems.length})
-          </Badge>
-          {Object.entries(categoryCounts).map(([category, count]) => (
+        <div className="space-y-3">
+          {/* Search Input */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search consumables by name, brand, or variant..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-12"
+            />
+          </div>
+          
+          {/* Category Filter */}
+          <div className="flex flex-wrap gap-2">
             <Badge
-              key={category}
-              variant={filterCategory === category ? 'default' : 'outline'}
+              variant={filterCategory === 'all' ? 'default' : 'outline'}
               className="cursor-pointer"
-              onClick={() => setFilterCategory(category)}
+              onClick={() => setFilterCategory('all')}
             >
-              {category} ({count})
+              All ({searchedItems.length})
             </Badge>
-          ))}
+            {Object.entries(categoryCounts).map(([category, count]) => (
+              <Badge
+                key={category}
+                variant={filterCategory === category ? 'default' : 'outline'}
+                className="cursor-pointer"
+                onClick={() => setFilterCategory(category)}
+              >
+                {category} ({count})
+              </Badge>
+            ))}
+          </div>
         </div>
       )}
 
