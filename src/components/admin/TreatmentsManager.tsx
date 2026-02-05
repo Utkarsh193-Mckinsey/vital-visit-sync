@@ -161,6 +161,7 @@ export default function TreatmentsManager() {
             dosage_unit: formData.dosage_unit,
             administration_method: formData.administration_method.trim() || null,
             common_doses: formData.common_doses.length > 0 ? formData.common_doses : null,
+            default_dose: formData.default_dose.trim() || null,
           })
           .eq('id', editingId);
 
