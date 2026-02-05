@@ -26,11 +26,56 @@ async function getAmiriFont(): Promise<string> {
   return cachedAmiriFont;
 }
 
-// Load logo image
+// Load and convert logo to black and white
 async function loadLogoImage(): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.onload = () => resolve(img);
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      // Convert to black and white using canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(img);
+        return;
+      }
+      
+      // Draw the image
+      ctx.drawImage(img, 0, 0);
+      
+      // Get image data and convert to grayscale/black
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        const alpha = data[i + 3];
+        
+        // Skip transparent pixels
+        if (alpha < 10) continue;
+        
+        // Convert to grayscale then to black
+        const gray = (r * 0.299 + g * 0.587 + b * 0.114);
+        // Make it pure black for non-transparent pixels
+        const bw = gray < 200 ? 0 : 0; // Force black for the logo
+        
+        data[i] = bw;
+        data[i + 1] = bw;
+        data[i + 2] = bw;
+      }
+      
+      ctx.putImageData(imageData, 0, 0);
+      
+      // Create new image from canvas
+      const bwImg = new Image();
+      bwImg.onload = () => resolve(bwImg);
+      bwImg.onerror = reject;
+      bwImg.src = canvas.toDataURL('image/png');
+    };
     img.onerror = reject;
     img.src = cosmiqueSymbol;
   });
