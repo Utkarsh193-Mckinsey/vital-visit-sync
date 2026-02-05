@@ -312,7 +312,9 @@ export default function ConsumablesManager() {
     setStockToAdd(0);
     setPackagesToAdd(0);
     setInlinePackagingUnit('');
+    setInlineBaseUnit('');
     setInlineUnitsPerPackage(1);
+    setAddStockStep('packaging');
   };
 
   const filteredBrands = uniqueBrands.filter(brand =>
