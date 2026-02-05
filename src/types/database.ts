@@ -151,6 +151,9 @@ export interface AlertRule {
    unit: string;
    brand?: string;
    current_stock?: number;
+   packaging_unit?: string;
+   units_per_package?: number;
+   variant?: string;
    status: string;
    created_date: string;
  }

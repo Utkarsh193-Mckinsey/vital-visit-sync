@@ -36,6 +36,7 @@ const CATEGORIES = [
 ];
 
 const UNITS = ['pcs', 'ml', 'mg', 'vial', 'amp', 'pack', 'box'];
+const PACKAGING_UNITS = ['Box', 'Pack', 'Vial', 'Bottle', 'Piece', 'Carton', 'Strip'];
 
 interface ConsumableFormData {
   item_name: string;
@@ -43,6 +44,9 @@ interface ConsumableFormData {
   unit: string;
   brand: string;
   current_stock: number;
+  packaging_unit: string;
+  units_per_package: number;
+  variant: string;
 }
 
 const emptyForm: ConsumableFormData = {
@@ -51,6 +55,9 @@ const emptyForm: ConsumableFormData = {
   unit: 'pcs',
   brand: '',
   current_stock: 0,
+  packaging_unit: '',
+  units_per_package: 1,
+  variant: '',
 };
 
 export default function ConsumablesManager() {
@@ -64,6 +71,7 @@ export default function ConsumablesManager() {
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [addStockId, setAddStockId] = useState<string | null>(null);
   const [stockToAdd, setStockToAdd] = useState<number>(0);
+  const [packagesToAdd, setPackagesToAdd] = useState<number>(0);
   const [brandSearch, setBrandSearch] = useState('');
   const [showBrandDropdown, setShowBrandDropdown] = useState(false);
   const { toast } = useToast();
@@ -111,6 +119,9 @@ export default function ConsumablesManager() {
       unit: item.unit,
       brand: item.brand || '',
       current_stock: item.current_stock || 0,
+      packaging_unit: item.packaging_unit || '',
+      units_per_package: item.units_per_package || 1,
+      variant: item.variant || '',
     });
   };
 
@@ -151,6 +162,9 @@ export default function ConsumablesManager() {
             unit: formData.unit,
             brand: formData.brand.trim() || null,
             current_stock: formData.current_stock,
+            packaging_unit: formData.packaging_unit || null,
+            units_per_package: formData.units_per_package || 1,
+            variant: formData.variant.trim() || null,
             status: 'active',
           });
 
@@ -169,6 +183,9 @@ export default function ConsumablesManager() {
             unit: formData.unit,
             brand: formData.brand.trim() || null,
             current_stock: formData.current_stock,
+            packaging_unit: formData.packaging_unit || null,
+            units_per_package: formData.units_per_package || 1,
+            variant: formData.variant.trim() || null,
           })
           .eq('id', editingId);
 
@@ -221,20 +238,26 @@ export default function ConsumablesManager() {
   };
 
   const handleAddStock = async (itemId: string) => {
-    if (stockToAdd <= 0) {
+    const item = items.find(i => i.id === itemId);
+    if (!item) return;
+
+    // If item has packaging, use packages to add; otherwise use direct units
+    const hasPackaging = item.packaging_unit && (item.units_per_package || 1) > 1;
+    const quantityToAdd = hasPackaging 
+      ? packagesToAdd * (item.units_per_package || 1)
+      : stockToAdd;
+
+    if (quantityToAdd <= 0) {
       toast({
         title: 'Invalid Amount',
-        description: 'Please enter a valid stock amount.',
+        description: 'Please enter a valid quantity.',
         variant: 'destructive',
       });
       return;
     }
 
     try {
-      const item = items.find(i => i.id === itemId);
-      if (!item) return;
-
-      const newStock = (item.current_stock || 0) + stockToAdd;
+      const newStock = (item.current_stock || 0) + quantityToAdd;
       
       const { error } = await supabase
         .from('stock_items')
@@ -243,13 +266,18 @@ export default function ConsumablesManager() {
 
       if (error) throw error;
 
+      const addedDesc = hasPackaging 
+        ? `Added ${packagesToAdd} ${item.packaging_unit}(s) (${quantityToAdd} ${item.unit})`
+        : `Added ${stockToAdd} ${item.unit}`;
+
       toast({
         title: 'Stock Added',
-        description: `Added ${stockToAdd} ${item.unit} to ${item.item_name}. New total: ${newStock}`,
+        description: `${addedDesc} to ${item.item_name}. New total: ${newStock} ${item.unit}`,
       });
 
       setAddStockId(null);
       setStockToAdd(0);
+      setPackagesToAdd(0);
       fetchItems();
     } catch (error) {
       console.error('Error adding stock:', error);
@@ -369,6 +397,36 @@ export default function ConsumablesManager() {
               </div>
             </div>
 
+            {/* Packaging Section */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium">Packaging Unit</label>
+                <Select
+                  value={formData.packaging_unit}
+                  onValueChange={(value) => setFormData({ ...formData, packaging_unit: value })}
+                >
+                  <SelectTrigger className="h-14">
+                    <SelectValue placeholder="How it comes (Box, Vial...)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PACKAGING_UNITS.map((pu) => (
+                      <SelectItem key={pu} value={pu} className="py-3">
+                        {pu}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <TabletInput
+                label="Units per Package"
+                type="number"
+                placeholder="e.g., 1 Box = 100 pcs"
+                value={formData.units_per_package.toString()}
+                onChange={(e) => setFormData({ ...formData, units_per_package: parseFloat(e.target.value) || 1 })}
+              />
+            </div>
+
             {/* Brand with Autocomplete */}
             <div className="space-y-2 relative">
               <label className="block text-sm font-medium">Brand</label>
@@ -401,9 +459,17 @@ export default function ConsumablesManager() {
               )}
             </div>
 
+            {/* Variant/Strength (e.g., for Mounjaro 2.5mg, 5mg) */}
+            <TabletInput
+              label="Variant / Strength"
+              placeholder="e.g., 2.5mg, 5mg, 10ml"
+              value={formData.variant}
+              onChange={(e) => setFormData({ ...formData, variant: e.target.value })}
+            />
+
             {/* Initial Stock */}
             <TabletInput
-              label="Initial Stock"
+              label="Initial Stock (in base units)"
               type="number"
               placeholder="0"
               value={formData.current_stock.toString()}
@@ -445,12 +511,20 @@ export default function ConsumablesManager() {
         </TabletCard>
       ) : (
         <div className="space-y-2">
-          {filteredActiveItems.map((item) => (
+          {filteredActiveItems.map((item) => {
+            const hasPackaging = item.packaging_unit && (item.units_per_package || 1) > 1;
+            
+            return (
             <TabletCard key={item.id} className={editingId === item.id ? 'hidden' : ''}>
               <TabletCardContent className="flex items-center justify-between py-4">
                 <div className="flex-1">
-                  <div className="font-medium text-lg flex items-center gap-2">
+                  <div className="font-medium text-lg flex items-center gap-2 flex-wrap">
                     {item.item_name}
+                    {item.variant && (
+                      <Badge variant="secondary" className="text-xs">
+                        {item.variant}
+                      </Badge>
+                    )}
                     <Badge variant="outline" className="text-xs">
                       {item.unit}
                     </Badge>
@@ -458,6 +532,9 @@ export default function ConsumablesManager() {
                   <div className="text-sm text-muted-foreground">
                     {item.category}
                     {item.brand && <span> • {item.brand}</span>}
+                    {hasPackaging && (
+                      <span> • 1 {item.packaging_unit} = {item.units_per_package} {item.unit}</span>
+                    )}
                   </div>
                   <div className="text-sm mt-1">
                     <span className={`font-medium ${(item.current_stock || 0) <= 0 ? 'text-destructive' : 'text-primary'}`}>
@@ -468,28 +545,46 @@ export default function ConsumablesManager() {
                 
                 {/* Add Stock Modal */}
                 {addStockId === item.id ? (
-                  <div className="flex items-center gap-2">
-                    <TabletInput
-                      type="number"
-                      placeholder="Qty"
-                      className="w-20"
-                      value={stockToAdd.toString()}
-                      onChange={(e) => setStockToAdd(parseFloat(e.target.value) || 0)}
-                      autoFocus
-                    />
-                    <TabletButton
-                      size="sm"
-                      onClick={() => handleAddStock(item.id)}
-                    >
-                      Add
-                    </TabletButton>
-                    <TabletButton
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => { setAddStockId(null); setStockToAdd(0); }}
-                    >
-                      <X className="h-4 w-4" />
-                    </TabletButton>
+                  <div className="flex flex-col gap-2">
+                    {hasPackaging ? (
+                      <div className="flex items-center gap-2">
+                        <TabletInput
+                          type="number"
+                          placeholder="Qty"
+                          className="w-20"
+                          value={packagesToAdd.toString()}
+                          onChange={(e) => setPackagesToAdd(parseFloat(e.target.value) || 0)}
+                          autoFocus
+                        />
+                        <span className="text-sm text-muted-foreground whitespace-nowrap">
+                          {item.packaging_unit}(s) = {packagesToAdd * (item.units_per_package || 1)} {item.unit}
+                        </span>
+                      </div>
+                    ) : (
+                      <TabletInput
+                        type="number"
+                        placeholder="Qty"
+                        className="w-20"
+                        value={stockToAdd.toString()}
+                        onChange={(e) => setStockToAdd(parseFloat(e.target.value) || 0)}
+                        autoFocus
+                      />
+                    )}
+                    <div className="flex gap-2">
+                      <TabletButton
+                        size="sm"
+                        onClick={() => handleAddStock(item.id)}
+                      >
+                        Add
+                      </TabletButton>
+                      <TabletButton
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => { setAddStockId(null); setStockToAdd(0); setPackagesToAdd(0); }}
+                      >
+                        <X className="h-4 w-4" />
+                      </TabletButton>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex gap-2">
@@ -519,7 +614,8 @@ export default function ConsumablesManager() {
                 )}
               </TabletCardContent>
             </TabletCard>
-          ))}
+          );
+          })}
         </div>
       )}
 
