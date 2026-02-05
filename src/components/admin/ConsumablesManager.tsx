@@ -369,6 +369,47 @@ export default function ConsumablesManager() {
               </div>
             </div>
 
+            {/* Brand with Autocomplete */}
+            <div className="space-y-2 relative">
+              <label className="block text-sm font-medium">Brand</label>
+              <TabletInput
+                placeholder="e.g., BD, Terumo, Braun"
+                value={formData.brand}
+                onChange={(e) => {
+                  setFormData({ ...formData, brand: e.target.value });
+                  setBrandSearch(e.target.value);
+                  setShowBrandDropdown(true);
+                }}
+                onFocus={() => setShowBrandDropdown(true)}
+                onBlur={() => setTimeout(() => setShowBrandDropdown(false), 200)}
+              />
+              {showBrandDropdown && filteredBrands.length > 0 && formData.brand && (
+                <div className="absolute z-10 w-full bg-popover border rounded-md shadow-md mt-1 max-h-40 overflow-auto">
+                  {filteredBrands.map((brand) => (
+                    <div
+                      key={brand}
+                      className="px-4 py-2 hover:bg-muted cursor-pointer"
+                      onMouseDown={() => {
+                        setFormData({ ...formData, brand });
+                        setShowBrandDropdown(false);
+                      }}
+                    >
+                      {brand}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Initial Stock */}
+            <TabletInput
+              label="Initial Stock"
+              type="number"
+              placeholder="0"
+              value={formData.current_stock.toString()}
+              onChange={(e) => setFormData({ ...formData, current_stock: parseFloat(e.target.value) || 0 })}
+            />
+
             <div className="flex gap-3">
               <TabletButton
                 variant="outline"
