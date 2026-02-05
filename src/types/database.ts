@@ -52,6 +52,7 @@ export interface ConsentTemplate {
   form_name: string;
   treatment_id?: string;
   consent_text: string;
+  consent_text_ar?: string;
   version_number: number;
   is_current_version: boolean;
   status: ConsentStatus;
@@ -122,6 +123,7 @@ export interface ConsentForm {
   signature_url: string;
   signed_date: string;
   pdf_url?: string;
+  language?: string;
   // Joined data
   treatment?: Treatment;
   consent_template?: ConsentTemplate;
