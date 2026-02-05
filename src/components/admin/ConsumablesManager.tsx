@@ -71,6 +71,7 @@ export default function ConsumablesManager() {
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [addStockId, setAddStockId] = useState<string | null>(null);
   const [stockToAdd, setStockToAdd] = useState<number>(0);
+  const [packagesToAdd, setPackagesToAdd] = useState<number>(0);
   const [brandSearch, setBrandSearch] = useState('');
   const [showBrandDropdown, setShowBrandDropdown] = useState(false);
   const { toast } = useToast();
