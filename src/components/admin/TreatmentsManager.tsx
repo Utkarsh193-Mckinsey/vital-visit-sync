@@ -56,6 +56,7 @@ export default function TreatmentsManager() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [newDose, setNewDose] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
