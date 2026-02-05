@@ -34,12 +34,14 @@ import {
 interface TemplateFormData {
   form_name: string;
   consent_text: string;
+  consent_text_ar: string;
   treatment_id: string | null;
 }
 
 const emptyForm: TemplateFormData = {
   form_name: '',
   consent_text: '',
+  consent_text_ar: '',
   treatment_id: null,
 };
 
