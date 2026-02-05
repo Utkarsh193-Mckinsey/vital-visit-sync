@@ -162,6 +162,9 @@ export default function ConsumablesManager() {
             unit: formData.unit,
             brand: formData.brand.trim() || null,
             current_stock: formData.current_stock,
+            packaging_unit: formData.packaging_unit || null,
+            units_per_package: formData.units_per_package || 1,
+            variant: formData.variant.trim() || null,
             status: 'active',
           });
 
