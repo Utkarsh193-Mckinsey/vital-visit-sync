@@ -34,6 +34,7 @@ interface TreatmentFormData {
   dosage_unit: DosageUnit;
   administration_method: string;
   common_doses: string[];
+  default_dose: string;
 }
 
 const emptyForm: TreatmentFormData = {
@@ -42,6 +43,7 @@ const emptyForm: TreatmentFormData = {
   dosage_unit: 'Session',
   administration_method: '',
   common_doses: [],
+  default_dose: '',
 };
 
 // Units that support common doses (medical measurable units)
