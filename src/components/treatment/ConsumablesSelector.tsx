@@ -67,6 +67,54 @@ export function ConsumablesSelector({
     fetchStockItems();
   }, []);
 
+  const loadDefaultConsumables = async () => {
+    if (treatmentIds.length === 0) return;
+    
+    const { data, error } = await supabase
+      .from('treatment_consumables')
+      .select('*, stock_item:stock_items(*)')
+      .in('treatment_id', treatmentIds);
+
+    if (error) {
+      console.error('Error loading default consumables:', error);
+      return;
+    }
+
+    if (data && data.length > 0) {
+      // Merge defaults - if same item appears for multiple treatments, sum quantities
+      const mergedDefaults: Record<string, SelectedConsumable> = {};
+      
+      for (const item of data) {
+        const stockItem = item.stock_item as StockItem;
+        if (!stockItem) continue;
+        
+        if (mergedDefaults[item.stock_item_id]) {
+          mergedDefaults[item.stock_item_id].quantity += item.default_quantity;
+        } else {
+          mergedDefaults[item.stock_item_id] = {
+            stockItemId: item.stock_item_id,
+            itemName: stockItem.item_name,
+            quantity: item.default_quantity,
+            unit: stockItem.unit,
+          };
+        }
+      }
+
+      // Only set if no consumables already selected
+      if (selectedConsumables.length === 0) {
+        onConsumablesChange(Object.values(mergedDefaults));
+      }
+      
+      setDefaultConsumables(data.map(d => ({
+        stock_item_id: d.stock_item_id,
+        default_quantity: d.default_quantity,
+        item_name: (d.stock_item as StockItem)?.item_name || '',
+        unit: (d.stock_item as StockItem)?.unit || '',
+      })));
+      setHasLoadedDefaults(true);
+    }
+  };
+
   const fetchStockItems = async () => {
     const { data, error } = await supabase
       .from('stock_items')
