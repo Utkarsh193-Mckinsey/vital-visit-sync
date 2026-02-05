@@ -26,51 +26,12 @@ async function getAmiriFont(): Promise<string> {
   return cachedAmiriFont;
 }
 
-// Load and convert logo to black (replace golden/tan with black)
+// Load logo image directly without color conversion
 async function loadLogoImage(): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      // Convert golden/tan parts to black using canvas
-      const canvas = document.createElement('canvas');
-      canvas.width = img.naturalWidth || img.width;
-      canvas.height = img.naturalHeight || img.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        resolve(img);
-        return;
-      }
-      
-      // Draw the image
-      ctx.drawImage(img, 0, 0);
-      
-      // Get image data and convert golden to black
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageData.data;
-      
-      for (let i = 0; i < data.length; i += 4) {
-        const alpha = data[i + 3];
-        
-        // Skip fully transparent pixels
-        if (alpha < 10) continue;
-        
-        // Any non-transparent pixel becomes black
-        // This turns the golden logo into a black silhouette
-        data[i] = 0;     // R
-        data[i + 1] = 0; // G
-        data[i + 2] = 0; // B
-        // Keep alpha as is
-      }
-      
-      ctx.putImageData(imageData, 0, 0);
-      
-      // Create new image from canvas
-      const bwImg = new Image();
-      bwImg.onload = () => resolve(bwImg);
-      bwImg.onerror = reject;
-      bwImg.src = canvas.toDataURL('image/png');
-    };
+    img.onload = () => resolve(img);
     img.onerror = reject;
     img.src = cosmiqueSymbol;
   });
