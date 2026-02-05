@@ -123,6 +123,7 @@ export interface ConsentForm {
   signature_url: string;
   signed_date: string;
   pdf_url?: string;
+  language?: string;
   // Joined data
   treatment?: Treatment;
   consent_template?: ConsentTemplate;
