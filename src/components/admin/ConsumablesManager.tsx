@@ -71,6 +71,7 @@ export default function ConsumablesManager() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [addStockId, setAddStockId] = useState<string | null>(null);
   const [stockToAdd, setStockToAdd] = useState<number>(0);
   const [packagesToAdd, setPackagesToAdd] = useState<number>(0);
