@@ -238,20 +238,26 @@ export default function ConsumablesManager() {
   };
 
   const handleAddStock = async (itemId: string) => {
-    if (stockToAdd <= 0) {
+    const item = items.find(i => i.id === itemId);
+    if (!item) return;
+
+    // If item has packaging, use packages to add; otherwise use direct units
+    const hasPackaging = item.packaging_unit && (item.units_per_package || 1) > 1;
+    const quantityToAdd = hasPackaging 
+      ? packagesToAdd * (item.units_per_package || 1)
+      : stockToAdd;
+
+    if (quantityToAdd <= 0) {
       toast({
         title: 'Invalid Amount',
-        description: 'Please enter a valid stock amount.',
+        description: 'Please enter a valid quantity.',
         variant: 'destructive',
       });
       return;
     }
 
     try {
-      const item = items.find(i => i.id === itemId);
-      if (!item) return;
-
-      const newStock = (item.current_stock || 0) + stockToAdd;
+      const newStock = (item.current_stock || 0) + quantityToAdd;
       
       const { error } = await supabase
         .from('stock_items')
@@ -260,17 +266,28 @@ export default function ConsumablesManager() {
 
       if (error) throw error;
 
+      const addedDesc = hasPackaging 
+        ? `Added ${packagesToAdd} ${item.packaging_unit}(s) (${quantityToAdd} ${item.unit})`
+        : `Added ${stockToAdd} ${item.unit}`;
+
       toast({
         title: 'Stock Added',
-        description: `Added ${stockToAdd} ${item.unit} to ${item.item_name}. New total: ${newStock}`,
+        description: `${addedDesc} to ${item.item_name}. New total: ${newStock} ${item.unit}`,
       });
 
       setAddStockId(null);
       setStockToAdd(0);
+      setPackagesToAdd(0);
       fetchItems();
     } catch (error) {
       console.error('Error adding stock:', error);
       toast({
+        title: 'Error',
+        description: 'Failed to update stock.',
+        variant: 'destructive',
+      });
+    }
+  };
         title: 'Error',
         description: 'Failed to update stock.',
         variant: 'destructive',
