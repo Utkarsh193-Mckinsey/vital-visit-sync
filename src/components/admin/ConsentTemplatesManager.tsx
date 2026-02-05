@@ -96,7 +96,8 @@ export default function ConsentTemplatesManager() {
     setFormData({
       form_name: template.form_name,
       consent_text: template.consent_text,
-      treatment_id: template.treatment_id,
+      consent_text_ar: template.consent_text_ar || '',
+      treatment_id: template.treatment_id || null,
     });
   };
 
