@@ -135,6 +135,7 @@ export default function ConsentTemplatesManager() {
           .insert({
             form_name: formData.form_name.trim(),
             consent_text: formData.consent_text.trim(),
+            consent_text_ar: formData.consent_text_ar.trim() || null,
             treatment_id: formData.treatment_id || null,
             is_current_version: true,
             version_number: 1,
