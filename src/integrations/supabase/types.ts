@@ -242,24 +242,30 @@ export type Database = {
       }
       stock_items: {
         Row: {
+          brand: string | null
           category: string
           created_date: string
+          current_stock: number | null
           id: string
           item_name: string
           status: string
           unit: string
         }
         Insert: {
+          brand?: string | null
           category: string
           created_date?: string
+          current_stock?: number | null
           id?: string
           item_name: string
           status?: string
           unit?: string
         }
         Update: {
+          brand?: string | null
           category?: string
           created_date?: string
+          current_stock?: number | null
           id?: string
           item_name?: string
           status?: string
