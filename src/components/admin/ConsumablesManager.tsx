@@ -210,6 +210,13 @@ export default function ConsumablesManager() {
 
       setDeleteConfirm(null);
       fetchItems();
+    } catch (error) {
+      console.error('Error deactivating consumable:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to deactivate consumable.',
+        variant: 'destructive',
+      });
     }
   };
 
