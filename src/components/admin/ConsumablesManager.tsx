@@ -729,6 +729,9 @@ export default function ConsumablesManager() {
                               >
                                 Add Stock
                               </TabletButton>
+                              <TabletButton size="sm" variant="ghost" onClick={resetAddStockState}>
+                                <X className="h-4 w-4" />
+                              </TabletButton>
                             </div>
                           </>
                         )}
