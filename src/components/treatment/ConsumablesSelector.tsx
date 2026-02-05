@@ -38,11 +38,13 @@ export interface SelectedConsumable {
 interface ConsumablesSelectorProps {
   selectedConsumables: SelectedConsumable[];
   onConsumablesChange: (consumables: SelectedConsumable[]) => void;
+  treatmentIds?: string[];  // Treatment IDs to load default consumables from
 }
 
 export function ConsumablesSelector({
   selectedConsumables,
   onConsumablesChange,
+  treatmentIds = [],
 }: ConsumablesSelectorProps) {
   const [stockItems, setStockItems] = useState<StockItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
