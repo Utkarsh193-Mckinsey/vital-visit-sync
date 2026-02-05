@@ -100,6 +100,7 @@ export default function TreatmentsManager() {
       dosage_unit: treatment.dosage_unit,
       administration_method: treatment.administration_method || '',
       common_doses: treatment.common_doses || [],
+      default_dose: (treatment as any).default_dose || '',
     });
   };
 
