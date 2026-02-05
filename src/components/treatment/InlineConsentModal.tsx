@@ -169,19 +169,15 @@ export function InlineConsentModal({
         .from('signatures')
         .getPublicUrl(signatureFileName);
 
-      // Get the consent text based on selected language
-      const consentText = selectedLanguage === 'ar' && consentTemplate.consent_text_ar 
-        ? consentTemplate.consent_text_ar 
-        : consentTemplate.consent_text;
-
-      // Generate PDF with full consent form
+      // Generate PDF with full consent form - include both English and Arabic
       const pdfBlob = await generateConsentPDF({
         patientName: patient.full_name,
         patientDOB: patient.date_of_birth,
         patientPhone: patient.phone_number,
         treatmentName: treatmentName,
         consentFormName: consentTemplate.form_name,
-        consentText: consentText,
+        consentText: consentTemplate.consent_text,
+        consentTextAr: consentTemplate.consent_text_ar,
         signatureDataUrl: signatureDataUrl,
         signedDate: new Date(),
         language: selectedLanguage,
