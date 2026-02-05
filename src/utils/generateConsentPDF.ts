@@ -14,6 +14,7 @@ interface ConsentPDFData {
   signedDate: Date;
   language?: 'en' | 'ar';
   dosage?: string;
+  photoVideoSignatureDataUrl?: string;
 }
 
 // Cache the font to avoid loading it multiple times
@@ -43,10 +44,12 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
   });
 
   // Load and embed Amiri font for Arabic support
+  let hasAmiriFont = false;
   try {
     const amiriBase64 = await getAmiriFont();
     pdf.addFileToVFS('Amiri-Regular.ttf', amiriBase64);
     pdf.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
+    hasAmiriFont = true;
   } catch (error) {
     console.warn('Could not load Amiri font, Arabic may not render correctly:', error);
   }
@@ -72,9 +75,9 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
 
   // Helper to set Arabic font
   const setArabicFont = () => {
-    try {
+    if (hasAmiriFont) {
       pdf.setFont('Amiri', 'normal');
-    } catch {
+    } else {
       pdf.setFont('helvetica', 'normal');
     }
   };
@@ -93,8 +96,14 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
   // ==========================================
   try {
     const logo = await loadLogoImage();
-    const logoWidth = 30;
-    const logoHeight = 30;
+    // Calculate aspect ratio to prevent stretching
+    const originalWidth = logo.naturalWidth || logo.width;
+    const originalHeight = logo.naturalHeight || logo.height;
+    const aspectRatio = originalWidth / originalHeight;
+    
+    const logoHeight = 25;
+    const logoWidth = logoHeight * aspectRatio;
+    
     pdf.addImage(logo, 'PNG', (pageWidth - logoWidth) / 2, yPosition, logoWidth, logoHeight);
     yPosition += logoHeight + 5;
   } catch (error) {
@@ -126,33 +135,41 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
   yPosition += 12;
 
   // ==========================================
-  // PATIENT INFORMATION
+  // PATIENT INFORMATION - Properly formatted
   // ==========================================
   pdf.setFontSize(11);
-  setEnglishFont('bold');
   
-  // Patient Name
+  // Patient Name - with underline extending to right margin
+  setEnglishFont('bold');
   pdf.text('Patient Name:', margin, yPosition);
+  const nameLabelWidth = pdf.getTextWidth('Patient Name:');
   setEnglishFont('normal');
-  pdf.text(` ${data.patientName}`, margin + pdf.getTextWidth('Patient Name:'), yPosition);
-  // Draw underline
-  const nameLineStart = margin + pdf.getTextWidth('Patient Name: ') + pdf.getTextWidth(data.patientName);
-  pdf.line(nameLineStart, yPosition, pageWidth - margin, yPosition);
+  pdf.text(' ' + data.patientName, margin + nameLabelWidth, yPosition);
+  // Draw underline from after name to right margin
+  const nameTextWidth = pdf.getTextWidth(' ' + data.patientName);
+  pdf.setLineWidth(0.3);
+  pdf.line(margin + nameLabelWidth + nameTextWidth + 2, yPosition + 1, pageWidth - margin, yPosition + 1);
   yPosition += 8;
 
-  // Date of Treatment
+  // Date of Treatment - with proper colon and spacing
   setEnglishFont('bold');
   pdf.text('Date of Treatment:', margin, yPosition);
+  const dateLabelWidth = pdf.getTextWidth('Date of Treatment:');
   setEnglishFont('normal');
   const treatmentDate = formatDate(data.signedDate.toISOString());
-  pdf.text(` ${treatmentDate}`, margin + pdf.getTextWidth('Date of Treatment:'), yPosition);
+  pdf.text(' ' + treatmentDate, margin + dateLabelWidth, yPosition);
   yPosition += 8;
 
-  // Dosage
+  // Dosage - with underline
   setEnglishFont('bold');
   pdf.text('Dosage:', margin, yPosition);
+  const dosageLabelWidth = pdf.getTextWidth('Dosage:');
   setEnglishFont('normal');
-  pdf.text(` ${data.dosage || '________________'}`, margin + pdf.getTextWidth('Dosage:'), yPosition);
+  if (data.dosage) {
+    pdf.text(' ' + data.dosage, margin + dosageLabelWidth, yPosition);
+  }
+  pdf.setLineWidth(0.3);
+  pdf.line(margin + dosageLabelWidth + 2, yPosition + 1, margin + 100, yPosition + 1);
   yPosition += 6;
 
   drawDivider();
@@ -163,7 +180,7 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
   const sections = parseConsentSections(data.consentText, data.consentTextAr);
   
   for (const section of sections) {
-    checkNewPage(40);
+    checkNewPage(50);
     
     // English heading
     pdf.setFontSize(11);
@@ -180,17 +197,18 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
       pdf.text(line, margin, yPosition);
       yPosition += 5;
     }
+    yPosition += 2;
     
-    // Arabic heading
+    // Arabic heading (right-aligned)
     if (section.arabicTitle) {
-      yPosition += 2;
+      checkNewPage();
       setArabicFont();
       pdf.setFontSize(11);
       pdf.text(section.arabicTitle, pageWidth - margin, yPosition, { align: 'right' });
       yPosition += 6;
     }
     
-    // Arabic content
+    // Arabic content (right-aligned)
     if (section.arabicContent) {
       pdf.setFontSize(10);
       setArabicFont();
@@ -208,7 +226,7 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
   // ==========================================
   // PATIENT SIGNATURE SECTION
   // ==========================================
-  checkNewPage(60);
+  checkNewPage(70);
   
   pdf.setFontSize(11);
   setEnglishFont('bold');
@@ -217,13 +235,20 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
   
   pdf.setFontSize(10);
   setEnglishFont('normal');
-  pdf.text(`I acknowledge I have been informed about the ${data.treatmentName} treatment. I consent to proceed.`, margin, yPosition);
-  yPosition += 6;
+  const ackText = `I acknowledge I have been informed about the ${data.treatmentName} treatment. I consent to proceed.`;
+  const ackLines = pdf.splitTextToSize(ackText, contentWidth);
+  for (const line of ackLines) {
+    pdf.text(line, margin, yPosition);
+    yPosition += 5;
+  }
+  yPosition += 2;
   
+  // Arabic acknowledgment
   setArabicFont();
   pdf.text('إقرار المريض وتوقيعه', pageWidth - margin, yPosition, { align: 'right' });
   yPosition += 6;
-  pdf.text('.أقر أنه تم إبلاغي بعلاج ' + data.treatmentName + '. أوافق على المتابعة', pageWidth - margin, yPosition, { align: 'right' });
+  const arabicAck = 'أقر أنه تم إبلاغي بالعلاج. أوافق على المتابعة.';
+  pdf.text(arabicAck, pageWidth - margin, yPosition, { align: 'right' });
   yPosition += 12;
 
   // Add patient signature image
@@ -242,16 +267,20 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
   setEnglishFont('bold');
   pdf.setFontSize(10);
   pdf.text("Patient's Signature:", margin, yPosition);
-  pdf.line(margin + 40, yPosition, margin + 100, yPosition);
-  pdf.text('Date:', margin + 110, yPosition);
-  pdf.text(formatDate(data.signedDate.toISOString()), margin + 125, yPosition);
+  pdf.setLineWidth(0.3);
+  pdf.line(margin + 38, yPosition + 1, margin + 95, yPosition + 1);
+  pdf.text('Date:', margin + 100, yPosition);
+  setEnglishFont('normal');
+  pdf.text(' ' + formatDate(data.signedDate.toISOString()), margin + 112, yPosition);
   yPosition += 8;
 
   // Doctor Signature line
+  setEnglishFont('bold');
   pdf.text("Doctor's Signature:", margin, yPosition);
-  pdf.line(margin + 40, yPosition, margin + 100, yPosition);
-  pdf.text('Date:', margin + 110, yPosition);
-  pdf.line(margin + 125, yPosition, margin + 155, yPosition);
+  pdf.setLineWidth(0.3);
+  pdf.line(margin + 38, yPosition + 1, margin + 95, yPosition + 1);
+  pdf.text('Date:', margin + 100, yPosition);
+  pdf.line(margin + 112, yPosition + 1, margin + 150, yPosition + 1);
   yPosition += 6;
 
   drawDivider();
@@ -259,7 +288,7 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
   // ==========================================
   // VIDEO & PHOTOGRAPHIC CONSENT
   // ==========================================
-  checkNewPage(50);
+  checkNewPage(60);
   
   pdf.setFontSize(11);
   setEnglishFont('bold');
@@ -276,10 +305,11 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
   }
   yPosition += 2;
   
+  // Arabic photo consent
   setArabicFont();
   pdf.text('الموافقة على التصوير والفيديو', pageWidth - margin, yPosition, { align: 'right' });
   yPosition += 6;
-  const photoConsentAr = '.أوافق على التقاط الصور/الفيديو أثناء علاجي لأغراض تعليمية أو ترويجية أو طبية. ستظل هويتي سرية إلا إذا منحت موافقة صريحة للمشاركة';
+  const photoConsentAr = 'أوافق على التقاط الصور/الفيديو أثناء علاجي لأغراض تعليمية أو ترويجية أو طبية. ستظل هويتي سرية إلا إذا منحت موافقة صريحة للمشاركة.';
   const photoLinesAr = pdf.splitTextToSize(photoConsentAr, contentWidth);
   for (const line of photoLinesAr) {
     pdf.text(line, pageWidth - margin, yPosition, { align: 'right' });
@@ -287,12 +317,31 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
   }
   yPosition += 8;
 
-  // Photo consent signature
+  // Add photo/video signature if provided
+  if (data.photoVideoSignatureDataUrl) {
+    try {
+      const photoSigImage = await loadImage(data.photoVideoSignatureDataUrl);
+      const sigWidth = 50;
+      const sigHeight = 20;
+      pdf.addImage(photoSigImage, 'PNG', margin, yPosition, sigWidth, sigHeight);
+      yPosition += sigHeight + 2;
+    } catch (error) {
+      console.error('Error adding photo consent signature to PDF:', error);
+    }
+  }
+
+  // Photo consent signature line
   setEnglishFont('bold');
   pdf.text('Signature:', margin, yPosition);
-  pdf.line(margin + 25, yPosition, margin + 85, yPosition);
-  pdf.text('Date:', margin + 95, yPosition);
-  pdf.line(margin + 110, yPosition, margin + 140, yPosition);
+  pdf.setLineWidth(0.3);
+  pdf.line(margin + 22, yPosition + 1, margin + 80, yPosition + 1);
+  pdf.text('Date:', margin + 85, yPosition);
+  setEnglishFont('normal');
+  if (data.photoVideoSignatureDataUrl) {
+    pdf.text(' ' + formatDate(data.signedDate.toISOString()), margin + 97, yPosition);
+  } else {
+    pdf.line(margin + 97, yPosition + 1, margin + 135, yPosition + 1);
+  }
 
   // ==========================================
   // FOOTER
