@@ -1,9 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { TabletButton } from '@/components/ui/tablet-button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { FileSignature, X } from 'lucide-react';
+import { FileSignature, Globe } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import {
   Dialog,
@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { generateConsentPDF } from '@/utils/generateConsentPDF';
 import { format } from 'date-fns';
-import type { Patient, Treatment, ConsentTemplate } from '@/types/database';
+import type { Patient, ConsentTemplate } from '@/types/database';
 
 interface InlineConsentModalProps {
   open: boolean;
@@ -25,6 +25,8 @@ interface InlineConsentModalProps {
   treatmentId: string;
   treatmentName: string;
 }
+
+type Language = 'en' | 'ar';
 
 // Helper function to replace placeholders in consent text
 const replaceConsentPlaceholders = (
@@ -56,8 +58,21 @@ export function InlineConsentModal({
   const [consentTemplate, setConsentTemplate] = useState<ConsentTemplate | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSigning, setIsSigning] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState<Language | null>(null);
   const signatureRef = useRef<SignatureCanvas>(null);
   const { toast } = useToast();
+
+  // Reset state when modal opens/closes
+  useEffect(() => {
+    if (open) {
+      setSelectedLanguage(null);
+      setConsentTemplate(null);
+      fetchConsentTemplate();
+    } else {
+      setSelectedLanguage(null);
+      setConsentTemplate(null);
+    }
+  }, [open]);
 
   // Fetch consent template when modal opens
   const fetchConsentTemplate = async () => {
@@ -102,20 +117,21 @@ export function InlineConsentModal({
     }
   };
 
-  // Fetch when modal opens
-  useState(() => {
-    if (open) {
-      fetchConsentTemplate();
-    }
-  });
-
-  // Effect to fetch on open change
-  if (open && !consentTemplate && !isLoading) {
-    fetchConsentTemplate();
-  }
-
   const clearSignature = () => {
     signatureRef.current?.clear();
+  };
+
+  const handleLanguageSelect = (lang: Language) => {
+    // If Arabic is selected but no Arabic text available, show error
+    if (lang === 'ar' && !consentTemplate?.consent_text_ar) {
+      toast({
+        title: 'Arabic Not Available',
+        description: 'This consent form is only available in English.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setSelectedLanguage(lang);
   };
 
   const handleSignConsent = async () => {
@@ -128,7 +144,7 @@ export function InlineConsentModal({
       return;
     }
 
-    if (!consentTemplate) return;
+    if (!consentTemplate || !selectedLanguage) return;
 
     setIsSigning(true);
 
@@ -153,6 +169,11 @@ export function InlineConsentModal({
         .from('signatures')
         .getPublicUrl(signatureFileName);
 
+      // Get the consent text based on selected language
+      const consentText = selectedLanguage === 'ar' && consentTemplate.consent_text_ar 
+        ? consentTemplate.consent_text_ar 
+        : consentTemplate.consent_text;
+
       // Generate PDF with full consent form
       const pdfBlob = await generateConsentPDF({
         patientName: patient.full_name,
@@ -160,9 +181,10 @@ export function InlineConsentModal({
         patientPhone: patient.phone_number,
         treatmentName: treatmentName,
         consentFormName: consentTemplate.form_name,
-        consentText: consentTemplate.consent_text,
+        consentText: consentText,
         signatureDataUrl: signatureDataUrl,
         signedDate: new Date(),
+        language: selectedLanguage,
       });
 
       // Upload PDF
@@ -186,6 +208,7 @@ export function InlineConsentModal({
           consent_template_id: consentTemplate.id,
           signature_url: signatureUrlData.publicUrl,
           pdf_url: pdfUrlData.publicUrl,
+          language: selectedLanguage,
         });
 
       if (consentError) throw consentError;
@@ -215,14 +238,15 @@ export function InlineConsentModal({
     }
   };
 
-  const processedConsentText = consentTemplate
-    ? replaceConsentPlaceholders(
-        consentTemplate.consent_text,
-        patient.full_name,
-        treatmentName,
-        new Date()
-      )
-    : '';
+  const getConsentText = () => {
+    if (!consentTemplate || !selectedLanguage) return '';
+    const text = selectedLanguage === 'ar' && consentTemplate.consent_text_ar 
+      ? consentTemplate.consent_text_ar 
+      : consentTemplate.consent_text;
+    return replaceConsentPlaceholders(text, patient.full_name, treatmentName, new Date());
+  };
+
+  const hasArabicVersion = !!consentTemplate?.consent_text_ar;
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -233,7 +257,9 @@ export function InlineConsentModal({
             Sign Consent: {treatmentName}
           </DialogTitle>
           <DialogDescription>
-            Please read the consent form carefully and sign below.
+            {!selectedLanguage 
+              ? 'Please select your preferred language.' 
+              : 'Please read the consent form carefully and sign below.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -244,28 +270,76 @@ export function InlineConsentModal({
               <p className="text-muted-foreground">Loading consent form...</p>
             </div>
           </div>
-        ) : consentTemplate ? (
+        ) : consentTemplate && !selectedLanguage ? (
+          // Language Selection Step
+          <div className="flex-1 flex flex-col items-center justify-center gap-6 py-8">
+            <Globe className="h-16 w-16 text-primary/50" />
+            <h3 className="text-xl font-semibold">Select Language / اختر اللغة</h3>
+            <div className="flex gap-4">
+              <TabletButton
+                onClick={() => handleLanguageSelect('en')}
+                className="h-20 w-40 text-lg"
+                variant="outline"
+              >
+                🇬🇧 English
+              </TabletButton>
+              <TabletButton
+                onClick={() => handleLanguageSelect('ar')}
+                className="h-20 w-40 text-lg"
+                variant="outline"
+                disabled={!hasArabicVersion}
+              >
+                🇦🇪 العربية
+              </TabletButton>
+            </div>
+            {!hasArabicVersion && (
+              <p className="text-sm text-muted-foreground">
+                Arabic version is not available for this consent form.
+              </p>
+            )}
+          </div>
+        ) : consentTemplate && selectedLanguage ? (
           <div className="flex-1 flex flex-col min-h-0 gap-4">
+            {/* Language Indicator */}
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">
+                Language: {selectedLanguage === 'ar' ? 'العربية (Arabic)' : 'English'}
+              </span>
+              <TabletButton
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedLanguage(null)}
+              >
+                Change Language
+              </TabletButton>
+            </div>
+
             {/* Consent Text */}
             <div className="flex-1 min-h-0">
               <ScrollArea className="h-[200px] rounded-lg border p-4 bg-muted/30">
                 <div 
-                  className="prose prose-sm max-w-none text-sm"
-                  dangerouslySetInnerHTML={{ __html: processedConsentText }}
-                />
+                  className={`prose prose-sm max-w-none text-sm whitespace-pre-wrap ${
+                    selectedLanguage === 'ar' ? 'text-right' : ''
+                  }`}
+                  dir={selectedLanguage === 'ar' ? 'rtl' : 'ltr'}
+                >
+                  {getConsentText()}
+                </div>
               </ScrollArea>
             </div>
 
             {/* Signature Area */}
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <label className="text-sm font-medium">Patient Signature</label>
+                <label className="text-sm font-medium">
+                  {selectedLanguage === 'ar' ? 'توقيع المريض' : 'Patient Signature'}
+                </label>
                 <TabletButton
                   variant="ghost"
                   size="sm"
                   onClick={clearSignature}
                 >
-                  Clear
+                  {selectedLanguage === 'ar' ? 'مسح' : 'Clear'}
                 </TabletButton>
               </div>
               <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg bg-white">
@@ -279,7 +353,9 @@ export function InlineConsentModal({
                 />
               </div>
               <p className="text-xs text-muted-foreground text-center">
-                Sign above using finger or stylus
+                {selectedLanguage === 'ar' 
+                  ? 'وقّع أعلاه باستخدام الإصبع أو القلم' 
+                  : 'Sign above using finger or stylus'}
               </p>
             </div>
 
@@ -291,7 +367,7 @@ export function InlineConsentModal({
                 className="flex-1"
                 disabled={isSigning}
               >
-                Cancel
+                {selectedLanguage === 'ar' ? 'إلغاء' : 'Cancel'}
               </TabletButton>
               <TabletButton
                 onClick={handleSignConsent}
@@ -299,7 +375,7 @@ export function InlineConsentModal({
                 isLoading={isSigning}
                 leftIcon={<FileSignature />}
               >
-                Sign & Continue
+                {selectedLanguage === 'ar' ? 'توقيع ومتابعة' : 'Sign & Continue'}
               </TabletButton>
             </div>
           </div>
