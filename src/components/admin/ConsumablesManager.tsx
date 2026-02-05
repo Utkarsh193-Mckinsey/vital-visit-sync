@@ -397,6 +397,36 @@ export default function ConsumablesManager() {
               </div>
             </div>
 
+            {/* Packaging Section */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium">Packaging Unit</label>
+                <Select
+                  value={formData.packaging_unit}
+                  onValueChange={(value) => setFormData({ ...formData, packaging_unit: value })}
+                >
+                  <SelectTrigger className="h-14">
+                    <SelectValue placeholder="How it comes (Box, Vial...)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PACKAGING_UNITS.map((pu) => (
+                      <SelectItem key={pu} value={pu} className="py-3">
+                        {pu}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <TabletInput
+                label="Units per Package"
+                type="number"
+                placeholder="e.g., 1 Box = 100 pcs"
+                value={formData.units_per_package.toString()}
+                onChange={(e) => setFormData({ ...formData, units_per_package: parseFloat(e.target.value) || 1 })}
+              />
+            </div>
+
             {/* Brand with Autocomplete */}
             <div className="space-y-2 relative">
               <label className="block text-sm font-medium">Brand</label>
@@ -429,9 +459,17 @@ export default function ConsumablesManager() {
               )}
             </div>
 
+            {/* Variant/Strength (e.g., for Mounjaro 2.5mg, 5mg) */}
+            <TabletInput
+              label="Variant / Strength"
+              placeholder="e.g., 2.5mg, 5mg, 10ml"
+              value={formData.variant}
+              onChange={(e) => setFormData({ ...formData, variant: e.target.value })}
+            />
+
             {/* Initial Stock */}
             <TabletInput
-              label="Initial Stock"
+              label="Initial Stock (in base units)"
               type="number"
               placeholder="0"
               value={formData.current_stock.toString()}
