@@ -109,6 +109,8 @@ export default function ConsumablesManager() {
       item_name: item.item_name,
       category: item.category,
       unit: item.unit,
+      brand: item.brand || '',
+      current_stock: item.current_stock || 0,
     });
   };
 
