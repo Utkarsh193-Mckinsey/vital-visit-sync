@@ -35,8 +35,9 @@ const CATEGORIES = [
   'Other',
 ];
 
-const UNITS = ['pcs', 'ml', 'mg', 'vial', 'amp', 'pack', 'box'];
-const PACKAGING_UNITS = ['Box', 'Pack', 'Vial', 'Bottle', 'Piece', 'Carton', 'Strip'];
+const BASE_UNITS = ['pcs', 'ml', 'mg', 'mcg', 'Units', 'amp'];
+const PACKAGING_UNITS = ['Box', 'Pack', 'Vial', 'Bottle', 'Carton', 'Strip', 'Blister'];
+const UNITS = [...BASE_UNITS, 'vial', 'pack', 'box'];
 
 interface ConsumableFormData {
   item_name: string;
