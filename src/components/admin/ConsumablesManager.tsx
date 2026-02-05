@@ -614,7 +614,8 @@ export default function ConsumablesManager() {
                 )}
               </TabletCardContent>
             </TabletCard>
-          ))}
+          );
+          })}
         </div>
       )}
 
