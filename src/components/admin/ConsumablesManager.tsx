@@ -568,8 +568,45 @@ export default function ConsumablesManager() {
                 
                 {/* Add Stock Modal */}
                 {addStockId === item.id ? (
-                  <div className="flex flex-col gap-2">
-                    {hasPackaging ? (
+                  <div className="flex flex-col gap-3 min-w-[280px] p-3 bg-muted/50 rounded-lg">
+                    {/* If no packaging configured, show config options */}
+                    {!hasPackaging && (
+                      <>
+                        <div className="text-sm font-medium text-muted-foreground">How does this item come?</div>
+                        <div className="flex gap-2">
+                          <Select
+                            value={inlinePackagingUnit}
+                            onValueChange={setInlinePackagingUnit}
+                          >
+                            <SelectTrigger className="h-10 flex-1">
+                              <SelectValue placeholder="Packaging (Box, Vial...)" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {PACKAGING_UNITS.map((pu) => (
+                                <SelectItem key={pu} value={pu}>
+                                  {pu}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <TabletInput
+                            type="number"
+                            placeholder={`${item.unit} per pkg`}
+                            className="w-24"
+                            value={inlineUnitsPerPackage.toString()}
+                            onChange={(e) => setInlineUnitsPerPackage(parseFloat(e.target.value) || 1)}
+                          />
+                        </div>
+                        {inlinePackagingUnit && inlineUnitsPerPackage > 1 && (
+                          <div className="text-xs text-muted-foreground">
+                            1 {inlinePackagingUnit} = {inlineUnitsPerPackage} {item.unit}
+                          </div>
+                        )}
+                      </>
+                    )}
+                    
+                    {/* Quantity input */}
+                    {(hasPackaging || (inlinePackagingUnit && inlineUnitsPerPackage > 1)) ? (
                       <div className="flex items-center gap-2">
                         <TabletInput
                           type="number"
@@ -577,33 +614,37 @@ export default function ConsumablesManager() {
                           className="w-20"
                           value={packagesToAdd.toString()}
                           onChange={(e) => setPackagesToAdd(parseFloat(e.target.value) || 0)}
-                          autoFocus
+                          autoFocus={hasPackaging}
                         />
                         <span className="text-sm text-muted-foreground whitespace-nowrap">
-                          {item.packaging_unit}(s) = {packagesToAdd * (item.units_per_package || 1)} {item.unit}
+                          {hasPackaging ? item.packaging_unit : inlinePackagingUnit}(s) = {packagesToAdd * (hasPackaging ? (item.units_per_package || 1) : inlineUnitsPerPackage)} {item.unit}
                         </span>
                       </div>
                     ) : (
-                      <TabletInput
-                        type="number"
-                        placeholder="Qty"
-                        className="w-20"
-                        value={stockToAdd.toString()}
-                        onChange={(e) => setStockToAdd(parseFloat(e.target.value) || 0)}
-                        autoFocus
-                      />
+                      <div className="flex items-center gap-2">
+                        <TabletInput
+                          type="number"
+                          placeholder={`Qty in ${item.unit}`}
+                          className="w-24"
+                          value={stockToAdd.toString()}
+                          onChange={(e) => setStockToAdd(parseFloat(e.target.value) || 0)}
+                          autoFocus
+                        />
+                        <span className="text-sm text-muted-foreground">{item.unit}</span>
+                      </div>
                     )}
+                    
                     <div className="flex gap-2">
                       <TabletButton
                         size="sm"
                         onClick={() => handleAddStock(item.id)}
                       >
-                        Add
+                        Add Stock
                       </TabletButton>
                       <TabletButton
                         size="sm"
                         variant="ghost"
-                        onClick={() => { setAddStockId(null); setStockToAdd(0); setPackagesToAdd(0); }}
+                        onClick={resetAddStockState}
                       >
                         <X className="h-4 w-4" />
                       </TabletButton>
