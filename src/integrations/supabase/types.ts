@@ -240,6 +240,33 @@ export type Database = {
         }
         Relationships: []
       }
+      stock_items: {
+        Row: {
+          category: string
+          created_date: string
+          id: string
+          item_name: string
+          status: string
+          unit: string
+        }
+        Insert: {
+          category: string
+          created_date?: string
+          id?: string
+          item_name: string
+          status?: string
+          unit?: string
+        }
+        Update: {
+          category?: string
+          created_date?: string
+          id?: string
+          item_name?: string
+          status?: string
+          unit?: string
+        }
+        Relationships: []
+      }
       treatments: {
         Row: {
           administration_method: string | null
@@ -280,6 +307,58 @@ export type Database = {
             columns: ["consent_template_id"]
             isOneToOne: false
             referencedRelation: "consent_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      visit_consumables: {
+        Row: {
+          created_date: string
+          id: string
+          notes: string | null
+          quantity_used: number
+          recorded_by: string | null
+          stock_item_id: string
+          visit_id: string
+        }
+        Insert: {
+          created_date?: string
+          id?: string
+          notes?: string | null
+          quantity_used?: number
+          recorded_by?: string | null
+          stock_item_id: string
+          visit_id: string
+        }
+        Update: {
+          created_date?: string
+          id?: string
+          notes?: string | null
+          quantity_used?: number
+          recorded_by?: string | null
+          stock_item_id?: string
+          visit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visit_consumables_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_consumables_stock_item_id_fkey"
+            columns: ["stock_item_id"]
+            isOneToOne: false
+            referencedRelation: "stock_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_consumables_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
             referencedColumns: ["id"]
           },
         ]
