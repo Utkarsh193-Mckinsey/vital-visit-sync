@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import { loadAmiriFontFromBundle } from './fonts/amiriFontBase64';
 
 interface ConsentPDFData {
   patientName: string;
@@ -13,12 +14,30 @@ interface ConsentPDFData {
   language?: 'en' | 'ar';
 }
 
+// Cache the font to avoid loading it multiple times
+let cachedAmiriFont: string | null = null;
+
+async function getAmiriFont(): Promise<string> {
+  if (cachedAmiriFont) return cachedAmiriFont;
+  cachedAmiriFont = await loadAmiriFontFromBundle();
+  return cachedAmiriFont;
+}
+
 export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
   const pdf = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
     format: 'a4',
   });
+
+  // Load and embed Amiri font for Arabic support
+  try {
+    const amiriBase64 = await getAmiriFont();
+    pdf.addFileToVFS('Amiri-Regular.ttf', amiriBase64);
+    pdf.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
+  } catch (error) {
+    console.warn('Could not load Amiri font, Arabic may not render correctly:', error);
+  }
 
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
@@ -34,11 +53,25 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
     }
   };
 
+  // Helper to set English font
+  const setEnglishFont = (style: 'normal' | 'bold' = 'normal') => {
+    pdf.setFont('helvetica', style);
+  };
+
+  // Helper to set Arabic font
+  const setArabicFont = () => {
+    try {
+      pdf.setFont('Amiri', 'normal');
+    } catch {
+      pdf.setFont('helvetica', 'normal');
+    }
+  };
+
   // ==========================================
   // HEADER - Clinic Name
   // ==========================================
+  setEnglishFont('bold');
   pdf.setFontSize(16);
-  pdf.setFont('helvetica', 'bold');
   pdf.text('Cosmique Aesthetic and Dermatology Clinic', pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 12;
 
@@ -46,12 +79,16 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
   // FORM TITLE - Bilingual
   // ==========================================
   pdf.setFontSize(14);
-  pdf.setFont('helvetica', 'bold');
   
-  // Get Arabic form name based on treatment
+  // English title
+  setEnglishFont('bold');
   const arabicFormName = getArabicFormName(data.consentFormName);
-  const bilingualTitle = `${data.consentFormName} / ${arabicFormName}`;
-  pdf.text(bilingualTitle, pageWidth / 2, yPosition, { align: 'center' });
+  pdf.text(`${data.consentFormName} / `, pageWidth / 2, yPosition, { align: 'center' });
+  
+  // Add Arabic title using Amiri font
+  const englishTitleWidth = pdf.getTextWidth(`${data.consentFormName} / `);
+  setArabicFont();
+  pdf.text(arabicFormName, pageWidth / 2 + englishTitleWidth / 2 + 2, yPosition);
   yPosition += 12;
 
   // Divider line
@@ -63,22 +100,45 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
   // PATIENT INFORMATION - Bilingual Labels
   // ==========================================
   pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'normal');
 
   // Patient Name
-  pdf.text(`Patient Name / اسم المريض: ${data.patientName}`, margin, yPosition);
+  setEnglishFont('normal');
+  pdf.text('Patient Name / ', margin, yPosition);
+  setArabicFont();
+  const nameEnWidth = pdf.getTextWidth('Patient Name / ');
+  pdf.text('اسم المريض', margin + nameEnWidth, yPosition);
+  setEnglishFont('normal');
+  pdf.text(`: ${data.patientName}`, margin + nameEnWidth + pdf.getTextWidth('اسم المريض'), yPosition);
   yPosition += 6;
 
   // Date of Birth
-  pdf.text(`Date of Birth / تاريخ الميلاد: ${formatDate(data.patientDOB)}`, margin, yPosition);
+  setEnglishFont('normal');
+  pdf.text('Date of Birth / ', margin, yPosition);
+  setArabicFont();
+  const dobEnWidth = pdf.getTextWidth('Date of Birth / ');
+  pdf.text('تاريخ الميلاد', margin + dobEnWidth, yPosition);
+  setEnglishFont('normal');
+  pdf.text(`: ${formatDate(data.patientDOB)}`, margin + dobEnWidth + pdf.getTextWidth('تاريخ الميلاد'), yPosition);
   yPosition += 6;
 
   // Contact Number
-  pdf.text(`Contact Number / رقم التواصل: ${data.patientPhone}`, margin, yPosition);
+  setEnglishFont('normal');
+  pdf.text('Contact Number / ', margin, yPosition);
+  setArabicFont();
+  const contactEnWidth = pdf.getTextWidth('Contact Number / ');
+  pdf.text('رقم التواصل', margin + contactEnWidth, yPosition);
+  setEnglishFont('normal');
+  pdf.text(`: ${data.patientPhone}`, margin + contactEnWidth + pdf.getTextWidth('رقم التواصل'), yPosition);
   yPosition += 6;
 
   // Procedure Date
-  pdf.text(`Procedure Date / تاريخ الإجراء: ${formatDate(data.signedDate.toISOString())}`, margin, yPosition);
+  setEnglishFont('normal');
+  pdf.text('Procedure Date / ', margin, yPosition);
+  setArabicFont();
+  const procEnWidth = pdf.getTextWidth('Procedure Date / ');
+  pdf.text('تاريخ الإجراء', margin + procEnWidth, yPosition);
+  setEnglishFont('normal');
+  pdf.text(`: ${formatDate(data.signedDate.toISOString())}`, margin + procEnWidth + pdf.getTextWidth('تاريخ الإجراء'), yPosition);
   yPosition += 10;
 
   // Divider line
@@ -87,10 +147,10 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
   yPosition += 8;
 
   // ==========================================
-  // CONSENT TEXT - Show based on selected language
+  // ENGLISH CONSENT TEXT
   // ==========================================
   pdf.setFontSize(9);
-  pdf.setFont('helvetica', 'normal');
+  setEnglishFont('normal');
 
   // Replace placeholders in consent text
   let processedText = data.consentText
@@ -111,7 +171,9 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
     yPosition += 4.5;
   }
 
-  // If Arabic text is provided, add it after English
+  // ==========================================
+  // ARABIC CONSENT TEXT (if provided)
+  // ==========================================
   if (data.consentTextAr) {
     yPosition += 8;
     checkNewPage(40);
@@ -123,12 +185,11 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
 
     // Arabic header
     pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('النص العربي / Arabic Text', pageWidth / 2, yPosition, { align: 'center' });
+    setArabicFont();
+    pdf.text('النص العربي', pageWidth / 2, yPosition, { align: 'center' });
     yPosition += 8;
 
     pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'normal');
 
     // Replace placeholders in Arabic text
     let processedArabicText = data.consentTextAr
@@ -138,8 +199,7 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
       .replace(/\[TREATMENT_NAME\]/gi, data.treatmentName)
       .replace(/\[treatment name\]/gi, data.treatmentName);
 
-    // Split Arabic text - note: jsPDF has limited Arabic support
-    // We'll render it as-is, which may have rendering issues with complex Arabic
+    // Split Arabic text and render with Amiri font
     const arabicLines = pdf.splitTextToSize(processedArabicText, contentWidth);
     
     for (const line of arabicLines) {
@@ -156,25 +216,31 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
   // ==========================================
   // SIGNATURE SECTION
   // ==========================================
+  setEnglishFont('normal');
+  
   // Divider line
   pdf.setLineWidth(0.3);
   pdf.line(margin, yPosition, pageWidth - margin, yPosition);
   yPosition += 8;
 
-  // Signature header
+  // Signature header - bilingual
   pdf.setFontSize(11);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('Patient Signature / توقيع المريض', margin, yPosition);
+  setEnglishFont('bold');
+  pdf.text('Patient Signature / ', margin, yPosition);
+  setArabicFont();
+  const sigEnWidth = pdf.getTextWidth('Patient Signature / ');
+  pdf.text('توقيع المريض', margin + sigEnWidth, yPosition);
   yPosition += 8;
 
   pdf.setFontSize(9);
-  pdf.setFont('helvetica', 'normal');
+  setEnglishFont('normal');
   pdf.text(
     'I confirm that I have read, understood, and agree to the terms above.',
     margin,
     yPosition
   );
   yPosition += 4;
+  setArabicFont();
   pdf.text(
     'أؤكد أنني قرأت وفهمت ووافقت على الشروط أعلاه.',
     pageWidth - margin,
@@ -192,48 +258,72 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
     yPosition += sigHeight + 2;
   } catch (error) {
     console.error('Error adding signature to PDF:', error);
+    setEnglishFont('normal');
     pdf.text('[Signature on file]', margin, yPosition);
     yPosition += 10;
   }
 
   // Signature line
+  setEnglishFont('normal');
   pdf.setLineWidth(0.5);
   pdf.line(margin, yPosition, margin + 70, yPosition);
   yPosition += 5;
 
   pdf.setFontSize(8);
-  pdf.text('Patient Signature / توقيع المريض', margin, yPosition);
+  pdf.text('Patient Signature / ', margin, yPosition);
+  setArabicFont();
+  pdf.text('توقيع المريض', margin + pdf.getTextWidth('Patient Signature / '), yPosition);
   yPosition += 8;
 
   // Date line
-  pdf.text(`Date / التاريخ: ${formatDateTime(data.signedDate)}`, margin, yPosition);
+  setEnglishFont('normal');
+  pdf.text('Date / ', margin, yPosition);
+  setArabicFont();
+  pdf.text('التاريخ', margin + pdf.getTextWidth('Date / '), yPosition);
+  setEnglishFont('normal');
+  pdf.text(`: ${formatDateTime(data.signedDate)}`, margin + pdf.getTextWidth('Date / ') + pdf.getTextWidth('التاريخ'), yPosition);
   yPosition += 15;
 
   // ==========================================
   // PRACTITIONER SECTION
   // ==========================================
   pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('Practitioner Details / تفاصيل الممارس', margin, yPosition);
+  setEnglishFont('bold');
+  pdf.text('Practitioner Details / ', margin, yPosition);
+  setArabicFont();
+  pdf.text('تفاصيل الممارس', margin + pdf.getTextWidth('Practitioner Details / '), yPosition);
   yPosition += 8;
 
   pdf.setFontSize(9);
-  pdf.setFont('helvetica', 'normal');
+  setEnglishFont('normal');
   
   // Practitioner name line
-  pdf.text('Practitioner Name / اسم الممارس: _______________________________', margin, yPosition);
+  pdf.text('Practitioner Name / ', margin, yPosition);
+  setArabicFont();
+  pdf.text('اسم الممارس', margin + pdf.getTextWidth('Practitioner Name / '), yPosition);
+  setEnglishFont('normal');
+  pdf.text(': _______________________________', margin + pdf.getTextWidth('Practitioner Name / ') + pdf.getTextWidth('اسم الممارس'), yPosition);
   yPosition += 8;
 
   // Practitioner signature line
-  pdf.text('Signature / التوقيع: _______________________________', margin, yPosition);
+  pdf.text('Signature / ', margin, yPosition);
+  setArabicFont();
+  pdf.text('التوقيع', margin + pdf.getTextWidth('Signature / '), yPosition);
+  setEnglishFont('normal');
+  pdf.text(': _______________________________', margin + pdf.getTextWidth('Signature / ') + pdf.getTextWidth('التوقيع'), yPosition);
   yPosition += 8;
 
   // Date line
-  pdf.text('Date / التاريخ: _______________________________', margin, yPosition);
+  pdf.text('Date / ', margin, yPosition);
+  setArabicFont();
+  pdf.text('التاريخ', margin + pdf.getTextWidth('Date / '), yPosition);
+  setEnglishFont('normal');
+  pdf.text(': _______________________________', margin + pdf.getTextWidth('Date / ') + pdf.getTextWidth('التاريخ'), yPosition);
 
   // ==========================================
   // FOOTER
   // ==========================================
+  setEnglishFont('normal');
   pdf.setFontSize(7);
   pdf.setTextColor(128, 128, 128);
   pdf.text(
