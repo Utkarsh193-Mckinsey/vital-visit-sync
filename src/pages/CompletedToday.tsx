@@ -143,40 +143,7 @@ export default function CompletedToday() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {visits.map((visit) => (
-                <TabletCard key={visit.id} className="overflow-hidden border-l-4 border-l-success">
-                  <TabletCardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-semibold">{visit.patient.full_name}</span>
-                      <span className="text-sm text-muted-foreground">
-                        Visit #{visit.visit_number}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5 mb-3">
-                      {visit.consent_forms.map((cf) => (
-                        <span 
-                          key={cf.id}
-                          className="rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success"
-                        >
-                          {cf.treatment?.treatment_name}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <CheckCircle className="h-3.5 w-3.5 text-success" />
-                        Completed
-                      </span>
-                      {visit.completed_date && (
-                        <span>
-                          {new Date(visit.completed_date).toLocaleTimeString('en-AE', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      )}
-                    </div>
-                  </TabletCardContent>
-                </TabletCard>
+                <VisitDetailsCard key={visit.id} visit={visit} />
               ))}
             </div>
           )}
