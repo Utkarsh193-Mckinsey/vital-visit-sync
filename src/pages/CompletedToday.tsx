@@ -2,16 +2,36 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { TabletCard, TabletCardContent } from '@/components/ui/tablet-card';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
-import { CheckCircle, ClipboardCheck, Package } from 'lucide-react';
+import { ClipboardCheck, Package } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TodayConsumablesReport } from '@/components/reports/TodayConsumablesReport';
+import { VisitDetailsCard } from '@/components/reports/VisitDetailsCard';
 import type { Visit, Patient, ConsentForm, Treatment, Staff } from '@/types/database';
+
+interface VisitTreatmentDetail {
+  id: string;
+  dose_administered: string;
+  dose_unit: string;
+  timestamp: string;
+  treatment: Treatment;
+}
+
+interface VisitConsumableDetail {
+  id: string;
+  quantity_used: number;
+  stock_item: {
+    item_name: string;
+    unit: string;
+  };
+}
 
 interface CompletedVisit extends Visit {
   patient: Patient;
   consent_forms: (ConsentForm & { treatment: Treatment })[];
   nurse_staff?: Staff | null;
   doctor_staff?: Staff | null;
+  visit_treatments?: VisitTreatmentDetail[];
+  visit_consumables?: VisitConsumableDetail[];
 }
 
 export default function CompletedToday() {
