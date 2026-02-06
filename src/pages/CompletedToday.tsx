@@ -2,16 +2,36 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { TabletCard, TabletCardContent } from '@/components/ui/tablet-card';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
-import { CheckCircle, ClipboardCheck, Package } from 'lucide-react';
+import { ClipboardCheck, Package } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TodayConsumablesReport } from '@/components/reports/TodayConsumablesReport';
+import { VisitDetailsCard } from '@/components/reports/VisitDetailsCard';
 import type { Visit, Patient, ConsentForm, Treatment, Staff } from '@/types/database';
+
+interface VisitTreatmentDetail {
+  id: string;
+  dose_administered: string;
+  dose_unit: string;
+  timestamp: string;
+  treatment: Treatment;
+}
+
+interface VisitConsumableDetail {
+  id: string;
+  quantity_used: number;
+  stock_item: {
+    item_name: string;
+    unit: string;
+  };
+}
 
 interface CompletedVisit extends Visit {
   patient: Patient;
   consent_forms: (ConsentForm & { treatment: Treatment })[];
   nurse_staff?: Staff | null;
   doctor_staff?: Staff | null;
+  visit_treatments?: VisitTreatmentDetail[];
+  visit_consumables?: VisitConsumableDetail[];
 }
 
 export default function CompletedToday() {
@@ -34,7 +54,22 @@ export default function CompletedToday() {
           treatment:treatments (*)
         ),
         nurse_staff:staff!visits_nurse_staff_id_fkey (*),
-        doctor_staff:staff!visits_doctor_staff_id_fkey (*)
+        doctor_staff:staff!visits_doctor_staff_id_fkey (*),
+        visit_treatments (
+          id,
+          dose_administered,
+          dose_unit,
+          timestamp,
+          treatment:treatments (*)
+        ),
+        visit_consumables (
+          id,
+          quantity_used,
+          stock_item:stock_items (
+            item_name,
+            unit
+          )
+        )
       `)
       .eq('current_status', 'completed')
       .gte('completed_date', today.toISOString())
@@ -108,40 +143,7 @@ export default function CompletedToday() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {visits.map((visit) => (
-                <TabletCard key={visit.id} className="overflow-hidden border-l-4 border-l-success">
-                  <TabletCardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-semibold">{visit.patient.full_name}</span>
-                      <span className="text-sm text-muted-foreground">
-                        Visit #{visit.visit_number}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5 mb-3">
-                      {visit.consent_forms.map((cf) => (
-                        <span 
-                          key={cf.id}
-                          className="rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success"
-                        >
-                          {cf.treatment?.treatment_name}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <CheckCircle className="h-3.5 w-3.5 text-success" />
-                        Completed
-                      </span>
-                      {visit.completed_date && (
-                        <span>
-                          {new Date(visit.completed_date).toLocaleTimeString('en-AE', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      )}
-                    </div>
-                  </TabletCardContent>
-                </TabletCard>
+                <VisitDetailsCard key={visit.id} visit={visit} />
               ))}
             </div>
           )}
