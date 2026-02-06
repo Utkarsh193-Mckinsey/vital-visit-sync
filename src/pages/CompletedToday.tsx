@@ -54,7 +54,22 @@ export default function CompletedToday() {
           treatment:treatments (*)
         ),
         nurse_staff:staff!visits_nurse_staff_id_fkey (*),
-        doctor_staff:staff!visits_doctor_staff_id_fkey (*)
+        doctor_staff:staff!visits_doctor_staff_id_fkey (*),
+        visit_treatments (
+          id,
+          dose_administered,
+          dose_unit,
+          timestamp,
+          treatment:treatments (*)
+        ),
+        visit_consumables (
+          id,
+          quantity_used,
+          stock_item:stock_items (
+            item_name,
+            unit
+          )
+        )
       `)
       .eq('current_status', 'completed')
       .gte('completed_date', today.toISOString())
