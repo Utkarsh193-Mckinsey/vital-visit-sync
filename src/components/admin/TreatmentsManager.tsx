@@ -376,14 +376,14 @@ export default function TreatmentsManager() {
                       <span className="text-muted-foreground font-normal ml-1">- pre-selected for doctors</span>
                     </label>
                     <Select
-                      value={formData.default_dose}
-                      onValueChange={(value) => setFormData({ ...formData, default_dose: value })}
+                      value={formData.default_dose || '__none__'}
+                      onValueChange={(value) => setFormData({ ...formData, default_dose: value === '__none__' ? '' : value })}
                     >
                       <SelectTrigger className="h-14">
                         <SelectValue placeholder="Select default dose (optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="" className="py-3">
+                        <SelectItem value="__none__" className="py-3">
                           No default
                         </SelectItem>
                         {formData.common_doses.map((dose) => (
