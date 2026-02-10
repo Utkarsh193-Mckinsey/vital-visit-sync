@@ -211,6 +211,24 @@ export default function PatientRegistration() {
         id: patient.id,
         signatureDataUrl,
       });
+
+      // Auto-download Emirates ID PDF if images were captured
+      if (frontIdImage) {
+        try {
+          const idPdfBlob = await generateEmiratesIdPDF({
+            patientName: formData.full_name.trim(),
+            patientPhone: formData.phone_number.trim(),
+            emiratesId: formData.emirates_id.trim() || null,
+            frontImage: frontIdImage,
+            backImage: backIdImage || undefined,
+          });
+          const firstName = getFirstName(formData.full_name);
+          const idFileName = getEmiratesIdFileName(firstName, formData.phone_number);
+          downloadPDF(idPdfBlob, idFileName);
+        } catch (err) {
+          console.error('Error generating Emirates ID PDF:', err);
+        }
+      }
       
     } catch (error) {
       console.error('Registration error:', error);
