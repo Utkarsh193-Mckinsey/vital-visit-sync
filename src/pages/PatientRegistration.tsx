@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, UserPlus, Eraser, Download, Check } from 'lucide-react';
 import { generateRegistrationPDF, getRegistrationFileName } from '@/utils/generateRegistrationPDF';
 import { downloadPDF, getFirstName } from '@/utils/pdfDownload';
+import EmiratesIdCapture, { type ExtractedIdData } from '@/components/patient/EmiratesIdCapture';
 
 export default function PatientRegistration() {
   const [formData, setFormData] = useState({
