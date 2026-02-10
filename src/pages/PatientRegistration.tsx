@@ -8,8 +8,9 @@ import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletCard, TabletCardContent, TabletCardHeader, TabletCardTitle } from '@/components/ui/tablet-card';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, UserPlus, Eraser, Download, Check } from 'lucide-react';
+import { ArrowLeft, UserPlus, Eraser, Download, Check, CreditCard } from 'lucide-react';
 import { generateRegistrationPDF, getRegistrationFileName } from '@/utils/generateRegistrationPDF';
+import { generateEmiratesIdPDF, getEmiratesIdFileName } from '@/utils/generateEmiratesIdPDF';
 import { downloadPDF, getFirstName } from '@/utils/pdfDownload';
 import EmiratesIdCapture, { type ExtractedIdData } from '@/components/patient/EmiratesIdCapture';
 
@@ -210,6 +211,24 @@ export default function PatientRegistration() {
         id: patient.id,
         signatureDataUrl,
       });
+
+      // Auto-download Emirates ID PDF if images were captured
+      if (frontIdImage) {
+        try {
+          const idPdfBlob = await generateEmiratesIdPDF({
+            patientName: formData.full_name.trim(),
+            patientPhone: formData.phone_number.trim(),
+            emiratesId: formData.emirates_id.trim() || null,
+            frontImage: frontIdImage,
+            backImage: backIdImage || undefined,
+          });
+          const firstName = getFirstName(formData.full_name);
+          const idFileName = getEmiratesIdFileName(firstName, formData.phone_number);
+          downloadPDF(idPdfBlob, idFileName);
+        } catch (err) {
+          console.error('Error generating Emirates ID PDF:', err);
+        }
+      }
       
     } catch (error) {
       console.error('Registration error:', error);
@@ -401,6 +420,38 @@ export default function PatientRegistration() {
             />
           </TabletCardContent>
         </TabletCard>
+
+        {/* Emirates ID Photos Section */}
+        {(frontIdImage || backIdImage) && (
+          <TabletCard className="mb-6">
+            <TabletCardHeader>
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                <TabletCardTitle>Emirates ID Photos</TabletCardTitle>
+              </div>
+            </TabletCardHeader>
+            <TabletCardContent>
+              <div className="grid gap-4 md:grid-cols-2">
+                {frontIdImage && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Front Side</p>
+                    <div className="rounded-xl overflow-hidden border">
+                      <img src={frontIdImage} alt="Emirates ID Front" className="w-full h-auto object-cover" />
+                    </div>
+                  </div>
+                )}
+                {backIdImage && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Back Side</p>
+                    <div className="rounded-xl overflow-hidden border">
+                      <img src={backIdImage} alt="Emirates ID Back" className="w-full h-auto object-cover" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </TabletCardContent>
+          </TabletCard>
+        )}
 
         <TabletCard className="mb-6">
           <TabletCardHeader>
