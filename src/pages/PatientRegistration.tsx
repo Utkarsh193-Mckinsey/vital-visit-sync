@@ -8,8 +8,9 @@ import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletCard, TabletCardContent, TabletCardHeader, TabletCardTitle } from '@/components/ui/tablet-card';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, UserPlus, Eraser, Download, Check } from 'lucide-react';
+import { ArrowLeft, UserPlus, Eraser, Download, Check, CreditCard } from 'lucide-react';
 import { generateRegistrationPDF, getRegistrationFileName } from '@/utils/generateRegistrationPDF';
+import { generateEmiratesIdPDF, getEmiratesIdFileName } from '@/utils/generateEmiratesIdPDF';
 import { downloadPDF, getFirstName } from '@/utils/pdfDownload';
 import EmiratesIdCapture, { type ExtractedIdData } from '@/components/patient/EmiratesIdCapture';
 
