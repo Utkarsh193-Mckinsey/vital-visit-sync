@@ -301,6 +301,31 @@ export default function PatientRegistration() {
     );
   }
 
+  // Show Emirates ID capture step first
+  if (!idCaptureComplete) {
+    return (
+      <PageContainer maxWidth="md">
+        <PageHeader 
+          title="New Patient Registration"
+          backButton={
+            <TabletButton 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => navigate('/patients')}
+              aria-label="Back to search"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </TabletButton>
+          }
+        />
+        <EmiratesIdCapture
+          onDataExtracted={handleIdDataExtracted}
+          onSkip={handleSkipIdCapture}
+        />
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer maxWidth="md">
       <PageHeader 
