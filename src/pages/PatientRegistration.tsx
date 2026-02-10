@@ -14,6 +14,9 @@ import { downloadPDF, getFirstName } from '@/utils/pdfDownload';
 import EmiratesIdCapture, { type ExtractedIdData } from '@/components/patient/EmiratesIdCapture';
 
 export default function PatientRegistration() {
+  const [idCaptureComplete, setIdCaptureComplete] = useState(false);
+  const [frontIdImage, setFrontIdImage] = useState<string>('');
+  const [backIdImage, setBackIdImage] = useState<string>('');
   const [formData, setFormData] = useState({
     full_name: '',
     phone_number: '',
@@ -30,6 +33,23 @@ export default function PatientRegistration() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { staff } = useAuth();
+
+  const handleIdDataExtracted = (data: ExtractedIdData, frontImg: string, backImg: string) => {
+    setFrontIdImage(frontImg);
+    setBackIdImage(backImg);
+    setFormData(prev => ({
+      ...prev,
+      full_name: data.full_name || prev.full_name,
+      date_of_birth: data.date_of_birth || prev.date_of_birth,
+      emirates_id: data.emirates_id || prev.emirates_id,
+      address: data.address || prev.address,
+    }));
+    setIdCaptureComplete(true);
+  };
+
+  const handleSkipIdCapture = () => {
+    setIdCaptureComplete(true);
+  };
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
