@@ -403,6 +403,38 @@ export default function PatientRegistration() {
           </TabletCardContent>
         </TabletCard>
 
+        {/* Emirates ID Photos Section */}
+        {(frontIdImage || backIdImage) && (
+          <TabletCard className="mb-6">
+            <TabletCardHeader>
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                <TabletCardTitle>Emirates ID Photos</TabletCardTitle>
+              </div>
+            </TabletCardHeader>
+            <TabletCardContent>
+              <div className="grid gap-4 md:grid-cols-2">
+                {frontIdImage && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Front Side</p>
+                    <div className="rounded-xl overflow-hidden border">
+                      <img src={frontIdImage} alt="Emirates ID Front" className="w-full h-auto object-cover" />
+                    </div>
+                  </div>
+                )}
+                {backIdImage && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Back Side</p>
+                    <div className="rounded-xl overflow-hidden border">
+                      <img src={backIdImage} alt="Emirates ID Back" className="w-full h-auto object-cover" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </TabletCardContent>
+          </TabletCard>
+        )}
+
         <TabletCard className="mb-6">
           <TabletCardHeader>
             <div className="flex items-center justify-between">
