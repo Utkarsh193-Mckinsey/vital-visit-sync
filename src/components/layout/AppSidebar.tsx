@@ -145,6 +145,10 @@ export function AppSidebar() {
     if (url.includes('?')) {
       return location.pathname + location.search === url;
     }
+    // For plain /settings, only match when there's no tab query param
+    if (url === '/settings') {
+      return location.pathname === '/settings' && !location.search.includes('tab=');
+    }
     return location.pathname === url;
   };
 
