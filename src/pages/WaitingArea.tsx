@@ -211,7 +211,7 @@ export default function WaitingArea() {
                 </TabletCardContent>
               </TabletCard>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4">
                 {waitingVisits.map((visit) => (
                   <TabletCard key={visit.id} className="overflow-hidden border-l-4 border-l-warning">
                     <TabletCardContent className="p-0">
