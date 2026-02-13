@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import * as XLSX from "https://esm.sh/xlsx@0.18.5";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,12 +21,10 @@ Deno.serve(async (req) => {
 
     // Get today's date range (UAE timezone UTC+4)
     const now = new Date();
-    // Adjust to UAE time
     const uaeOffset = 4 * 60 * 60 * 1000;
     const uaeNow = new Date(now.getTime() + uaeOffset);
     const uaeToday = new Date(uaeNow);
     uaeToday.setUTCHours(0, 0, 0, 0);
-    // Convert back to UTC for querying
     const startUTC = new Date(uaeToday.getTime() - uaeOffset);
     const endUTC = new Date(startUTC.getTime() + 24 * 60 * 60 * 1000);
 
@@ -82,61 +81,106 @@ Deno.serve(async (req) => {
     const visits = visitsRes.data || [];
     const consumables = consumablesRes.data || [];
 
-    // Build HTML email
+    // --- Build Excel workbook ---
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: Registered Patients
+    const patientsData = patients.map((p: any) => ({
+      "Full Name": p.full_name,
+      "Phone Number": p.phone_number,
+      "Email": p.email,
+      "Date of Birth": p.date_of_birth || "",
+      "Emirates ID": p.emirates_id || "",
+      "Address": p.address || "",
+      "Status": p.status,
+      "Registration Date": p.registration_date || "",
+    }));
+    const ws1 = XLSX.utils.json_to_sheet(patientsData.length > 0 ? patientsData : [{ "No Data": "No patients registered" }]);
+    XLSX.utils.book_append_sheet(wb, ws1, "Registered Patients");
+
+    // Sheet 2: Treatments Completed Today
+    const treatmentsData: any[] = [];
+    for (const visit of visits) {
+      const patientName = (visit as any).patient?.full_name || "Unknown";
+      const doctor = (visit as any).doctor_staff?.full_name || "-";
+      const nurse = (visit as any).nurse_staff?.full_name || "-";
+      const vts = (visit as any).visit_treatments || [];
+      if (vts.length > 0) {
+        for (const vt of vts) {
+          treatmentsData.push({
+            "Patient Name": patientName,
+            "Treatment": vt.treatment?.treatment_name || "-",
+            "Category": vt.treatment?.category || "-",
+            "Dose": `${vt.dose_administered} ${vt.dose_unit}`,
+            "Doctor": doctor,
+            "Nurse": nurse,
+            "Time": vt.timestamp || "-",
+            "Doctor Notes": (visit as any).doctor_notes || "",
+            "Vitals - BP": (visit as any).blood_pressure_systolic && (visit as any).blood_pressure_diastolic
+              ? `${(visit as any).blood_pressure_systolic}/${(visit as any).blood_pressure_diastolic}`
+              : "-",
+            "Vitals - HR": (visit as any).heart_rate || "-",
+            "Vitals - Weight (kg)": (visit as any).weight_kg || "-",
+          });
+        }
+      } else {
+        treatmentsData.push({
+          "Patient Name": patientName,
+          "Treatment": "No treatments recorded",
+          "Category": "-",
+          "Dose": "-",
+          "Doctor": doctor,
+          "Nurse": nurse,
+          "Time": "-",
+          "Doctor Notes": (visit as any).doctor_notes || "",
+          "Vitals - BP": "-",
+          "Vitals - HR": "-",
+          "Vitals - Weight (kg)": "-",
+        });
+      }
+    }
+    const ws2 = XLSX.utils.json_to_sheet(treatmentsData.length > 0 ? treatmentsData : [{ "No Data": "No treatments completed today" }]);
+    XLSX.utils.book_append_sheet(wb, ws2, "Treatments Today");
+
+    // Sheet 3: Consumables Used Today
+    const consumablesData = consumables.map((c: any) => ({
+      "Item Name": c.stock_item?.item_name || "-",
+      "Brand": c.stock_item?.brand || "-",
+      "Variant": c.stock_item?.variant || "-",
+      "Category": c.stock_item?.category || "-",
+      "Quantity Used": c.quantity_used,
+      "Unit": c.stock_item?.unit || "-",
+      "Patient": c.visit?.patient?.full_name || "-",
+      "Notes": c.notes || "",
+      "Time": c.created_date || "-",
+    }));
+    const ws3 = XLSX.utils.json_to_sheet(consumablesData.length > 0 ? consumablesData : [{ "No Data": "No consumables used today" }]);
+    XLSX.utils.book_append_sheet(wb, ws3, "Consumables Used");
+
+    // Auto-width columns
+    [ws1, ws2, ws3].forEach((ws) => {
+      const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
+      const colWidths: number[] = [];
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        let maxLen = 10;
+        for (let R = range.s.r; R <= range.e.r; R++) {
+          const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
+          if (cell && cell.v) {
+            const len = String(cell.v).length;
+            if (len > maxLen) maxLen = len;
+          }
+        }
+        colWidths.push(Math.min(maxLen + 2, 40));
+      }
+      ws["!cols"] = colWidths.map((w) => ({ wch: w }));
+    });
+
+    // Write workbook to base64
+    const xlsxBuffer = XLSX.write(wb, { type: "base64", bookType: "xlsx" });
+
+    // Build summary HTML for email body
     const completedCount = visits.length;
     const consumablesCount = consumables.length;
-
-    // Build treatments summary
-    let treatmentsHtml = "";
-    if (visits.length > 0) {
-      treatmentsHtml = `<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;font-size:13px;">
-        <tr style="background:#f3f4f6;"><th>Patient</th><th>Treatment</th><th>Dose</th><th>Doctor</th><th>Nurse</th></tr>`;
-      for (const visit of visits) {
-        const patientName = (visit as any).patient?.full_name || "Unknown";
-        const doctor = (visit as any).doctor_staff?.full_name || "-";
-        const nurse = (visit as any).nurse_staff?.full_name || "-";
-        const vts = (visit as any).visit_treatments || [];
-        if (vts.length > 0) {
-          for (const vt of vts) {
-            treatmentsHtml += `<tr>
-              <td>${patientName}</td>
-              <td>${vt.treatment?.treatment_name || "-"}</td>
-              <td>${vt.dose_administered} ${vt.dose_unit}</td>
-              <td>${doctor}</td>
-              <td>${nurse}</td>
-            </tr>`;
-          }
-        } else {
-          treatmentsHtml += `<tr>
-            <td>${patientName}</td>
-            <td colspan="4">No treatments recorded</td>
-          </tr>`;
-        }
-      }
-      treatmentsHtml += "</table>";
-    } else {
-      treatmentsHtml = "<p>No completed treatments today.</p>";
-    }
-
-    // Build consumables summary
-    let consumablesHtml = "";
-    if (consumables.length > 0) {
-      consumablesHtml = `<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;font-size:13px;">
-        <tr style="background:#f3f4f6;"><th>Item</th><th>Brand</th><th>Qty Used</th><th>Unit</th><th>Patient</th></tr>`;
-      for (const c of consumables) {
-        const si = (c as any).stock_item;
-        consumablesHtml += `<tr>
-          <td>${si?.item_name || "-"}</td>
-          <td>${si?.brand || "-"}</td>
-          <td>${c.quantity_used}</td>
-          <td>${si?.unit || "-"}</td>
-          <td>${(c as any).visit?.patient?.full_name || "-"}</td>
-        </tr>`;
-      }
-      consumablesHtml += "</table>";
-    } else {
-      consumablesHtml = "<p>No consumables used today.</p>";
-    }
 
     const emailHtml = `
       <div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;">
@@ -149,17 +193,13 @@ Deno.serve(async (req) => {
           <li><strong>${consumablesCount}</strong> consumable records</li>
           <li><strong>${patients.length}</strong> total registered patients</li>
         </ul>
-        <h3>💉 Treatments Completed</h3>
-        ${treatmentsHtml}
-        <br/>
-        <h3>📦 Consumables Used</h3>
-        ${consumablesHtml}
+        <p>📎 The full Excel report is attached to this email.</p>
         <hr/>
         <p style="color:#999;font-size:12px;">This is an automated report from Cosmique Clinic Management System.</p>
       </div>
     `;
 
-    // Send email via Resend
+    // Send email with Excel attachment via Resend
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -171,6 +211,12 @@ Deno.serve(async (req) => {
         to: ["info@cosmiquedxb.com"],
         subject: `Daily Clinic Report — ${dateLabel}`,
         html: emailHtml,
+        attachments: [
+          {
+            content: xlsxBuffer,
+            filename: `Clinic_Daily_Report_${dateLabel}.xlsx`,
+          },
+        ],
       }),
     });
 
