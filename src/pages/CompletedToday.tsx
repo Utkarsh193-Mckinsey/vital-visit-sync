@@ -141,7 +141,7 @@ export default function CompletedToday() {
               </TabletCardContent>
             </TabletCard>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4">
               {visits.map((visit) => (
                 <VisitDetailsCard key={visit.id} visit={visit} />
               ))}
