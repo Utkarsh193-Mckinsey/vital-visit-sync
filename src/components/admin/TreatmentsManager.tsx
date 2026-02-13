@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 const DOSAGE_UNITS: DosageUnit[] = ['mg', 'ml', 'Units', 'mcg', 'Session'];
-const CATEGORIES = ['IV Therapy', 'Injections', 'Skin Treatments', 'Wellness', 'Other'];
+const CATEGORIES = ['Hair Treatment', 'Face Treatment Injectable', 'Face Treatment non Invasive', 'IV drip', 'Fat loss', 'Body Contouring'];
 
 interface TreatmentFormData {
   treatment_name: string;
