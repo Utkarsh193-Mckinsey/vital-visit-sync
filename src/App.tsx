@@ -19,6 +19,7 @@ import CompletedToday from "./pages/CompletedToday";
 import VitalsEntry from "./pages/VitalsEntry";
 import TreatmentAdmin from "./pages/TreatmentAdmin";
 import AdminSettings from "./pages/AdminSettings";
+import TreatmentsPage from "./pages/TreatmentsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -176,6 +177,12 @@ function AppRoutes() {
       } />
 
       {/* Admin routes */}
+      <Route path="/treatments" element={
+        <ProtectedRoute allowedRoles={['admin']}>
+          <TreatmentsPage />
+        </ProtectedRoute>
+      } />
+
       <Route path="/settings" element={
         <ProtectedRoute allowedRoles={['admin']}>
           <AdminSettings />

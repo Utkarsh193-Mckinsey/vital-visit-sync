@@ -2,16 +2,14 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { TabletButton } from '@/components/ui/tablet-button';
-import { TabletCard, TabletCardContent, TabletCardHeader, TabletCardTitle } from '@/components/ui/tablet-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Pill, FileText, Package } from 'lucide-react';
-import TreatmentsManager from '@/components/admin/TreatmentsManager';
+import { ArrowLeft, FileText, Package } from 'lucide-react';
 import ConsentTemplatesManager from '@/components/admin/ConsentTemplatesManager';
 import ConsumablesManager from '@/components/admin/ConsumablesManager';
 
 export default function AdminSettings() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('treatments');
+  const [activeTab, setActiveTab] = useState('consumables');
 
   return (
     <PageContainer maxWidth="lg">
@@ -30,11 +28,7 @@ export default function AdminSettings() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-14">
-          <TabsTrigger value="treatments" className="h-12 text-base flex items-center gap-2">
-            <Pill className="h-4 w-4" />
-            Treatments
-          </TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 h-14">
           <TabsTrigger value="consumables" className="h-12 text-base flex items-center gap-2">
             <Package className="h-4 w-4" />
             Consumables
@@ -44,10 +38,6 @@ export default function AdminSettings() {
             Consent Forms
           </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="treatments" className="mt-4">
-          <TreatmentsManager />
-        </TabsContent>
 
         <TabsContent value="consumables" className="mt-4">
           <ConsumablesManager />
