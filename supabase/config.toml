@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.stop-followup]
 verify_jwt = false
+
+[functions.handle-pending-request]
+verify_jwt = false
