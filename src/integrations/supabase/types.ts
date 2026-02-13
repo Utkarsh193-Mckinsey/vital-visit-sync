@@ -14,6 +14,65 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointment_communications: {
+        Row: {
+          ai_confidence: string | null
+          ai_parsed_intent: string | null
+          appointment_id: string
+          call_duration_seconds: number | null
+          call_status: string | null
+          call_summary: string | null
+          channel: string
+          created_at: string
+          direction: string
+          id: string
+          message_sent: string | null
+          needs_human_review: boolean
+          patient_reply: string | null
+          raw_response: Json | null
+        }
+        Insert: {
+          ai_confidence?: string | null
+          ai_parsed_intent?: string | null
+          appointment_id: string
+          call_duration_seconds?: number | null
+          call_status?: string | null
+          call_summary?: string | null
+          channel: string
+          created_at?: string
+          direction: string
+          id?: string
+          message_sent?: string | null
+          needs_human_review?: boolean
+          patient_reply?: string | null
+          raw_response?: Json | null
+        }
+        Update: {
+          ai_confidence?: string | null
+          ai_parsed_intent?: string | null
+          appointment_id?: string
+          call_duration_seconds?: number | null
+          call_status?: string | null
+          call_summary?: string | null
+          channel?: string
+          created_at?: string
+          direction?: string
+          id?: string
+          message_sent?: string | null
+          needs_human_review?: boolean
+          patient_reply?: string | null
+          raw_response?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_communications_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           appointment_date: string
@@ -364,6 +423,65 @@ export type Database = {
           status?: Database["public"]["Enums"]["patient_status"]
         }
         Relationships: []
+      }
+      pending_requests: {
+        Row: {
+          ai_confidence: string | null
+          ai_parsed_details: Json | null
+          ai_suggested_reply: string | null
+          appointment_id: string | null
+          created_at: string
+          handled_at: string | null
+          handled_by: string | null
+          id: string
+          original_message: string | null
+          patient_name: string
+          phone: string
+          request_type: string
+          staff_reply: string | null
+          status: string
+        }
+        Insert: {
+          ai_confidence?: string | null
+          ai_parsed_details?: Json | null
+          ai_suggested_reply?: string | null
+          appointment_id?: string | null
+          created_at?: string
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          original_message?: string | null
+          patient_name: string
+          phone: string
+          request_type: string
+          staff_reply?: string | null
+          status?: string
+        }
+        Update: {
+          ai_confidence?: string | null
+          ai_parsed_details?: Json | null
+          ai_suggested_reply?: string | null
+          appointment_id?: string | null
+          created_at?: string
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          original_message?: string | null
+          patient_name?: string
+          phone?: string
+          request_type?: string
+          staff_reply?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_requests_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       staff: {
         Row: {

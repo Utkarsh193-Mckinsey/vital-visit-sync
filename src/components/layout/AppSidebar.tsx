@@ -25,7 +25,10 @@ import {
   Activity,
   CheckCircle,
   UserCheck,
-  CalendarDays
+  CalendarDays,
+  Bot,
+  UserX,
+  CalendarClock
 } from 'lucide-react';
 import { TabletButton } from '@/components/ui/tablet-button';
 import cosmiqueLogo from '@/assets/cosmique-symbol.png';
@@ -37,7 +40,7 @@ interface NavItem {
   url: string;
   icon: React.ComponentType<{ className?: string }>;
   roles: StaffRole[];
-  countKey?: 'waiting' | 'inProgress' | 'completed' | 'newPatients';
+  countKey?: 'waiting' | 'inProgress' | 'completed' | 'newPatients' | 'pendingRequests' | 'noShows' | 'rescheduled';
 }
 
 const navigationItems: NavItem[] = [
@@ -82,6 +85,27 @@ const navigationItems: NavItem[] = [
     countKey: 'newPatients' as const
   },
   { 
+    title: 'Personal Assistant', 
+    url: '/assistant', 
+    icon: Bot,
+    roles: ['admin', 'reception'],
+    countKey: 'pendingRequests' as const
+  },
+  { 
+    title: 'No Show', 
+    url: '/no-show', 
+    icon: UserX,
+    roles: ['admin', 'reception'],
+    countKey: 'noShows' as const
+  },
+  { 
+    title: 'Rescheduled', 
+    url: '/rescheduled', 
+    icon: CalendarClock,
+    roles: ['admin', 'reception'],
+    countKey: 'rescheduled' as const
+  },
+  { 
     title: 'Treatments', 
     url: '/treatments', 
     icon: Syringe,
@@ -100,6 +124,9 @@ interface VisitCounts {
   inProgress: number;
   completed: number;
   newPatients: number;
+  pendingRequests: number;
+  noShows: number;
+  rescheduled: number;
 }
 
 export function AppSidebar() {
@@ -113,7 +140,10 @@ export function AppSidebar() {
     waiting: 0,
     inProgress: 0,
     completed: 0,
-    newPatients: 0
+    newPatients: 0,
+    pendingRequests: 0,
+    noShows: 0,
+    rescheduled: 0,
   });
 
   // Fetch visit counts
@@ -123,8 +153,9 @@ export function AppSidebar() {
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
+    const todayStr = today.toISOString().split('T')[0];
 
-    const [waitingRes, inProgressRes, completedRes, newPatientsRes] = await Promise.all([
+    const [waitingRes, inProgressRes, completedRes, newPatientsRes, pendingRes, noShowRes, rescheduledRes] = await Promise.all([
       supabase.from('visits').select('id', { count: 'exact', head: true }).eq('current_status', 'waiting'),
       supabase.from('visits').select('id', { count: 'exact', head: true }).eq('current_status', 'in_progress'),
       supabase.from('visits').select('id', { count: 'exact', head: true })
@@ -132,6 +163,9 @@ export function AppSidebar() {
         .gte('completed_date', today.toISOString())
         .lt('completed_date', tomorrow.toISOString()),
       supabase.from('patients').select('id', { count: 'exact', head: true }).eq('doctor_reviewed', false),
+      supabase.from('pending_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase.from('appointments').select('id', { count: 'exact', head: true }).eq('status', 'no_show'),
+      supabase.from('appointments').select('id', { count: 'exact', head: true }).eq('status', 'rescheduled'),
     ]);
 
     setCounts({
@@ -139,6 +173,9 @@ export function AppSidebar() {
       inProgress: inProgressRes.count || 0,
       completed: completedRes.count || 0,
       newPatients: newPatientsRes.count || 0,
+      pendingRequests: pendingRes.count || 0,
+      noShows: noShowRes.count || 0,
+      rescheduled: rescheduledRes.count || 0,
     });
   };
 
@@ -153,6 +190,8 @@ export function AppSidebar() {
       .channel('sidebar-counts')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'visits' }, fetchCounts)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'patients' }, fetchCounts)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, fetchCounts)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pending_requests' }, fetchCounts)
       .subscribe();
 
     return () => {
@@ -174,7 +213,7 @@ export function AppSidebar() {
     navigate('/login');
   };
 
-  const getCount = (key?: 'waiting' | 'inProgress' | 'completed' | 'newPatients') => {
+  const getCount = (key?: keyof VisitCounts) => {
     if (!key) return 0;
     return counts[key];
   };
@@ -243,8 +282,12 @@ export function AppSidebar() {
                                     ? 'bg-warning/10 text-warning' 
                                     : item.countKey === 'inProgress'
                                     ? 'bg-primary/10 text-primary'
-                                    : item.countKey === 'newPatients'
+                                    : item.countKey === 'newPatients' || item.countKey === 'pendingRequests'
                                     ? 'bg-destructive/10 text-destructive'
+                                    : item.countKey === 'noShows'
+                                    ? 'bg-destructive/10 text-destructive'
+                                    : item.countKey === 'rescheduled'
+                                    ? 'bg-warning/10 text-warning'
                                     : 'bg-success/10 text-success'
                                 }`}>
                                   {count}
