@@ -36,7 +36,7 @@ interface NavItem {
   url: string;
   icon: React.ComponentType<{ className?: string }>;
   roles: StaffRole[];
-  countKey?: 'waiting' | 'inProgress' | 'completed';
+  countKey?: 'waiting' | 'inProgress' | 'completed' | 'newPatients';
 }
 
 const navigationItems: NavItem[] = [
@@ -72,7 +72,7 @@ const navigationItems: NavItem[] = [
     url: '/new-patients', 
     icon: UserCheck,
     roles: ['admin', 'doctor'],
-    countKey: undefined
+    countKey: 'newPatients' as const
   },
   { 
     title: 'Treatments', 
@@ -92,6 +92,7 @@ interface VisitCounts {
   waiting: number;
   inProgress: number;
   completed: number;
+  newPatients: number;
 }
 
 export function AppSidebar() {
@@ -104,7 +105,8 @@ export function AppSidebar() {
   const [counts, setCounts] = useState<VisitCounts>({
     waiting: 0,
     inProgress: 0,
-    completed: 0
+    completed: 0,
+    newPatients: 0
   });
 
   // Fetch visit counts
@@ -115,19 +117,21 @@ export function AppSidebar() {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const [waitingRes, inProgressRes, completedRes] = await Promise.all([
+    const [waitingRes, inProgressRes, completedRes, newPatientsRes] = await Promise.all([
       supabase.from('visits').select('id', { count: 'exact', head: true }).eq('current_status', 'waiting'),
       supabase.from('visits').select('id', { count: 'exact', head: true }).eq('current_status', 'in_progress'),
       supabase.from('visits').select('id', { count: 'exact', head: true })
         .eq('current_status', 'completed')
         .gte('completed_date', today.toISOString())
         .lt('completed_date', tomorrow.toISOString()),
+      supabase.from('patients').select('id', { count: 'exact', head: true }).eq('doctor_reviewed', false),
     ]);
 
     setCounts({
       waiting: waitingRes.count || 0,
       inProgress: inProgressRes.count || 0,
       completed: completedRes.count || 0,
+      newPatients: newPatientsRes.count || 0,
     });
   };
 
@@ -137,10 +141,11 @@ export function AppSidebar() {
     // Poll every 10 seconds
     const interval = setInterval(fetchCounts, 10000);
 
-    // Realtime subscription
+    // Realtime subscription for visits
     const channel = supabase
       .channel('sidebar-counts')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'visits' }, fetchCounts)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'patients' }, fetchCounts)
       .subscribe();
 
     return () => {
@@ -162,7 +167,7 @@ export function AppSidebar() {
     navigate('/login');
   };
 
-  const getCount = (key?: 'waiting' | 'inProgress' | 'completed') => {
+  const getCount = (key?: 'waiting' | 'inProgress' | 'completed' | 'newPatients') => {
     if (!key) return 0;
     return counts[key];
   };
@@ -231,6 +236,8 @@ export function AppSidebar() {
                                     ? 'bg-warning/10 text-warning' 
                                     : item.countKey === 'inProgress'
                                     ? 'bg-primary/10 text-primary'
+                                    : item.countKey === 'newPatients'
+                                    ? 'bg-destructive/10 text-destructive'
                                     : 'bg-success/10 text-success'
                                 }`}>
                                   {count}
