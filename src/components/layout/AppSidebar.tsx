@@ -28,7 +28,9 @@ import {
   CalendarDays,
   Bot,
   UserX,
-  CalendarClock
+  CalendarClock,
+  LayoutDashboard,
+  BarChart3
 } from 'lucide-react';
 import { TabletButton } from '@/components/ui/tablet-button';
 import cosmiqueLogo from '@/assets/cosmique-symbol.png';
@@ -44,6 +46,12 @@ interface NavItem {
 }
 
 const navigationItems: NavItem[] = [
+  { 
+    title: 'Dashboard', 
+    url: '/dashboard', 
+    icon: LayoutDashboard,
+    roles: ['admin', 'reception']
+  },
   { 
     title: 'All Patients', 
     url: '/patients', 
@@ -109,6 +117,12 @@ const navigationItems: NavItem[] = [
     title: 'Treatments', 
     url: '/treatments', 
     icon: Syringe,
+    roles: ['admin']
+  },
+  { 
+    title: 'Analytics', 
+    url: '/analytics', 
+    icon: BarChart3,
     roles: ['admin']
   },
   { 
