@@ -79,7 +79,7 @@ export default function InTreatment() {
   };
 
   return (
-    <PageContainer maxWidth="xl">
+    <PageContainer maxWidth="full">
       <PageHeader 
         title="In Treatment"
         subtitle={`${visits.length} patient${visits.length !== 1 ? 's' : ''} in treatment`}
@@ -102,7 +102,7 @@ export default function InTreatment() {
           </TabletCardContent>
         </TabletCard>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4">
           {visits.map((visit) => (
             <TabletCard key={visit.id} className="overflow-hidden border-l-4 border-l-primary">
               <TabletCardContent className="p-0">
