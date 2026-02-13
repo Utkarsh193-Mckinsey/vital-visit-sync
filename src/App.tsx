@@ -23,6 +23,9 @@ import TreatmentsPage from "./pages/TreatmentsPage";
 import PatientReview from "./pages/PatientReview";
 import NewPatients from "./pages/NewPatients";
 import Appointments from "./pages/Appointments";
+import NoShow from "./pages/NoShow";
+import Rescheduled from "./pages/Rescheduled";
+import PersonalAssistant from "./pages/PersonalAssistant";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -195,6 +198,24 @@ function AppRoutes() {
       <Route path="/appointments" element={
         <ProtectedRoute allowedRoles={['admin', 'reception']}>
           <Appointments />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/no-show" element={
+        <ProtectedRoute allowedRoles={['admin', 'reception']}>
+          <NoShow />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/rescheduled" element={
+        <ProtectedRoute allowedRoles={['admin', 'reception']}>
+          <Rescheduled />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/assistant" element={
+        <ProtectedRoute allowedRoles={['admin', 'reception']}>
+          <PersonalAssistant />
         </ProtectedRoute>
       } />
 
