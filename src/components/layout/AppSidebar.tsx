@@ -199,9 +199,10 @@ export function AppSidebar() {
                       tooltip={item.countKey && count > 0 ? `${item.title} (${count})` : item.title}
                     >
                       <NavLink 
-                        to={item.url} 
+                        to={item.url}
+                        end
                         className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-muted relative"
-                        activeClassName="bg-primary/10 text-primary font-medium"
+                        activeClassName=""
                       >
                         <div className="relative">
                           <item.icon className="h-5 w-5 flex-shrink-0" />
