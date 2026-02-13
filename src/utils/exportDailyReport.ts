@@ -2,13 +2,16 @@ import * as XLSX from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 
-export async function exportDailyReport() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
+  const today = fromDate || new Date();
+  if (!fromDate) today.setHours(0, 0, 0, 0);
+  const tomorrow = toDate ? new Date(toDate.getTime() + 1) : new Date(today);
+  if (!toDate) tomorrow.setDate(tomorrow.getDate() + 1);
+  else tomorrow.setHours(0, 0, 0, 0);
 
-  const todayStr = format(today, 'yyyy-MM-dd');
+  const todayStr = fromDate && toDate
+    ? `${format(fromDate, 'yyyy-MM-dd')}_to_${format(toDate, 'yyyy-MM-dd')}`
+    : format(today, 'yyyy-MM-dd');
 
   // Fetch all data in parallel
   const [patientsRes, visitsRes, consumablesRes] = await Promise.all([

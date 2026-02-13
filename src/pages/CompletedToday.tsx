@@ -3,12 +3,27 @@ import { supabase } from '@/integrations/supabase/client';
 import { TabletCard, TabletCardContent } from '@/components/ui/tablet-card';
 import { TabletButton } from '@/components/ui/tablet-button';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
-import { ClipboardCheck, Package, Download } from 'lucide-react';
+import { ClipboardCheck, Package, Download, Calendar, ChevronDown } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TodayConsumablesReport } from '@/components/reports/TodayConsumablesReport';
 import { VisitDetailsCard } from '@/components/reports/VisitDetailsCard';
 import { exportDailyReport } from '@/utils/exportDailyReport';
 import { toast } from '@/hooks/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { TabletInput } from '@/components/ui/tablet-input';
+import { Label } from '@/components/ui/label';
 import type { Visit, Patient, ConsentForm, Treatment, Staff } from '@/types/database';
 
 interface VisitTreatmentDetail {
@@ -41,12 +56,41 @@ export default function CompletedToday() {
   const [visits, setVisits] = useState<CompletedVisit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
-  const handleExport = async () => {
+  const handleExportToday = async () => {
     setIsExporting(true);
     try {
       await exportDailyReport();
       toast({ title: 'Export complete', description: 'Daily report downloaded successfully.' });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({ title: 'Export failed', description: 'Could not generate the report.', variant: 'destructive' });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportCustom = async () => {
+    if (!startDate || !endDate) {
+      toast({ title: 'Missing dates', description: 'Please select both start and end dates.', variant: 'destructive' });
+      return;
+    }
+    if (new Date(startDate) > new Date(endDate)) {
+      toast({ title: 'Invalid range', description: 'Start date must be before end date.', variant: 'destructive' });
+      return;
+    }
+    setIsExporting(true);
+    setShowDatePicker(false);
+    try {
+      const from = new Date(startDate);
+      from.setHours(0, 0, 0, 0);
+      const to = new Date(endDate);
+      to.setHours(23, 59, 59, 999);
+      await exportDailyReport(from, to);
+      toast({ title: 'Export complete', description: 'Custom date report downloaded successfully.' });
     } catch (error) {
       console.error('Export error:', error);
       toast({ title: 'Export failed', description: 'Could not generate the report.', variant: 'destructive' });
@@ -127,15 +171,66 @@ export default function CompletedToday() {
         title="Completed Today"
         subtitle={`${visits.length} visit${visits.length !== 1 ? 's' : ''} completed`}
         action={
-          <TabletButton
-            onClick={handleExport}
-            disabled={isExporting}
-            leftIcon={<Download className="h-5 w-5" />}
-          >
-            {isExporting ? 'Exporting...' : 'Export Daily Report'}
-          </TabletButton>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <TabletButton
+                disabled={isExporting}
+                leftIcon={<Download className="h-5 w-5" />}
+              >
+                {isExporting ? 'Exporting...' : 'Export Report'}
+                <ChevronDown className="h-4 w-4 ml-1" />
+              </TabletButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={handleExportToday} className="gap-2 py-3 text-base cursor-pointer">
+                <Download className="h-4 w-4" />
+                Export Daily Report
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowDatePicker(true)} className="gap-2 py-3 text-base cursor-pointer">
+                <Calendar className="h-4 w-4" />
+                Export Custom Date Report
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         }
       />
+
+      {/* Custom Date Range Dialog */}
+      <Dialog open={showDatePicker} onOpenChange={setShowDatePicker}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Export Custom Date Report</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="start-date">Start Date</Label>
+              <TabletInput
+                id="start-date"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="end-date">End Date</Label>
+              <TabletInput
+                id="end-date"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <TabletButton variant="outline" onClick={() => setShowDatePicker(false)}>
+              Cancel
+            </TabletButton>
+            <TabletButton onClick={handleExportCustom} disabled={isExporting} leftIcon={<Download className="h-5 w-5" />}>
+              {isExporting ? 'Exporting...' : 'Export'}
+            </TabletButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Tabs defaultValue="visits" className="w-full">
         <TabsList className="mb-4">
