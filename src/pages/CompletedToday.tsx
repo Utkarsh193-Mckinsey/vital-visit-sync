@@ -105,7 +105,7 @@ export default function CompletedToday() {
   }, []);
 
   return (
-    <PageContainer maxWidth="xl">
+    <PageContainer maxWidth="full">
       <PageHeader 
         title="Completed Today"
         subtitle={`${visits.length} visit${visits.length !== 1 ? 's' : ''} completed`}
