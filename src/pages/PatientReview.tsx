@@ -7,14 +7,19 @@ import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletCard, TabletCardContent, TabletCardHeader, TabletCardTitle } from '@/components/ui/tablet-card';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Eraser, CheckCircle, Loader2, User, Phone, HeartPulse, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Eraser, CheckCircle, Loader2, User, Phone, HeartPulse, AlertCircle, Download, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { generateRegistrationPDF, getRegistrationFileName } from '@/utils/generateRegistrationPDF';
+import { downloadPDF, getFirstName } from '@/utils/pdfDownload';
 
 export default function PatientReview() {
   const { patientId } = useParams<{ patientId: string }>();
   const [patient, setPatient] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [approved, setApproved] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [doctorSignatureDataUrl, setDoctorSignatureDataUrl] = useState('');
   const [signatureError, setSignatureError] = useState('');
   const signatureRef = useRef<SignatureCanvas>(null);
   const navigate = useNavigate();
@@ -52,6 +57,7 @@ export default function PatientReview() {
       // Upload doctor signature
       const canvas = signatureRef.current!.getCanvas();
       const dataUrl = canvas.toDataURL('image/png');
+      setDoctorSignatureDataUrl(dataUrl);
       const base64Data = dataUrl.split(',')[1];
       const byteCharacters = atob(base64Data);
       const byteNumbers = new Array(byteCharacters.length);
@@ -81,12 +87,52 @@ export default function PatientReview() {
       if (updateError) throw updateError;
 
       toast({ title: 'Patient Approved', description: 'Registration has been reviewed and approved.' });
-      navigate('/patients');
+      setApproved(true);
     } catch (error) {
       console.error('Error approving patient:', error);
       toast({ title: 'Error', description: 'Failed to save approval. Please try again.', variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDownloadRegistration = async () => {
+    if (!patient) return;
+    setIsDownloading(true);
+    try {
+      const pdfBlob = await generateRegistrationPDF({
+        patientName: patient.full_name,
+        patientDOB: patient.date_of_birth,
+        patientPhone: patient.phone_number,
+        patientEmail: patient.email || '',
+        emiratesId: patient.emirates_id || null,
+        nationality: patient.nationality || null,
+        gender: patient.gender || null,
+        countryOfResidence: patient.country_of_residence || null,
+        emirate: patient.emirate || null,
+        emergencyContactName: patient.emergency_contact_name || null,
+        emergencyContactNumber: patient.emergency_contact_number || null,
+        emergencyContactRelationship: patient.emergency_contact_relationship || null,
+        medicalHistory: [
+          { label: 'Heart Diseases', value: patient.medical_heart_disease, details: patient.medical_heart_disease_details },
+          { label: 'Blood Pressure', value: patient.medical_blood_pressure, details: patient.medical_blood_pressure_details },
+          { label: 'Allergy', value: patient.medical_allergy, details: patient.medical_allergy_details },
+          { label: 'Diabetes', value: patient.medical_diabetes, details: patient.medical_diabetes_details },
+          { label: 'Other', value: patient.medical_other, details: patient.medical_other_details },
+        ],
+        signatureDataUrl: patient.registration_signature_url || '',
+        doctorSignatureDataUrl: doctorSignatureDataUrl || patient.doctor_signature_url || '',
+        registrationDate: new Date(patient.registration_date),
+      });
+      const firstName = getFirstName(patient.full_name);
+      const fileName = getRegistrationFileName(firstName, patient.phone_number);
+      downloadPDF(pdfBlob, fileName);
+      toast({ title: 'Download Started', description: 'Registration form PDF is downloading.' });
+    } catch (error) {
+      console.error('Error generating registration PDF:', error);
+      toast({ title: 'Download Failed', description: 'Failed to generate PDF.', variant: 'destructive' });
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -101,6 +147,31 @@ export default function PatientReview() {
   }
 
   if (!patient) return null;
+
+  // Show approval success screen
+  if (approved) {
+    return (
+      <PageContainer maxWidth="md">
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+            <Check className="h-8 w-8 text-primary" />
+          </div>
+          <h1 className="text-2xl font-bold text-center mb-2">Registration Approved!</h1>
+          <p className="text-muted-foreground text-center mb-8">
+            {patient.full_name}'s registration has been reviewed and approved.
+          </p>
+          <div className="w-full max-w-sm space-y-4">
+            <TabletButton fullWidth variant="outline" onClick={handleDownloadRegistration} disabled={isDownloading} leftIcon={<Download />}>
+              {isDownloading ? 'Generating PDF...' : 'Download Registration Form'}
+            </TabletButton>
+            <TabletButton fullWidth onClick={() => navigate('/new-patients')}>
+              Back to New Patients
+            </TabletButton>
+          </div>
+        </div>
+      </PageContainer>
+    );
+  }
 
   const medicalItems = [
     { label: 'Heart Diseases', value: patient.medical_heart_disease, details: patient.medical_heart_disease_details },
