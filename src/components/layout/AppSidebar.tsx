@@ -24,7 +24,8 @@ import {
   Syringe,
   Activity,
   CheckCircle,
-  UserCheck
+  UserCheck,
+  CalendarDays
 } from 'lucide-react';
 import { TabletButton } from '@/components/ui/tablet-button';
 import cosmiqueLogo from '@/assets/cosmique-symbol.png';
@@ -44,6 +45,12 @@ const navigationItems: NavItem[] = [
     title: 'All Patients', 
     url: '/patients', 
     icon: Users,
+    roles: ['admin', 'reception']
+  },
+  { 
+    title: 'Appointments', 
+    url: '/appointments', 
+    icon: CalendarDays,
     roles: ['admin', 'reception']
   },
   { 
