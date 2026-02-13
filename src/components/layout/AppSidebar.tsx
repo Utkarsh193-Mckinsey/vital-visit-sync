@@ -23,7 +23,8 @@ import {
   LogOut,
   Syringe,
   Activity,
-  CheckCircle
+  CheckCircle,
+  UserCheck
 } from 'lucide-react';
 import { TabletButton } from '@/components/ui/tablet-button';
 import cosmiqueLogo from '@/assets/cosmique-symbol.png';
@@ -65,6 +66,13 @@ const navigationItems: NavItem[] = [
     icon: CheckCircle,
     roles: ['admin', 'nurse', 'doctor'],
     countKey: 'completed'
+  },
+  { 
+    title: 'New Patients', 
+    url: '/new-patients', 
+    icon: UserCheck,
+    roles: ['admin', 'doctor'],
+    countKey: undefined
   },
   { 
     title: 'Treatments', 

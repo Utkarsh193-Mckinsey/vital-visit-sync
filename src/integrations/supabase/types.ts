@@ -180,11 +180,33 @@ export type Database = {
       patients: {
         Row: {
           address: string | null
+          country_of_residence: string | null
           date_of_birth: string
-          email: string
+          doctor_reviewed: boolean | null
+          doctor_reviewed_by: string | null
+          doctor_reviewed_date: string | null
+          doctor_signature_url: string | null
+          email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_number: string | null
+          emergency_contact_relationship: string | null
+          emirate: string | null
           emirates_id: string | null
           full_name: string
+          gender: string | null
           id: string
+          language: string | null
+          medical_allergy: boolean | null
+          medical_allergy_details: string | null
+          medical_blood_pressure: boolean | null
+          medical_blood_pressure_details: string | null
+          medical_diabetes: boolean | null
+          medical_diabetes_details: string | null
+          medical_heart_disease: boolean | null
+          medical_heart_disease_details: string | null
+          medical_other: boolean | null
+          medical_other_details: string | null
+          nationality: string | null
           phone_number: string
           registration_date: string
           registration_signature_url: string | null
@@ -192,11 +214,33 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          country_of_residence?: string | null
           date_of_birth: string
-          email: string
+          doctor_reviewed?: boolean | null
+          doctor_reviewed_by?: string | null
+          doctor_reviewed_date?: string | null
+          doctor_signature_url?: string | null
+          email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_number?: string | null
+          emergency_contact_relationship?: string | null
+          emirate?: string | null
           emirates_id?: string | null
           full_name: string
+          gender?: string | null
           id?: string
+          language?: string | null
+          medical_allergy?: boolean | null
+          medical_allergy_details?: string | null
+          medical_blood_pressure?: boolean | null
+          medical_blood_pressure_details?: string | null
+          medical_diabetes?: boolean | null
+          medical_diabetes_details?: string | null
+          medical_heart_disease?: boolean | null
+          medical_heart_disease_details?: string | null
+          medical_other?: boolean | null
+          medical_other_details?: string | null
+          nationality?: string | null
           phone_number: string
           registration_date?: string
           registration_signature_url?: string | null
@@ -204,11 +248,33 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          country_of_residence?: string | null
           date_of_birth?: string
-          email?: string
+          doctor_reviewed?: boolean | null
+          doctor_reviewed_by?: string | null
+          doctor_reviewed_date?: string | null
+          doctor_signature_url?: string | null
+          email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_number?: string | null
+          emergency_contact_relationship?: string | null
+          emirate?: string | null
           emirates_id?: string | null
           full_name?: string
+          gender?: string | null
           id?: string
+          language?: string | null
+          medical_allergy?: boolean | null
+          medical_allergy_details?: string | null
+          medical_blood_pressure?: boolean | null
+          medical_blood_pressure_details?: string | null
+          medical_diabetes?: boolean | null
+          medical_diabetes_details?: string | null
+          medical_heart_disease?: boolean | null
+          medical_heart_disease_details?: string | null
+          medical_other?: boolean | null
+          medical_other_details?: string | null
+          nationality?: string | null
           phone_number?: string
           registration_date?: string
           registration_signature_url?: string | null

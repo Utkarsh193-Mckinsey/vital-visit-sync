@@ -20,6 +20,8 @@ import VitalsEntry from "./pages/VitalsEntry";
 import TreatmentAdmin from "./pages/TreatmentAdmin";
 import AdminSettings from "./pages/AdminSettings";
 import TreatmentsPage from "./pages/TreatmentsPage";
+import PatientReview from "./pages/PatientReview";
+import NewPatients from "./pages/NewPatients";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -133,6 +135,12 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
+      <Route path="/patient/:patientId/review" element={
+        <ProtectedRoute allowedRoles={['admin', 'doctor']}>
+          <PatientReview />
+        </ProtectedRoute>
+      } />
+
       <Route path="/patient/:patientId/consent" element={
         <ProtectedRoute allowedRoles={['admin', 'reception']}>
           <ConsentSigning />
@@ -145,6 +153,12 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
       
+      <Route path="/new-patients" element={
+        <ProtectedRoute allowedRoles={['admin', 'doctor']}>
+          <NewPatients />
+        </ProtectedRoute>
+      } />
+
       {/* Clinical routes */}
       <Route path="/waiting" element={
         <ProtectedRoute allowedRoles={['admin', 'nurse', 'doctor', 'reception']}>
