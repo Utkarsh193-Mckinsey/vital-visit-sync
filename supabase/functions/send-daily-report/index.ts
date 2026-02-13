@@ -7,6 +7,51 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+function getUAEDateRange(reportType: string) {
+  const uaeOffset = 4 * 60 * 60 * 1000;
+  const now = new Date();
+  const uaeNow = new Date(now.getTime() + uaeOffset);
+  const uaeToday = new Date(uaeNow);
+  uaeToday.setUTCHours(0, 0, 0, 0);
+
+  let startUAE: Date;
+  let endUAE: Date;
+  let label: string;
+
+  if (reportType === "weekly") {
+    // Last 7 days (Sunday to Saturday)
+    endUAE = new Date(uaeToday);
+    endUAE.setUTCDate(endUAE.getUTCDate() + 1); // end of today
+    startUAE = new Date(uaeToday);
+    startUAE.setUTCDate(startUAE.getUTCDate() - 6); // 7 days back
+    label = `${startUAE.toISOString().split("T")[0]}_to_${uaeToday.toISOString().split("T")[0]}`;
+  } else if (reportType === "monthly") {
+    // Full current month (1st to last day)
+    startUAE = new Date(Date.UTC(uaeToday.getUTCFullYear(), uaeToday.getUTCMonth(), 1));
+    endUAE = new Date(Date.UTC(uaeToday.getUTCFullYear(), uaeToday.getUTCMonth() + 1, 1));
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    label = `${monthNames[uaeToday.getUTCMonth()]}_${uaeToday.getUTCFullYear()}`;
+  } else {
+    // Daily (default)
+    startUAE = new Date(uaeToday);
+    endUAE = new Date(uaeToday);
+    endUAE.setUTCDate(endUAE.getUTCDate() + 1);
+    label = uaeToday.toISOString().split("T")[0];
+  }
+
+  // Convert UAE midnight boundaries back to UTC for DB queries
+  const startUTC = new Date(startUAE.getTime() - uaeOffset);
+  const endUTC = new Date(endUAE.getTime() - uaeOffset);
+
+  return { startUTC, endUTC, label };
+}
+
+function getReportTitle(reportType: string): string {
+  if (reportType === "weekly") return "Weekly Report";
+  if (reportType === "monthly") return "Monthly Report";
+  return "Daily Report";
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -17,18 +62,18 @@ Deno.serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
 
+    // Parse report type from request body
+    let reportType = "daily";
+    try {
+      const body = await req.json();
+      if (body?.report_type) reportType = body.report_type;
+    } catch {
+      // default to daily
+    }
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-    // Get today's date range (UAE timezone UTC+4)
-    const now = new Date();
-    const uaeOffset = 4 * 60 * 60 * 1000;
-    const uaeNow = new Date(now.getTime() + uaeOffset);
-    const uaeToday = new Date(uaeNow);
-    uaeToday.setUTCHours(0, 0, 0, 0);
-    const startUTC = new Date(uaeToday.getTime() - uaeOffset);
-    const endUTC = new Date(startUTC.getTime() + 24 * 60 * 60 * 1000);
-
-    const dateLabel = uaeToday.toISOString().split("T")[0];
+    const { startUTC, endUTC, label } = getUAEDateRange(reportType);
+    const title = getReportTitle(reportType);
 
     // Fetch data in parallel
     const [patientsRes, visitsRes, consumablesRes] = await Promise.all([
@@ -98,7 +143,7 @@ Deno.serve(async (req) => {
     const ws1 = XLSX.utils.json_to_sheet(patientsData.length > 0 ? patientsData : [{ "No Data": "No patients registered" }]);
     XLSX.utils.book_append_sheet(wb, ws1, "Registered Patients");
 
-    // Sheet 2: Treatments Completed Today
+    // Sheet 2: Treatments Completed
     const treatmentsData: any[] = [];
     for (const visit of visits) {
       const patientName = (visit as any).patient?.full_name || "Unknown";
@@ -117,8 +162,7 @@ Deno.serve(async (req) => {
             "Time": vt.timestamp || "-",
             "Doctor Notes": (visit as any).doctor_notes || "",
             "Vitals - BP": (visit as any).blood_pressure_systolic && (visit as any).blood_pressure_diastolic
-              ? `${(visit as any).blood_pressure_systolic}/${(visit as any).blood_pressure_diastolic}`
-              : "-",
+              ? `${(visit as any).blood_pressure_systolic}/${(visit as any).blood_pressure_diastolic}` : "-",
             "Vitals - HR": (visit as any).heart_rate || "-",
             "Vitals - Weight (kg)": (visit as any).weight_kg || "-",
           });
@@ -127,22 +171,17 @@ Deno.serve(async (req) => {
         treatmentsData.push({
           "Patient Name": patientName,
           "Treatment": "No treatments recorded",
-          "Category": "-",
-          "Dose": "-",
-          "Doctor": doctor,
-          "Nurse": nurse,
-          "Time": "-",
+          "Category": "-", "Dose": "-",
+          "Doctor": doctor, "Nurse": nurse, "Time": "-",
           "Doctor Notes": (visit as any).doctor_notes || "",
-          "Vitals - BP": "-",
-          "Vitals - HR": "-",
-          "Vitals - Weight (kg)": "-",
+          "Vitals - BP": "-", "Vitals - HR": "-", "Vitals - Weight (kg)": "-",
         });
       }
     }
-    const ws2 = XLSX.utils.json_to_sheet(treatmentsData.length > 0 ? treatmentsData : [{ "No Data": "No treatments completed today" }]);
-    XLSX.utils.book_append_sheet(wb, ws2, "Treatments Today");
+    const ws2 = XLSX.utils.json_to_sheet(treatmentsData.length > 0 ? treatmentsData : [{ "No Data": "No treatments in this period" }]);
+    XLSX.utils.book_append_sheet(wb, ws2, "Treatments");
 
-    // Sheet 3: Consumables Used Today
+    // Sheet 3: Consumables Used
     const consumablesData = consumables.map((c: any) => ({
       "Item Name": c.stock_item?.item_name || "-",
       "Brand": c.stock_item?.brand || "-",
@@ -154,7 +193,7 @@ Deno.serve(async (req) => {
       "Notes": c.notes || "",
       "Time": c.created_date || "-",
     }));
-    const ws3 = XLSX.utils.json_to_sheet(consumablesData.length > 0 ? consumablesData : [{ "No Data": "No consumables used today" }]);
+    const ws3 = XLSX.utils.json_to_sheet(consumablesData.length > 0 ? consumablesData : [{ "No Data": "No consumables used in this period" }]);
     XLSX.utils.book_append_sheet(wb, ws3, "Consumables Used");
 
     // Auto-width columns
@@ -178,14 +217,13 @@ Deno.serve(async (req) => {
     // Write workbook to base64
     const xlsxBuffer = XLSX.write(wb, { type: "base64", bookType: "xlsx" });
 
-    // Build summary HTML for email body
     const completedCount = visits.length;
     const consumablesCount = consumables.length;
 
     const emailHtml = `
       <div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;">
-        <h2 style="color:#1a1a1a;">Cosmique Clinic — Daily Report</h2>
-        <p style="color:#666;">Date: ${dateLabel}</p>
+        <h2 style="color:#1a1a1a;">Cosmique Clinic — ${title}</h2>
+        <p style="color:#666;">Period: ${label.replace(/_/g, " ")}</p>
         <hr/>
         <h3>📋 Summary</h3>
         <ul>
@@ -195,9 +233,11 @@ Deno.serve(async (req) => {
         </ul>
         <p>📎 The full Excel report is attached to this email.</p>
         <hr/>
-        <p style="color:#999;font-size:12px;">This is an automated report from Cosmique Clinic Management System.</p>
+        <p style="color:#999;font-size:12px;">This is an automated ${reportType} report from Cosmique Clinic Management System.</p>
       </div>
     `;
+
+    const fileName = `Clinic_${title.replace(" ", "_")}_${label}.xlsx`;
 
     // Send email with Excel attachment via Resend
     const resendRes = await fetch("https://api.resend.com/emails", {
@@ -209,12 +249,12 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         from: "Cosmique Clinic <onboarding@resend.dev>",
         to: ["info@cosmiquedxb.com"],
-        subject: `Daily Clinic Report — ${dateLabel}`,
+        subject: `Cosmique Clinic ${title} — ${label.replace(/_/g, " ")}`,
         html: emailHtml,
         attachments: [
           {
             content: xlsxBuffer,
-            filename: `Clinic_Daily_Report_${dateLabel}.xlsx`,
+            filename: fileName,
           },
         ],
       }),
@@ -231,7 +271,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, emailId: resendData.id, date: dateLabel }),
+      JSON.stringify({ success: true, emailId: resendData.id, reportType, period: label }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
