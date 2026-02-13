@@ -199,6 +199,16 @@ Deno.serve(async (req) => {
 
     await supabase.from("appointment_communications").insert(commLog);
 
+    // Stop any active follow-up sequence when patient responds
+    if (senderPhone) {
+      await supabase
+        .from("appointments")
+        .update({ followup_status: "stopped" })
+        .eq("status", "no_show")
+        .eq("followup_status", "active")
+        .in("phone", [senderPhone, `+${senderPhone.replace(/^\+/, "")}`, senderPhone.replace(/^\+/, "")]);
+    }
+
     // Process based on intent
     if (appointment) {
       if (parsed.intent === "confirm" && parsed.confidence === "high") {

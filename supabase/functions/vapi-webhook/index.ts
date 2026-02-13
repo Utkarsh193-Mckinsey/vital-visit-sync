@@ -154,6 +154,16 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Stop any active follow-up sequence when call is answered
+      if (callStatusLabel === "answered" && customerNumber) {
+        await supabase
+          .from("appointments")
+          .update({ followup_status: "stopped" })
+          .eq("status", "no_show")
+          .eq("followup_status", "active")
+          .in("phone", [customerNumber, `+${customerNumber.replace(/^\+/, "")}`, customerNumber.replace(/^\+/, "")]);
+      }
+
       // Process based on result
       if (callStatusLabel === "answered" || (callStatusLabel !== "no_answer" && callStatusLabel !== "voicemail")) {
         if (parsed.intent === "confirm" && (parsed.confidence === "high" || parsed.confidence === "medium")) {
