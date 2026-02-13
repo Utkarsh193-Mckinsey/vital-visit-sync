@@ -155,7 +155,7 @@ export default function WaitingArea() {
   };
 
   return (
-    <PageContainer maxWidth="xl">
+    <PageContainer maxWidth="full">
       <PageHeader 
         title="Waiting Area"
         subtitle={`${waitingVisits.length} patient${waitingVisits.length !== 1 ? 's' : ''} waiting`}
