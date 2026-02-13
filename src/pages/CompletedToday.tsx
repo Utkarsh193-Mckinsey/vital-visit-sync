@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { TabletCard, TabletCardContent } from '@/components/ui/tablet-card';
+import { TabletButton } from '@/components/ui/tablet-button';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
-import { ClipboardCheck, Package } from 'lucide-react';
+import { ClipboardCheck, Package, Download } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TodayConsumablesReport } from '@/components/reports/TodayConsumablesReport';
 import { VisitDetailsCard } from '@/components/reports/VisitDetailsCard';
+import { exportDailyReport } from '@/utils/exportDailyReport';
+import { toast } from '@/hooks/use-toast';
 import type { Visit, Patient, ConsentForm, Treatment, Staff } from '@/types/database';
 
 interface VisitTreatmentDetail {
@@ -37,6 +40,20 @@ interface CompletedVisit extends Visit {
 export default function CompletedToday() {
   const [visits, setVisits] = useState<CompletedVisit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      await exportDailyReport();
+      toast({ title: 'Export complete', description: 'Daily report downloaded successfully.' });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({ title: 'Export failed', description: 'Could not generate the report.', variant: 'destructive' });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const fetchVisits = async () => {
     const today = new Date();
@@ -109,6 +126,15 @@ export default function CompletedToday() {
       <PageHeader 
         title="Completed Today"
         subtitle={`${visits.length} visit${visits.length !== 1 ? 's' : ''} completed`}
+        action={
+          <TabletButton
+            onClick={handleExport}
+            disabled={isExporting}
+            leftIcon={<Download className="h-5 w-5" />}
+          >
+            {isExporting ? 'Exporting...' : 'Export Daily Report'}
+          </TabletButton>
+        }
       />
 
       <Tabs defaultValue="visits" className="w-full">
