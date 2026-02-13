@@ -4,10 +4,11 @@ import type { Appointment, AppointmentCommunication } from '@/pages/Appointments
 import { TabletCard } from '@/components/ui/tablet-card';
 import { Badge } from '@/components/ui/badge';
 import { TabletButton } from '@/components/ui/tablet-button';
-import { Phone, Clock, User, Edit, AlertTriangle, MessageSquare, PhoneCall, ChevronDown, ChevronUp, CheckCircle, Send } from 'lucide-react';
+import { Phone, Clock, User, Edit, AlertTriangle, MessageSquare, PhoneCall, ChevronDown, ChevronUp, CheckCircle, Send, Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 const STATUS_OPTIONS = ['upcoming', 'checked_in', 'in_treatment', 'completed', 'no_show', 'rescheduled', 'cancelled'];
 const CONFIRMATION_OPTIONS = ['unconfirmed', 'message_sent', 'confirmed_whatsapp', 'confirmed_call', 'double_confirmed', 'called_no_answer', 'called_reschedule', 'cancelled'];
@@ -41,6 +42,12 @@ function formatTime(time: string) {
   return `${h12}:${m} ${ampm}`;
 }
 
+function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}m ${s}s`;
+}
+
 interface Props {
   appointment: Appointment;
   onUpdateStatus: (id: string, status: string) => void;
@@ -54,6 +61,7 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
   const [logOpen, setLogOpen] = useState(false);
   const [comms, setComms] = useState<AppointmentCommunication[]>([]);
   const [commsLoaded, setCommsLoaded] = useState(false);
+  const [calling, setCalling] = useState(false);
 
   const loadComms = async () => {
     if (commsLoaded) return;
@@ -69,6 +77,24 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
   useEffect(() => {
     if (logOpen && !commsLoaded) loadComms();
   }, [logOpen]);
+
+  const handleCallPatient = async () => {
+    setCalling(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('manual-vapi-call', {
+        body: { appointment_id: apt.id },
+      });
+      if (error) throw error;
+      toast.success(`Calling ${apt.patient_name}...`);
+      // Refresh comms
+      setCommsLoaded(false);
+      if (logOpen) loadComms();
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to initiate call');
+    } finally {
+      setCalling(false);
+    }
+  };
 
   const confirm = confirmBadge[apt.confirmation_status] || confirmBadge.unconfirmed;
 
@@ -149,12 +175,25 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
             </SelectContent>
           </Select>
 
+          {/* Call Patient button */}
+          <TabletButton
+            variant="outline"
+            size="sm"
+            className="text-xs h-8"
+            onClick={handleCallPatient}
+            disabled={calling}
+          >
+            {calling ? (
+              <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> Calling...</>
+            ) : (
+              <><PhoneCall className="h-3.5 w-3.5 mr-1" /> Call</>
+            )}
+          </TabletButton>
+
           {showReminderStatus && (
-            <>
-              <TabletButton variant="outline" size="sm" className="text-xs h-8" onClick={() => onUpdateConfirmation(apt.id, 'confirmed_call')}>
-                <CheckCircle className="h-3.5 w-3.5 mr-1" /> Mark Confirmed
-              </TabletButton>
-            </>
+            <TabletButton variant="outline" size="sm" className="text-xs h-8" onClick={() => onUpdateConfirmation(apt.id, 'confirmed_call')}>
+              <CheckCircle className="h-3.5 w-3.5 mr-1" /> Mark Confirmed
+            </TabletButton>
           )}
 
           <TabletButton variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(apt)}>
@@ -184,17 +223,26 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
                   </span>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium capitalize">{c.channel}</span>
+                      <span className="font-medium capitalize">{c.channel === 'vapi_call' ? 'Voice Call' : c.channel}</span>
                       <span className="text-muted-foreground">{c.direction}</span>
+                      {c.call_status && (
+                        <Badge variant="outline" className={`text-[10px] ${
+                          c.call_status === 'answered' ? 'border-green-500 text-green-700' :
+                          c.call_status === 'no_answer' ? 'border-orange-500 text-orange-700' :
+                          c.call_status === 'voicemail' ? 'border-yellow-500 text-yellow-700' :
+                          c.call_status === 'initiated' ? 'border-blue-500 text-blue-700' :
+                          ''
+                        }`}>
+                          {c.call_status === 'initiated' ? '🔄 Calling...' : c.call_status.replace(/_/g, ' ')}
+                        </Badge>
+                      )}
+                      {c.call_duration_seconds && c.call_duration_seconds > 0 && (
+                        <span className="text-muted-foreground">⏱ {formatDuration(c.call_duration_seconds)}</span>
+                      )}
                       <span className="text-muted-foreground ml-auto">{format(new Date(c.created_at), 'MMM d, h:mm a')}</span>
                     </div>
                     {c.message_sent && <p className="text-muted-foreground">Sent: {c.message_sent}</p>}
                     {c.patient_reply && <p className="text-foreground">Reply: {c.patient_reply}</p>}
-                    {c.call_status && (
-                      <p className="text-muted-foreground">
-                        Call: {c.call_status}{c.call_duration_seconds ? ` (${c.call_duration_seconds}s)` : ''}
-                      </p>
-                    )}
                     {c.call_summary && <p className="text-foreground italic">Summary: {c.call_summary}</p>}
                     {c.ai_parsed_intent && (
                       <Badge variant="outline" className="text-[10px] mt-1">
