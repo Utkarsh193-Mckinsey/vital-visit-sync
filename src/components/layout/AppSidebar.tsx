@@ -68,7 +68,7 @@ const navigationItems: NavItem[] = [
   },
   { 
     title: 'Treatments', 
-    url: '/settings?tab=treatments', 
+    url: '/treatments', 
     icon: Syringe,
     roles: ['admin']
   },
@@ -142,13 +142,6 @@ export function AppSidebar() {
   }, []);
 
   const isActive = (url: string) => {
-    if (url.includes('?')) {
-      return location.pathname + location.search === url;
-    }
-    // For plain /settings, only match when there's no tab query param
-    if (url === '/settings') {
-      return location.pathname === '/settings' && !location.search.includes('tab=');
-    }
     return location.pathname === url;
   };
 
