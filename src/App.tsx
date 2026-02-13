@@ -8,6 +8,8 @@ import { AppLayout } from "@/components/layout/AppLayout";
 
 // Pages
 import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import Analytics from "./pages/Analytics";
 import PatientSearch from "./pages/PatientSearch";
 import PatientRegistration from "./pages/PatientRegistration";
 import PatientDashboard from "./pages/PatientDashboard";
@@ -62,7 +64,7 @@ function ProtectedRoute({
 
   if (allowedRoles && staff && !allowedRoles.includes(staff.role)) {
     if (staff.role === 'reception') {
-      return <Navigate to="/patients" replace />;
+      return <Navigate to="/dashboard" replace />;
     }
     return <Navigate to="/waiting" replace />;
   }
@@ -80,7 +82,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 
   if (isAuthenticated && staff) {
     if (staff.role === 'admin' || staff.role === 'reception') {
-      return <Navigate to="/patients" replace />;
+      return <Navigate to="/dashboard" replace />;
     }
     return <Navigate to="/waiting" replace />;
   }
@@ -101,7 +103,7 @@ function RootRedirect() {
   }
 
   if (staff?.role === 'admin' || staff?.role === 'reception') {
-    return <Navigate to="/patients" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <Navigate to="/waiting" replace />;
@@ -120,6 +122,19 @@ function AppRoutes() {
         </PublicRoute>
       } />
       
+      {/* Dashboard */}
+      <Route path="/dashboard" element={
+        <ProtectedRoute allowedRoles={['admin', 'reception']}>
+          <Dashboard />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/analytics" element={
+        <ProtectedRoute allowedRoles={['admin']}>
+          <Analytics />
+        </ProtectedRoute>
+      } />
+
       {/* Reception & Admin routes */}
       <Route path="/patients" element={
         <ProtectedRoute allowedRoles={['admin', 'reception']}>

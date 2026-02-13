@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.handle-pending-request]
 verify_jwt = false
+
+[functions.send-daily-summary]
+verify_jwt = false
