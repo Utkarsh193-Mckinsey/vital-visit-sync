@@ -14,6 +14,89 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointments: {
+        Row: {
+          appointment_date: string
+          appointment_time: string
+          booked_by: string | null
+          confirmation_status: string
+          confirmed_at: string | null
+          created_at: string
+          followup_status: string | null
+          followup_step: number
+          id: string
+          is_new_patient: boolean
+          last_reply: string | null
+          no_show_count: number
+          patient_name: string
+          phone: string
+          reminder_24hr_sent: boolean
+          reminder_24hr_sent_at: string | null
+          reminder_2hr_sent: boolean
+          reminder_2hr_sent_at: string | null
+          rescheduled_from: string | null
+          service: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          appointment_date: string
+          appointment_time: string
+          booked_by?: string | null
+          confirmation_status?: string
+          confirmed_at?: string | null
+          created_at?: string
+          followup_status?: string | null
+          followup_step?: number
+          id?: string
+          is_new_patient?: boolean
+          last_reply?: string | null
+          no_show_count?: number
+          patient_name: string
+          phone: string
+          reminder_24hr_sent?: boolean
+          reminder_24hr_sent_at?: string | null
+          reminder_2hr_sent?: boolean
+          reminder_2hr_sent_at?: string | null
+          rescheduled_from?: string | null
+          service: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          appointment_date?: string
+          appointment_time?: string
+          booked_by?: string | null
+          confirmation_status?: string
+          confirmed_at?: string | null
+          created_at?: string
+          followup_status?: string | null
+          followup_step?: number
+          id?: string
+          is_new_patient?: boolean
+          last_reply?: string | null
+          no_show_count?: number
+          patient_name?: string
+          phone?: string
+          reminder_24hr_sent?: boolean
+          reminder_24hr_sent_at?: string | null
+          reminder_2hr_sent?: boolean
+          reminder_2hr_sent_at?: string | null
+          rescheduled_from?: string | null
+          service?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_rescheduled_from_fkey"
+            columns: ["rescheduled_from"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consent_forms: {
         Row: {
           consent_template_id: string

@@ -22,6 +22,7 @@ import AdminSettings from "./pages/AdminSettings";
 import TreatmentsPage from "./pages/TreatmentsPage";
 import PatientReview from "./pages/PatientReview";
 import NewPatients from "./pages/NewPatients";
+import Appointments from "./pages/Appointments";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -191,6 +192,12 @@ function AppRoutes() {
       } />
 
       {/* Admin routes */}
+      <Route path="/appointments" element={
+        <ProtectedRoute allowedRoles={['admin', 'reception']}>
+          <Appointments />
+        </ProtectedRoute>
+      } />
+
       <Route path="/treatments" element={
         <ProtectedRoute allowedRoles={['admin']}>
           <TreatmentsPage />
