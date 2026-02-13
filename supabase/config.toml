@@ -20,3 +20,12 @@ verify_jwt = false
 
 [functions.manual-vapi-call]
 verify_jwt = false
+
+[functions.check-no-shows]
+verify_jwt = false
+
+[functions.run-followup-sequence]
+verify_jwt = false
+
+[functions.stop-followup]
+verify_jwt = false
