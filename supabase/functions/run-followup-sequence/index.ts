@@ -71,79 +71,10 @@ Deno.serve(async (req) => {
     const now = new Date();
     const results: { id: string; step: number; action: string }[] = [];
 
-    for (const apt of appointments || []) {
-      const noShowDate = new Date(apt.appointment_date);
-      const daysSince = Math.floor((now.getTime() - noShowDate.getTime()) / (1000 * 60 * 60 * 24));
-      const currentStep = apt.followup_step || 0;
-
-      if (apt.is_new_patient) {
-        // NEW PATIENT: aggressive 4-step sequence
-        if (daysSince >= 1 && currentStep < 1) {
-          const msg = `Hi ${apt.patient_name}, would you like to reschedule your ${apt.service} appointment? We have availability this week at Cosmique Clinic. Reply with your preferred date and time!`;
-          await sendWatiMessage(apt.phone, msg);
-          await supabase.from("appointment_communications").insert({
-            appointment_id: apt.id, channel: "whatsapp", direction: "outbound",
-            message_sent: `Follow-up Day 1: ${msg}`,
-          });
-          await supabase.from("appointments").update({ followup_step: 1 }).eq("id", apt.id);
-          results.push({ id: apt.id, step: 1, action: "whatsapp_day1" });
-
-        } else if (daysSince >= 3 && currentStep < 2) {
-          const msg = `Hi ${apt.patient_name}, just checking in! Many of our patients love their ${apt.service} results at Cosmique Clinic. We'd love to help you too. Would you like to book a new appointment?`;
-          await sendWatiMessage(apt.phone, msg);
-          await supabase.from("appointment_communications").insert({
-            appointment_id: apt.id, channel: "whatsapp", direction: "outbound",
-            message_sent: `Follow-up Day 3: ${msg}`,
-          });
-          await supabase.from("appointments").update({ followup_step: 2 }).eq("id", apt.id);
-          results.push({ id: apt.id, step: 2, action: "whatsapp_day3" });
-
-        } else if (daysSince >= 7 && currentStep < 3) {
-          const msg = `Hi ${apt.patient_name}, we have a special opening this week for ${apt.service}. Would you like us to reserve a spot for you? Reply YES and we will arrange it for you.`;
-          await sendWatiMessage(apt.phone, msg);
-          await supabase.from("appointment_communications").insert({
-            appointment_id: apt.id, channel: "whatsapp", direction: "outbound",
-            message_sent: `Follow-up Day 7: ${msg}`,
-          });
-          // Also trigger VAPI call
-          await triggerVapiCall(supabase, apt);
-          await supabase.from("appointments").update({ followup_step: 3 }).eq("id", apt.id);
-          results.push({ id: apt.id, step: 3, action: "whatsapp_day7_plus_call" });
-
-        } else if (daysSince >= 14 && currentStep < 4) {
-          await supabase.from("appointments").update({
-            followup_step: 4,
-            followup_status: "completed",
-          }).eq("id", apt.id);
-          results.push({ id: apt.id, step: 4, action: "sequence_completed" });
-        }
-      } else {
-        // EXISTING PATIENT: lighter 2-step sequence
-        if (daysSince >= 1 && currentStep < 1) {
-          const msg = `Hi ${apt.patient_name}, we missed you at your appointment. Would you like to reschedule? Let us know your preferred time.`;
-          await sendWatiMessage(apt.phone, msg);
-          await supabase.from("appointment_communications").insert({
-            appointment_id: apt.id, channel: "whatsapp", direction: "outbound",
-            message_sent: `Follow-up Day 1: ${msg}`,
-          });
-          await supabase.from("appointments").update({ followup_step: 1 }).eq("id", apt.id);
-          results.push({ id: apt.id, step: 1, action: "whatsapp_day1" });
-
-        } else if (daysSince >= 3 && currentStep < 2) {
-          const msg = `Hi ${apt.patient_name}, just a gentle reminder — would you like to book a new appointment for ${apt.service}?`;
-          await sendWatiMessage(apt.phone, msg);
-          await supabase.from("appointment_communications").insert({
-            appointment_id: apt.id, channel: "whatsapp", direction: "outbound",
-            message_sent: `Follow-up Day 3: ${msg}`,
-          });
-          await supabase.from("appointments").update({
-            followup_step: 2,
-            followup_status: "completed",
-          }).eq("id", apt.id);
-          results.push({ id: apt.id, step: 2, action: "whatsapp_day3_completed" });
-        }
-      }
-    }
+    // DISABLED: Patient messaging is currently turned off
+    // All follow-up sequences are paused - no messages sent to patients
+    console.log(`Found ${(appointments || []).length} active follow-ups, but patient messaging is DISABLED`);
+    const results: { id: string; step: number; action: string }[] = [];
 
     return new Response(JSON.stringify({ processed: results.length, results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
