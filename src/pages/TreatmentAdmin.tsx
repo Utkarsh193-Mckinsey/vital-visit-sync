@@ -67,6 +67,13 @@ interface TreatmentEntry {
   saveAsDefault: boolean;
 }
 
+interface StaffOption {
+  id: string;
+  full_name: string;
+  role: string;
+  title: string | null;
+}
+
 export default function TreatmentAdmin() {
   const { visitId } = useParams<{ visitId: string }>();
   const [visit, setVisit] = useState<VisitWithPatient | null>(null);
@@ -76,14 +83,33 @@ export default function TreatmentAdmin() {
   const [isSaving, setIsSaving] = useState(false);
   const [consentWarning, setConsentWarning] = useState<{ treatmentName: string; treatmentId: string; index: number } | null>(null);
   const [showConsentModal, setShowConsentModal] = useState(false);
-   const [selectedConsumables, setSelectedConsumables] = useState<SelectedConsumable[]>([]);
+  const [selectedConsumables, setSelectedConsumables] = useState<SelectedConsumable[]>([]);
+  const [selectedDoctorId, setSelectedDoctorId] = useState('');
+  const [selectedNurseId, setSelectedNurseId] = useState('');
+  const [doctors, setDoctors] = useState<StaffOption[]>([]);
+  const [nurses, setNurses] = useState<StaffOption[]>([]);
   const { staff } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     fetchVisitData();
+    fetchStaffOptions();
   }, [visitId]);
+
+  const fetchStaffOptions = async () => {
+    const { data } = await supabase
+      .from('staff')
+      .select('id, full_name, role, title')
+      .eq('status', 'active')
+      .in('role', ['doctor', 'nurse'])
+      .order('full_name');
+
+    if (data) {
+      setDoctors(data.filter(s => s.role === 'doctor'));
+      setNurses(data.filter(s => s.role === 'nurse'));
+    }
+  };
 
   const fetchVisitData = async () => {
     if (!visitId) return;
@@ -288,6 +314,9 @@ export default function TreatmentAdmin() {
     setIsSaving(true);
 
     try {
+      const doctorId = selectedDoctorId || staff.id;
+      const nurseId = selectedNurseId && selectedNurseId !== '__none__' ? selectedNurseId : null;
+
       // First update visit (without locking) so RLS allows subsequent updates
       const { error: visitUpdateError } = await supabase
         .from('visits')
@@ -295,7 +324,8 @@ export default function TreatmentAdmin() {
           current_status: 'completed',
           treatment_completed: true,
           doctor_notes: doctorNotes || null,
-          doctor_staff_id: staff.id,
+          doctor_staff_id: doctorId,
+          nurse_staff_id: nurseId,
           completed_date: new Date().toISOString(),
         })
         .eq('id', visitId);
@@ -314,7 +344,7 @@ export default function TreatmentAdmin() {
             dose_administered: treatment.doseAdministered,
             dose_unit: treatment.doseUnit,
             administration_details: [treatment.customBrand, treatment.administrationDetails].filter(Boolean).join(' - ') || null,
-            performed_by: staff.id,
+            performed_by: doctorId,
             sessions_deducted: 1,
           });
 
@@ -443,6 +473,49 @@ export default function TreatmentAdmin() {
             <div>
               <h3 className="font-semibold">{visit.patient.full_name}</h3>
               <p className="text-sm text-muted-foreground">{visit.patient.phone_number}</p>
+            </div>
+          </div>
+        </TabletCardContent>
+      </TabletCard>
+
+      {/* Staff Selection */}
+      <TabletCard className="mb-6">
+        <TabletCardContent className="p-4">
+          <h4 className="font-medium mb-3 flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Performed By
+          </h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Doctor</label>
+              <Select value={selectedDoctorId} onValueChange={setSelectedDoctorId}>
+                <SelectTrigger className="h-12">
+                  <SelectValue placeholder="Select doctor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {doctors.map(d => (
+                    <SelectItem key={d.id} value={d.id} className="py-3">
+                      {d.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Nurse / Beauty Therapist</label>
+              <Select value={selectedNurseId} onValueChange={setSelectedNurseId}>
+                <SelectTrigger className="h-12">
+                  <SelectValue placeholder="Select nurse (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__" className="text-muted-foreground">-- None --</SelectItem>
+                  {nurses.map(n => (
+                    <SelectItem key={n.id} value={n.id} className="py-3">
+                      {n.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </TabletCardContent>

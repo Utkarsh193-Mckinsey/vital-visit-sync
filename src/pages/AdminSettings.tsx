@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { TabletButton } from '@/components/ui/tablet-button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, FileText, Package } from 'lucide-react';
+import { ArrowLeft, FileText, Package, Users } from 'lucide-react';
 import ConsentTemplatesManager from '@/components/admin/ConsentTemplatesManager';
 import ConsumablesManager from '@/components/admin/ConsumablesManager';
+import StaffManager from '@/components/admin/StaffManager';
 
 export default function AdminSettings() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('consumables');
+  const [activeTab, setActiveTab] = useState('staff');
 
   return (
     <PageContainer maxWidth="lg">
@@ -28,7 +29,11 @@ export default function AdminSettings() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 h-14">
+        <TabsList className="grid w-full grid-cols-3 h-14">
+          <TabsTrigger value="staff" className="h-12 text-base flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Staff
+          </TabsTrigger>
           <TabsTrigger value="consumables" className="h-12 text-base flex items-center gap-2">
             <Package className="h-4 w-4" />
             Consumables
@@ -38,6 +43,10 @@ export default function AdminSettings() {
             Consent Forms
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="staff" className="mt-4">
+          <StaffManager />
+        </TabsContent>
 
         <TabsContent value="consumables" className="mt-4">
           <ConsumablesManager />
