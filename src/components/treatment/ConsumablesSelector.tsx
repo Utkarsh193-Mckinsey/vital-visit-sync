@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { TabletCard, TabletCardContent } from '@/components/ui/tablet-card';
 import { TabletButton } from '@/components/ui/tablet-button';
+import { TabletInput } from '@/components/ui/tablet-input';
 import { Badge } from '@/components/ui/badge';
 import { Package, Plus, Minus, X, Check, ChevronsUpDown } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -18,7 +19,23 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface StockItem {
   id: string;
@@ -38,8 +55,15 @@ export interface SelectedConsumable {
 interface ConsumablesSelectorProps {
   selectedConsumables: SelectedConsumable[];
   onConsumablesChange: (consumables: SelectedConsumable[]) => void;
-  treatmentIds?: string[];  // Treatment IDs to load default consumables from
+  treatmentIds?: string[];
 }
+
+const CATEGORIES = [
+  'Syringes', 'Needles & Infusion', 'Cannula', 'Solutions',
+  'Medicines', 'Other Items', 'Housekeeping',
+];
+
+const DEFAULT_UNITS = ['pcs', 'ml', 'mg', 'mcg', 'Units', 'vial', 'box', 'amp', 'bottle', 'tube', 'pkt'];
 
 export function ConsumablesSelector({
   selectedConsumables,
@@ -47,25 +71,25 @@ export function ConsumablesSelector({
   treatmentIds = [],
 }: ConsumablesSelectorProps) {
   const [stockItems, setStockItems] = useState<StockItem[]>([]);
-  const [defaultConsumables, setDefaultConsumables] = useState<{ stock_item_id: string; default_quantity: number; item_name: string; unit: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [hasLoadedDefaults, setHasLoadedDefaults] = useState(false);
+  const [showAddNew, setShowAddNew] = useState(false);
+  const [newItem, setNewItem] = useState({ name: '', category: CATEGORIES[0], unit: DEFAULT_UNITS[0], brand: '' });
+  const [customUnit, setCustomUnit] = useState('');
+  const [isAddingUnit, setIsAddingUnit] = useState(false);
+  const [units, setUnits] = useState<string[]>(DEFAULT_UNITS);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchStockItems();
   }, []);
 
-  // Load default consumables when treatmentIds change
   useEffect(() => {
     if (treatmentIds.length > 0 && !hasLoadedDefaults) {
       loadDefaultConsumables();
     }
   }, [treatmentIds, hasLoadedDefaults]);
-
-  useEffect(() => {
-    fetchStockItems();
-  }, []);
 
   const loadDefaultConsumables = async () => {
     if (treatmentIds.length === 0) return;
@@ -81,7 +105,6 @@ export function ConsumablesSelector({
     }
 
     if (data && data.length > 0) {
-      // Merge defaults - if same item appears for multiple treatments, sum quantities
       const mergedDefaults: Record<string, SelectedConsumable> = {};
       
       for (const item of data) {
@@ -100,17 +123,9 @@ export function ConsumablesSelector({
         }
       }
 
-      // Only set if no consumables already selected
       if (selectedConsumables.length === 0) {
         onConsumablesChange(Object.values(mergedDefaults));
       }
-      
-      setDefaultConsumables(data.map(d => ({
-        stock_item_id: d.stock_item_id,
-        default_quantity: d.default_quantity,
-        item_name: (d.stock_item as StockItem)?.item_name || '',
-        unit: (d.stock_item as StockItem)?.unit || '',
-      })));
       setHasLoadedDefaults(true);
     }
   };
@@ -127,6 +142,10 @@ export function ConsumablesSelector({
       console.error('Error fetching stock items:', error);
     } else {
       setStockItems(data || []);
+      // Extract unique units from existing items
+      const existingUnits = new Set(DEFAULT_UNITS);
+      (data || []).forEach(item => existingUnits.add(item.unit));
+      setUnits(Array.from(existingUnits));
     }
     setIsLoading(false);
   };
@@ -144,20 +163,13 @@ export function ConsumablesSelector({
     if (existing) {
       onConsumablesChange(
         selectedConsumables.map(c =>
-          c.stockItemId === item.id
-            ? { ...c, quantity: c.quantity + 1 }
-            : c
+          c.stockItemId === item.id ? { ...c, quantity: c.quantity + 1 } : c
         )
       );
     } else {
       onConsumablesChange([
         ...selectedConsumables,
-        {
-          stockItemId: item.id,
-          itemName: item.item_name,
-          quantity: 1,
-          unit: item.unit,
-        },
+        { stockItemId: item.id, itemName: item.item_name, quantity: 1, unit: item.unit },
       ]);
     }
     setOpen(false);
@@ -166,11 +178,7 @@ export function ConsumablesSelector({
   const updateQuantity = (stockItemId: string, delta: number) => {
     onConsumablesChange(
       selectedConsumables
-        .map(c =>
-          c.stockItemId === stockItemId
-            ? { ...c, quantity: Math.max(0, c.quantity + delta) }
-            : c
-        )
+        .map(c => c.stockItemId === stockItemId ? { ...c, quantity: Math.max(0, c.quantity + delta) } : c)
         .filter(c => c.quantity > 0)
     );
   };
@@ -179,8 +187,42 @@ export function ConsumablesSelector({
     onConsumablesChange(selectedConsumables.filter(c => c.stockItemId !== stockItemId));
   };
 
-  const isSelected = (itemId: string) =>
-    selectedConsumables.some(c => c.stockItemId === itemId);
+  const isSelected = (itemId: string) => selectedConsumables.some(c => c.stockItemId === itemId);
+
+  const handleAddNewItem = async () => {
+    if (!newItem.name.trim()) return;
+    
+    const unitToUse = isAddingUnit && customUnit.trim() ? customUnit.trim() : newItem.unit;
+    
+    const { data, error } = await supabase
+      .from('stock_items')
+      .insert({
+        item_name: newItem.name.trim(),
+        category: newItem.category,
+        unit: unitToUse,
+        brand: newItem.brand.trim() || null,
+        status: 'active',
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to add item.', variant: 'destructive' });
+      return;
+    }
+
+    // Add to local list and select it
+    setStockItems(prev => [...prev, data as StockItem]);
+    if (isAddingUnit && customUnit.trim()) {
+      setUnits(prev => [...prev, customUnit.trim()]);
+    }
+    addConsumable(data as StockItem);
+    setShowAddNew(false);
+    setNewItem({ name: '', category: CATEGORIES[0], unit: DEFAULT_UNITS[0], brand: '' });
+    setCustomUnit('');
+    setIsAddingUnit(false);
+    toast({ title: 'Item Added', description: `${data.item_name} added and selected.` });
+  };
 
   if (isLoading) {
     return (
@@ -208,54 +250,64 @@ export function ConsumablesSelector({
             )}
           </h4>
 
-          {/* Add Consumable Button with Dropdown */}
-          <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-              <TabletButton
-                variant="outline"
-                size="sm"
-                leftIcon={<Plus className="h-4 w-4" />}
-                rightIcon={<ChevronsUpDown className="h-3 w-3 opacity-50" />}
-              >
-                Add
-              </TabletButton>
-            </PopoverTrigger>
-            <PopoverContent className="w-[300px] p-0" align="end">
-              <Command>
-                <CommandInput placeholder="Search consumables..." />
-                <CommandList>
-                  <CommandEmpty>No consumables found.</CommandEmpty>
-                  <ScrollArea className="h-[280px]">
-                    {Object.entries(groupedItems).map(([category, items]) => (
-                      <CommandGroup key={category} heading={category}>
-                        {items.map((item) => (
-                          <CommandItem
-                            key={item.id}
-                            value={`${item.item_name} ${item.category}`}
-                            onSelect={() => addConsumable(item)}
-                            className="cursor-pointer"
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                isSelected(item.id) ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            <div className="flex-1">
-                              <span>{item.item_name}</span>
-                              <span className="ml-2 text-xs text-muted-foreground">
-                                ({item.unit})
-                              </span>
-                            </div>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    ))}
-                  </ScrollArea>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+          <div className="flex gap-2">
+            {/* Add New Item Button */}
+            <TabletButton
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowAddNew(true)}
+              leftIcon={<Plus className="h-4 w-4" />}
+            >
+              New
+            </TabletButton>
+
+            {/* Add Existing Consumable */}
+            <Popover open={open} onOpenChange={setOpen}>
+              <PopoverTrigger asChild>
+                <TabletButton
+                  variant="outline"
+                  size="sm"
+                  leftIcon={<Plus className="h-4 w-4" />}
+                  rightIcon={<ChevronsUpDown className="h-3 w-3 opacity-50" />}
+                >
+                  Add
+                </TabletButton>
+              </PopoverTrigger>
+              <PopoverContent className="w-[300px] p-0" align="end">
+                <Command>
+                  <CommandInput placeholder="Search consumables..." />
+                  <CommandList>
+                    <CommandEmpty>No consumables found.</CommandEmpty>
+                    <ScrollArea className="h-[280px]">
+                      {Object.entries(groupedItems).map(([category, items]) => (
+                        <CommandGroup key={category} heading={category}>
+                          {items.map((item) => (
+                            <CommandItem
+                              key={item.id}
+                              value={`${item.item_name} ${item.category}`}
+                              onSelect={() => addConsumable(item)}
+                              className="cursor-pointer"
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  isSelected(item.id) ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="flex-1">
+                                <span>{item.item_name}</span>
+                                <span className="ml-2 text-xs text-muted-foreground">({item.unit})</span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      ))}
+                    </ScrollArea>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
 
         {/* Selected Consumables List */}
@@ -306,6 +358,93 @@ export function ConsumablesSelector({
             ))}
           </div>
         )}
+
+        {/* Add New Item Dialog */}
+        <Dialog open={showAddNew} onOpenChange={setShowAddNew}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Add New Consumable</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label>Item Name *</Label>
+                <TabletInput
+                  placeholder="e.g. 25G Needle"
+                  value={newItem.name}
+                  onChange={(e) => setNewItem(prev => ({ ...prev, name: e.target.value }))}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Category</Label>
+                <Select value={newItem.category} onValueChange={(v) => setNewItem(prev => ({ ...prev, category: v }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map(c => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Unit</Label>
+                {isAddingUnit ? (
+                  <div className="flex gap-2">
+                    <TabletInput
+                      placeholder="e.g. strip, ampoule"
+                      value={customUnit}
+                      onChange={(e) => setCustomUnit(e.target.value)}
+                      className="flex-1"
+                    />
+                    <TabletButton
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => { setIsAddingUnit(false); setCustomUnit(''); }}
+                    >
+                      Cancel
+                    </TabletButton>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Select value={newItem.unit} onValueChange={(v) => setNewItem(prev => ({ ...prev, unit: v }))}>
+                      <SelectTrigger className="flex-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {units.map(u => (
+                          <SelectItem key={u} value={u}>{u}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <TabletButton
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setIsAddingUnit(true)}
+                      leftIcon={<Plus className="h-3 w-3" />}
+                    >
+                      New
+                    </TabletButton>
+                  </div>
+                )}
+              </div>
+              <div className="grid gap-2">
+                <Label>Brand (optional)</Label>
+                <TabletInput
+                  placeholder="e.g. MMC"
+                  value={newItem.brand}
+                  onChange={(e) => setNewItem(prev => ({ ...prev, brand: e.target.value }))}
+                />
+              </div>
+            </div>
+            <DialogFooter className="gap-2">
+              <TabletButton variant="outline" onClick={() => setShowAddNew(false)}>Cancel</TabletButton>
+              <TabletButton onClick={handleAddNewItem} disabled={!newItem.name.trim()}>
+                Add & Select
+              </TabletButton>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </TabletCardContent>
     </TabletCard>
   );

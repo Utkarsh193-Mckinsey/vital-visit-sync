@@ -752,9 +752,11 @@ export type Database = {
       visit_treatments: {
         Row: {
           administration_details: string | null
+          doctor_staff_id: string | null
           dose_administered: string
           dose_unit: string
           id: string
+          nurse_staff_id: string | null
           package_id: string
           performed_by: string | null
           sessions_deducted: number
@@ -764,9 +766,11 @@ export type Database = {
         }
         Insert: {
           administration_details?: string | null
+          doctor_staff_id?: string | null
           dose_administered: string
           dose_unit: string
           id?: string
+          nurse_staff_id?: string | null
           package_id: string
           performed_by?: string | null
           sessions_deducted?: number
@@ -776,9 +780,11 @@ export type Database = {
         }
         Update: {
           administration_details?: string | null
+          doctor_staff_id?: string | null
           dose_administered?: string
           dose_unit?: string
           id?: string
+          nurse_staff_id?: string | null
           package_id?: string
           performed_by?: string | null
           sessions_deducted?: number
@@ -787,6 +793,20 @@ export type Database = {
           visit_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "visit_treatments_doctor_staff_id_fkey"
+            columns: ["doctor_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_treatments_nurse_staff_id_fkey"
+            columns: ["nurse_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "visit_treatments_package_id_fkey"
             columns: ["package_id"]

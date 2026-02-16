@@ -65,6 +65,8 @@ interface TreatmentEntry {
   customDoseUnit: string;
   customBrand: string;
   saveAsDefault: boolean;
+  doctorId: string;
+  nurseId: string;
 }
 
 interface StaffOption {
@@ -171,6 +173,8 @@ export default function TreatmentAdmin() {
         customDoseUnit: pkg.treatment?.dosage_unit || 'Session',
         customBrand: '',
         saveAsDefault: false,
+        doctorId: '',
+        nurseId: '',
       }));
       
       setTreatments(entries);
@@ -334,6 +338,9 @@ export default function TreatmentAdmin() {
 
       // Insert visit treatments and deduct sessions ONLY for treatments with dose
       for (const treatment of treatmentsToAdminister) {
+        const treatmentDoctorId = (treatment.doctorId && treatment.doctorId !== '__default__') ? treatment.doctorId : doctorId;
+        const treatmentNurseId = (treatment.nurseId && treatment.nurseId !== '__default__' && treatment.nurseId !== '__none__') ? treatment.nurseId : nurseId;
+        
         // Insert visit treatment
         const { error: treatmentError } = await supabase
           .from('visit_treatments')
@@ -344,8 +351,10 @@ export default function TreatmentAdmin() {
             dose_administered: treatment.doseAdministered,
             dose_unit: treatment.doseUnit,
             administration_details: [treatment.customBrand, treatment.administrationDetails].filter(Boolean).join(' - ') || null,
-            performed_by: doctorId,
+            performed_by: treatmentDoctorId,
             sessions_deducted: 1,
+            doctor_staff_id: treatmentDoctorId,
+            nurse_staff_id: treatmentNurseId,
           });
 
         if (treatmentError) throw treatmentError;
@@ -478,12 +487,12 @@ export default function TreatmentAdmin() {
         </TabletCardContent>
       </TabletCard>
 
-      {/* Staff Selection */}
+      {/* Default Staff Selection (applies to all treatments unless overridden) */}
       <TabletCard className="mb-6">
         <TabletCardContent className="p-4">
           <h4 className="font-medium mb-3 flex items-center gap-2">
             <User className="h-4 w-4" />
-            Performed By
+            Default Performed By <span className="text-sm text-muted-foreground font-normal">(can override per treatment)</span>
           </h4>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -715,6 +724,39 @@ export default function TreatmentAdmin() {
                       value={treatment.administrationDetails}
                       onChange={(e) => updateTreatmentDetails(index, e.target.value)}
                     />
+                  </div>
+                </div>
+
+                {/* Per-treatment staff override */}
+                <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-dashed">
+                  <div>
+                    <label className="text-xs font-medium mb-1 block text-muted-foreground">Doctor (override)</label>
+                    <Select value={treatment.doctorId} onValueChange={(v) => updateCustomField(index, 'doctorId', v)}>
+                      <SelectTrigger className="h-10">
+                        <SelectValue placeholder="Use default" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__default__" className="text-muted-foreground">Use default</SelectItem>
+                        {doctors.map(d => (
+                          <SelectItem key={d.id} value={d.id}>{d.full_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium mb-1 block text-muted-foreground">Nurse (override)</label>
+                    <Select value={treatment.nurseId} onValueChange={(v) => updateCustomField(index, 'nurseId', v)}>
+                      <SelectTrigger className="h-10">
+                        <SelectValue placeholder="Use default" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__default__" className="text-muted-foreground">Use default</SelectItem>
+                        <SelectItem value="__none__" className="text-muted-foreground">-- None --</SelectItem>
+                        {nurses.map(n => (
+                          <SelectItem key={n.id} value={n.id}>{n.full_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </TabletCardContent>
