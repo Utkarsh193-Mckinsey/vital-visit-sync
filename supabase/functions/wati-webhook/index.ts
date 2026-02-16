@@ -133,6 +133,94 @@ async function sendWatiMessage(phone: string, message: string) {
   return res.json();
 }
 
+function parseAppointmentMessage(msg: string): {
+  name: string; phone: string; date: string; time: string; service: string; doctor?: string;
+} | null {
+  // Detect structured appointment messages like:
+  // "Appointment Confirmation\nName : Mr Daniel\nPhone :0566648823\nDate : Wednesday 18th February 2026\nTime :5:00 PM\nService : Face Consultation\nDr Deepika"
+  const lower = msg.toLowerCase();
+  if (!lower.includes("appointment") && !lower.includes("booking")) return null;
+
+  // Extract name
+  const nameMatch = msg.match(/name\s*[:：]\s*(.+)/i);
+  if (!nameMatch) return null;
+  const name = nameMatch[1].trim();
+
+  // Extract phone
+  const phoneMatch = msg.match(/phone\s*[:：]\s*([\d\s+()-]+)/i);
+  if (!phoneMatch) return null;
+  const phone = phoneMatch[1].trim().replace(/\s+/g, "");
+
+  // Extract date - handle various formats
+  const dateMatch = msg.match(/date\s*[:：]\s*(.+)/i);
+  if (!dateMatch) return null;
+  const dateStr = dateMatch[1].trim();
+
+  // Parse date: "Wednesday 18th February 2026" or "18/02/2026" or "2026-02-18"
+  let parsedDate: string | null = null;
+
+  // Try ISO format first
+  const isoMatch = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    parsedDate = isoMatch[0];
+  }
+
+  // Try DD/MM/YYYY
+  const slashMatch = dateStr.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (!parsedDate && slashMatch) {
+    parsedDate = `${slashMatch[3]}-${slashMatch[2].padStart(2, "0")}-${slashMatch[1].padStart(2, "0")}`;
+  }
+
+  // Try "18th February 2026" or "February 18, 2026" (with optional day name)
+  if (!parsedDate) {
+    const months: Record<string, string> = {
+      january: "01", february: "02", march: "03", april: "04",
+      may: "05", june: "06", july: "07", august: "08",
+      september: "09", october: "10", november: "11", december: "12",
+    };
+    // "18th February 2026"
+    const dmy = dateStr.match(/(\d{1,2})(?:st|nd|rd|th)?\s+(\w+)\s+(\d{4})/i);
+    if (dmy && months[dmy[2].toLowerCase()]) {
+      parsedDate = `${dmy[3]}-${months[dmy[2].toLowerCase()]}-${dmy[1].padStart(2, "0")}`;
+    }
+    // "February 18, 2026"
+    if (!parsedDate) {
+      const mdy = dateStr.match(/(\w+)\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})/i);
+      if (mdy && months[mdy[1].toLowerCase()]) {
+        parsedDate = `${mdy[3]}-${months[mdy[1].toLowerCase()]}-${mdy[2].padStart(2, "0")}`;
+      }
+    }
+  }
+
+  if (!parsedDate) return null;
+
+  // Extract time
+  const timeMatch = msg.match(/time\s*[:：]\s*(\d{1,2}[:\.]\d{2}\s*(?:AM|PM|am|pm)?)/i);
+  if (!timeMatch) return null;
+  let timeStr = timeMatch[1].trim().replace(".", ":");
+
+  // Convert to 24h format
+  const pmMatch = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (pmMatch) {
+    let h = parseInt(pmMatch[1]);
+    const m = pmMatch[2];
+    const ampm = pmMatch[3].toUpperCase();
+    if (ampm === "PM" && h < 12) h += 12;
+    if (ampm === "AM" && h === 12) h = 0;
+    timeStr = `${h.toString().padStart(2, "0")}:${m}`;
+  }
+
+  // Extract service
+  const serviceMatch = msg.match(/service\s*[:：]\s*(.+)/i);
+  const service = serviceMatch ? serviceMatch[1].trim() : "Consultation";
+
+  // Extract doctor (look for "Dr" or "Doctor" line)
+  const drMatch = msg.match(/(?:^|\n)\s*(Dr\.?\s+\w+[\w\s]*)/im);
+  const doctor = drMatch ? drMatch[1].trim() : undefined;
+
+  return { name, phone, date: parsedDate, time: timeStr, service, doctor };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -155,6 +243,51 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "Missing phone or message" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if this is a structured appointment booking message from the team
+    const appointmentData = parseAppointmentMessage(messageText);
+    if (appointmentData) {
+      // Log the message
+      await supabase.from("whatsapp_messages").insert({
+        phone: senderPhone,
+        patient_name: senderName || "Team",
+        direction: "inbound",
+        message_text: messageText,
+        ai_parsed_intent: "booking",
+      });
+
+      // Create the appointment
+      const { data: newApt, error: aptError } = await supabase
+        .from("appointments")
+        .insert({
+          patient_name: appointmentData.name,
+          phone: appointmentData.phone,
+          appointment_date: appointmentData.date,
+          appointment_time: appointmentData.time,
+          service: appointmentData.service,
+          status: "upcoming",
+          confirmation_status: "unconfirmed",
+          booked_by: appointmentData.doctor || "WhatsApp",
+          is_new_patient: false,
+        })
+        .select()
+        .single();
+
+      if (aptError) {
+        console.error("Error creating appointment:", aptError);
+        return new Response(
+          JSON.stringify({ success: false, error: aptError.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log("Auto-created appointment:", newApt?.id, appointmentData.name);
+
+      return new Response(
+        JSON.stringify({ success: true, intent: "booking", appointment_id: newApt?.id }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
