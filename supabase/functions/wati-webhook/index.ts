@@ -269,7 +269,7 @@ Deno.serve(async (req) => {
           service: appointmentData.service,
           status: "upcoming",
           confirmation_status: "unconfirmed",
-          booked_by: appointmentData.doctor || "WhatsApp",
+          booked_by: "WhatsApp",
           is_new_patient: false,
         })
         .select()
