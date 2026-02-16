@@ -86,6 +86,17 @@ export interface Visit {
   blood_pressure_systolic?: number;
   blood_pressure_diastolic?: number;
   heart_rate?: number;
+  temperature?: number;
+  height_cm?: number;
+  respiratory_rate?: number;
+  spo2?: number;
+  hip_cm?: number;
+  waist_cm?: number;
+  head_circumference_cm?: number;
+  sugar?: number;
+  urinalysis?: string;
+  other_details?: string;
+  lmp?: string;
   doctor_notes?: string;
   consent_signed: boolean;
   vitals_completed: boolean;
