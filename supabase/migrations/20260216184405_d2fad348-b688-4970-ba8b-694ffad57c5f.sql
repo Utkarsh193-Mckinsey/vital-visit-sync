@@ -1,0 +1,1 @@
+ALTER TABLE public.appointments ADD COLUMN special_instructions text DEFAULT NULL;
