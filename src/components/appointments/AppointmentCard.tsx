@@ -99,62 +99,68 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
   const confirm = confirmBadge[apt.confirmation_status] || confirmBadge.unconfirmed;
 
   return (
-    <TabletCard className="p-4">
-      <div className="flex items-start justify-between gap-4">
-        {/* Left: time + patient info */}
-        <div className="flex items-start gap-4 flex-1 min-w-0">
-          <div className="flex flex-col items-center min-w-[75px]">
-            <div className="flex items-center gap-1 text-lg font-bold text-foreground">
-              <Clock className="h-4 w-4 text-primary" />
-              {formatTime(apt.appointment_time)}
-            </div>
-            <span className="text-xs text-muted-foreground">{apt.appointment_date}</span>
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <span className="font-semibold text-foreground">{apt.patient_name}</span>
-              {apt.is_new_patient && <Badge variant="secondary" className="text-xs">NEW</Badge>}
-              {apt.no_show_count > 0 && (
-                <Badge variant="destructive" className="text-xs flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3" />
-                  {apt.no_show_count}x No-Show
-                </Badge>
-              )}
-              {showSlotAvailable && (
-                <Badge className="bg-blue-100 text-blue-800 text-xs">🔓 Slot Available</Badge>
-              )}
-            </div>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-              <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{apt.phone}</span>
-              <span className="font-medium text-foreground">{apt.service}</span>
-              {apt.booked_by && <span className="text-xs">Booked: {apt.booked_by}</span>}
-            </div>
-
-            {/* Reminder status for unconfirmed */}
-            {showReminderStatus && (
-              <div className="flex items-center gap-2 mt-2 flex-wrap">
-                {apt.reminder_24hr_sent && (
-                  <Badge variant="outline" className="text-xs">📱 24hr msg sent</Badge>
-                )}
-                {apt.reminder_2hr_sent && (
-                  <Badge variant="outline" className="text-xs border-destructive text-destructive">⚠️ 2hr reminder sent</Badge>
-                )}
-                {!apt.reminder_24hr_sent && !apt.reminder_2hr_sent && (
-                  <Badge variant="outline" className="text-xs">No reminders sent</Badge>
-                )}
-              </div>
-            )}
+    <TabletCard className="p-3">
+      {/* Single row layout */}
+      <div className="flex items-center gap-3 flex-wrap">
+        {/* Time & Date */}
+        <div className="flex items-center gap-1.5 min-w-[100px]">
+          <Clock className="h-4 w-4 text-primary flex-shrink-0" />
+          <div>
+            <span className="font-bold text-foreground text-sm">{formatTime(apt.appointment_time)}</span>
+            <span className="text-xs text-muted-foreground ml-1">{apt.appointment_date}</span>
           </div>
         </div>
 
-        {/* Right: badges + actions */}
-        <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
-          <Badge className={`${confirm.className} text-xs`}>{confirm.label}</Badge>
+        {/* Confirmation badge */}
+        <Badge className={`${confirm.className} text-xs flex-shrink-0`}>{confirm.label}</Badge>
 
+        {/* Patient name + phone */}
+        <div className="flex items-center gap-2 min-w-[160px]">
+          <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <div className="min-w-0">
+            <span className="font-semibold text-foreground text-sm truncate block">{apt.patient_name}</span>
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <Phone className="h-3 w-3" />{apt.phone}
+            </span>
+          </div>
+          {apt.is_new_patient && <Badge variant="secondary" className="text-[10px] h-5">NEW</Badge>}
+          {apt.no_show_count > 0 && (
+            <Badge variant="destructive" className="text-[10px] h-5 flex items-center gap-0.5">
+              <AlertTriangle className="h-2.5 w-2.5" />{apt.no_show_count}x
+            </Badge>
+          )}
+        </div>
+
+        {/* Service */}
+        <span className="text-sm font-medium text-foreground min-w-[100px]">{apt.service}</span>
+
+        {/* Booked by */}
+        {apt.booked_by && (
+          <span className="text-xs text-muted-foreground min-w-[80px]">
+            <span className="text-muted-foreground/70">by</span> {apt.booked_by}
+          </span>
+        )}
+
+        {/* Reminder status */}
+        {showReminderStatus && (
+          <div className="flex items-center gap-1">
+            {apt.reminder_24hr_sent && <Badge variant="outline" className="text-[10px] h-5">📱 24hr</Badge>}
+            {apt.reminder_2hr_sent && <Badge variant="outline" className="text-[10px] h-5 border-destructive text-destructive">⚠️ 2hr</Badge>}
+            {!apt.reminder_24hr_sent && !apt.reminder_2hr_sent && <Badge variant="outline" className="text-[10px] h-5">No reminders</Badge>}
+          </div>
+        )}
+
+        {showSlotAvailable && (
+          <Badge className="bg-blue-100 text-blue-800 text-[10px] h-5">🔓 Slot</Badge>
+        )}
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Actions */}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
           <Select value={apt.status} onValueChange={v => onUpdateStatus(apt.id, v)}>
-            <SelectTrigger className={`h-8 w-[130px] text-xs font-medium rounded-full border-0 ${statusColors[apt.status] || ''}`}>
+            <SelectTrigger className={`h-8 w-[120px] text-xs font-medium rounded-full border-0 ${statusColors[apt.status] || ''}`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -165,7 +171,7 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
           </Select>
 
           <Select value={apt.confirmation_status} onValueChange={v => onUpdateConfirmation(apt.id, v)}>
-            <SelectTrigger className="h-8 w-[150px] text-xs font-medium rounded-full border">
+            <SelectTrigger className="h-8 w-[140px] text-xs font-medium rounded-full border">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -175,24 +181,13 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
             </SelectContent>
           </Select>
 
-          {/* Call Patient button */}
-          <TabletButton
-            variant="outline"
-            size="sm"
-            className="text-xs h-8"
-            onClick={handleCallPatient}
-            disabled={calling}
-          >
-            {calling ? (
-              <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> Calling...</>
-            ) : (
-              <><PhoneCall className="h-3.5 w-3.5 mr-1" /> Call</>
-            )}
+          <TabletButton variant="outline" size="sm" className="text-xs h-8" onClick={handleCallPatient} disabled={calling}>
+            {calling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><PhoneCall className="h-3.5 w-3.5 mr-1" /> Call</>}
           </TabletButton>
 
           {showReminderStatus && (
             <TabletButton variant="outline" size="sm" className="text-xs h-8" onClick={() => onUpdateConfirmation(apt.id, 'confirmed_call')}>
-              <CheckCircle className="h-3.5 w-3.5 mr-1" /> Mark Confirmed
+              <CheckCircle className="h-3.5 w-3.5 mr-1" /> Confirm
             </TabletButton>
           )}
 
