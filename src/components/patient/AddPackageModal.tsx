@@ -21,11 +21,16 @@ import {
 } from '@/components/ui/select';
 
 const PAYMENT_METHODS = ['Cash', 'Card', 'Tabby', 'Tamara', 'Toothpick'] as const;
+const SESSION_OPTIONS = Array.from({ length: 20 }, (_, i) => i + 1);
 
 interface TreatmentLine {
   treatmentId: string;
   sessions: number;
-  complimentary: number;
+}
+
+interface ComplementaryLine {
+  treatmentId: string;
+  sessions: number;
 }
 
 interface PaymentSplit {
@@ -48,8 +53,9 @@ export default function AddPackageModal({
 }: AddPackageModalProps) {
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [treatmentLines, setTreatmentLines] = useState<TreatmentLine[]>([
-    { treatmentId: '', sessions: 4, complimentary: 0 },
+    { treatmentId: '', sessions: 4 },
   ]);
+  const [compLines, setCompLines] = useState<ComplementaryLine[]>([]);
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [paymentStatus, setPaymentStatus] = useState<'paid' | 'pending'>('paid');
   const [paymentSplits, setPaymentSplits] = useState<PaymentSplit[]>([
@@ -69,7 +75,8 @@ export default function AddPackageModal({
   }, [open]);
 
   const resetForm = () => {
-    setTreatmentLines([{ treatmentId: '', sessions: 4, complimentary: 0 }]);
+    setTreatmentLines([{ treatmentId: '', sessions: 4 }]);
+    setCompLines([]);
     setTotalAmount(0);
     setPaymentStatus('paid');
     setPaymentSplits([{ method: 'Cash', amount: 0 }]);
@@ -87,32 +94,27 @@ export default function AddPackageModal({
     setTreatments(data as Treatment[]);
   };
 
-  // Treatment lines
-  const addTreatmentLine = () => {
-    setTreatmentLines([...treatmentLines, { treatmentId: '', sessions: 4, complimentary: 0 }]);
+  // Treatment lines helpers
+  const addTreatmentLine = () => setTreatmentLines(prev => [...prev, { treatmentId: '', sessions: 4 }]);
+  const removeTreatmentLine = (i: number) => { if (treatmentLines.length > 1) setTreatmentLines(prev => prev.filter((_, idx) => idx !== i)); };
+  const updateLine = (i: number, field: keyof TreatmentLine, val: string | number) => {
+    setTreatmentLines(prev => prev.map((l, idx) => idx === i ? { ...l, [field]: val } : l));
   };
-  const removeTreatmentLine = (index: number) => {
-    if (treatmentLines.length <= 1) return;
-    setTreatmentLines(treatmentLines.filter((_, i) => i !== index));
-  };
-  const updateLine = (index: number, field: keyof TreatmentLine, value: string | number) => {
-    const updated = [...treatmentLines];
-    updated[index] = { ...updated[index], [field]: value };
-    setTreatmentLines(updated);
+
+  // Complimentary lines helpers
+  const addCompLine = () => setCompLines(prev => [...prev, { treatmentId: '', sessions: 1 }]);
+  const removeCompLine = (i: number) => setCompLines(prev => prev.filter((_, idx) => idx !== i));
+  const updateCompLine = (i: number, field: keyof ComplementaryLine, val: string | number) => {
+    setCompLines(prev => prev.map((l, idx) => idx === i ? { ...l, [field]: val } : l));
   };
 
   // Payment splits
   const totalPaid = paymentSplits.reduce((sum, s) => sum + (s.amount || 0), 0);
   const remaining = totalAmount - totalPaid;
-  const addPaymentSplit = () => setPaymentSplits([...paymentSplits, { method: 'Card', amount: 0 }]);
-  const removePaymentSplit = (index: number) => {
-    if (paymentSplits.length <= 1) return;
-    setPaymentSplits(paymentSplits.filter((_, i) => i !== index));
-  };
-  const updateSplit = (index: number, field: keyof PaymentSplit, value: string | number) => {
-    const updated = [...paymentSplits];
-    updated[index] = { ...updated[index], [field]: value };
-    setPaymentSplits(updated);
+  const addPaymentSplit = () => setPaymentSplits(prev => [...prev, { method: 'Card', amount: 0 }]);
+  const removePaymentSplit = (i: number) => { if (paymentSplits.length > 1) setPaymentSplits(prev => prev.filter((_, idx) => idx !== i)); };
+  const updateSplit = (i: number, field: keyof PaymentSplit, val: string | number) => {
+    setPaymentSplits(prev => prev.map((s, idx) => idx === i ? { ...s, [field]: val } : s));
   };
 
   const getTreatmentName = (id: string) => treatments.find(t => t.id === id)?.treatment_name || '';
@@ -132,42 +134,65 @@ export default function AddPackageModal({
     setIsSubmitting(true);
     try {
       const effectiveStatus = totalPaid >= totalAmount ? 'paid' : 'pending';
+      const allPackageIds: string[] = [];
 
-      // Create one package per treatment line
+      // Create paid treatment packages
       for (const line of validLines) {
-        const totalSessions = line.sessions + line.complimentary;
         const { data: pkg, error } = await supabase
           .from('packages')
           .insert({
             patient_id: patientId,
             treatment_id: line.treatmentId,
-            sessions_purchased: totalSessions,
-            sessions_remaining: totalSessions,
+            sessions_purchased: line.sessions,
+            sessions_remaining: line.sessions,
             payment_status: effectiveStatus,
             status: 'active',
             created_by: staff?.id,
-            total_amount: validLines.length === 1 ? totalAmount : null,
-            amount_paid: validLines.length === 1 ? totalPaid : null,
+            total_amount: totalAmount,
+            amount_paid: totalPaid,
             next_payment_date: paymentStatus === 'pending' && nextPaymentDate ? nextPaymentDate : null,
             next_payment_amount: paymentStatus === 'pending' && nextPaymentAmount > 0 ? nextPaymentAmount : null,
           })
           .select('id')
           .single();
         if (error) throw error;
+        allPackageIds.push(pkg.id);
+      }
 
-        // Attach payment splits to first package only (they cover the whole bundle)
-        if (line === validLines[0]) {
-          const validSplits = paymentSplits.filter(s => s.amount > 0);
-          if (validSplits.length > 0) {
-            const { error: payError } = await supabase
-              .from('package_payments')
-              .insert(validSplits.map(s => ({
-                package_id: pkg.id,
-                amount: s.amount,
-                payment_method: s.method.toLowerCase(),
-              })));
-            if (payError) throw payError;
-          }
+      // Create complimentary treatment packages
+      const validCompLines = compLines.filter(l => l.treatmentId && l.sessions > 0);
+      for (const line of validCompLines) {
+        const { data: pkg, error } = await supabase
+          .from('packages')
+          .insert({
+            patient_id: patientId,
+            treatment_id: line.treatmentId,
+            sessions_purchased: line.sessions,
+            sessions_remaining: line.sessions,
+            payment_status: 'paid',
+            status: 'active',
+            created_by: staff?.id,
+            total_amount: 0,
+            amount_paid: 0,
+          })
+          .select('id')
+          .single();
+        if (error) throw error;
+        allPackageIds.push(pkg.id);
+      }
+
+      // Attach payment splits to the first package
+      if (allPackageIds.length > 0) {
+        const validSplits = paymentSplits.filter(s => s.amount > 0);
+        if (validSplits.length > 0) {
+          const { error: payError } = await supabase
+            .from('package_payments')
+            .insert(validSplits.map(s => ({
+              package_id: allPackageIds[0],
+              amount: s.amount,
+              payment_method: s.method.toLowerCase(),
+            })));
+          if (payError) throw payError;
         }
       }
 
@@ -180,7 +205,34 @@ export default function AddPackageModal({
     }
   };
 
-  const sessionPresets = [2, 4, 8, 12];
+  const renderTreatmentSelect = (value: string, onChange: (val: string) => void) => (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="h-12 text-base">
+        <SelectValue placeholder="Select treatment" />
+      </SelectTrigger>
+      <SelectContent>
+        {treatments.map((t) => (
+          <SelectItem key={t.id} value={t.id} className="py-2">
+            <span className="font-medium">{t.treatment_name}</span>
+            <span className="text-xs text-muted-foreground ml-2">{t.category}</span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
+  const renderSessionSelect = (value: number, onChange: (val: number) => void) => (
+    <Select value={String(value)} onValueChange={(v) => onChange(parseInt(v))}>
+      <SelectTrigger className="h-12 w-24 text-base">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {SESSION_OPTIONS.map((n) => (
+          <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -193,85 +245,48 @@ export default function AddPackageModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5 pt-4">
-          {/* Treatment Lines */}
-          <div className="space-y-4">
+          {/* Paid Treatment Lines */}
+          <div className="space-y-3">
             <label className="block text-sm font-medium">Treatments *</label>
             {treatmentLines.map((line, index) => (
-              <div key={index} className="rounded-lg border p-3 space-y-3 relative">
+              <div key={index} className="flex items-center gap-2">
+                <div className="flex-1">
+                  {renderTreatmentSelect(line.treatmentId, (val) => updateLine(index, 'treatmentId', val))}
+                </div>
+                {renderSessionSelect(line.sessions, (val) => updateLine(index, 'sessions', val))}
                 {treatmentLines.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeTreatmentLine(index)}
-                    className="absolute top-2 right-2 p-1 text-destructive hover:bg-destructive/10 rounded"
-                  >
+                  <button type="button" onClick={() => removeTreatmentLine(index)} className="p-2 text-destructive hover:bg-destructive/10 rounded">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 )}
-                <Select value={line.treatmentId} onValueChange={(val) => updateLine(index, 'treatmentId', val)}>
-                  <SelectTrigger className="h-12 text-base">
-                    <SelectValue placeholder="Select treatment" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {treatments.map((t) => (
-                      <SelectItem key={t.id} value={t.id} className="py-2">
-                        <span className="font-medium">{t.treatment_name}</span>
-                        <span className="text-xs text-muted-foreground ml-2">{t.category}</span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Sessions</label>
-                    <div className="flex gap-1 flex-wrap">
-                      {sessionPresets.map((p) => (
-                        <TabletButton
-                          key={p}
-                          type="button"
-                          variant={line.sessions === p ? 'default' : 'outline'}
-                          size="sm"
-                          className="h-8 w-10 text-xs p-0"
-                          onClick={() => updateLine(index, 'sessions', p)}
-                        >
-                          {p}
-                        </TabletButton>
-                      ))}
-                    </div>
-                    <TabletInput
-                      type="number"
-                      min={1}
-                      value={line.sessions === 0 ? '' : line.sessions}
-                      onChange={(e) => updateLine(index, 'sessions', e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
-                      placeholder="Custom"
-                      className="h-10 text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Gift className="h-3 w-3" /> Complimentary
-                    </label>
-                    <TabletInput
-                      type="number"
-                      min={0}
-                      value={line.complimentary === 0 ? '' : line.complimentary}
-                      onChange={(e) => updateLine(index, 'complimentary', e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                      className="h-10 text-sm mt-[38px]"
-                    />
-                  </div>
-                </div>
-
-                {line.treatmentId && line.sessions > 0 && (
-                  <div className="text-xs text-muted-foreground">
-                    {getTreatmentName(line.treatmentId)}: {line.sessions} paid{line.complimentary > 0 ? ` + ${line.complimentary} free` : ''} = {line.sessions + line.complimentary} total sessions
-                  </div>
-                )}
               </div>
             ))}
-
             <TabletButton type="button" variant="outline" size="sm" onClick={addTreatmentLine} className="w-full">
-              <Plus className="h-4 w-4 mr-1" /> Add Another Treatment
+              <Plus className="h-4 w-4 mr-1" /> Add Treatment
+            </TabletButton>
+          </div>
+
+          {/* Complimentary Treatment Lines */}
+          <div className="space-y-3 border-t pt-4">
+            <label className="block text-sm font-medium flex items-center gap-2">
+              <Gift className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Complimentary Treatments
+            </label>
+            {compLines.length === 0 && (
+              <p className="text-xs text-muted-foreground">No complimentary treatments added</p>
+            )}
+            {compLines.map((line, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <div className="flex-1">
+                  {renderTreatmentSelect(line.treatmentId, (val) => updateCompLine(index, 'treatmentId', val))}
+                </div>
+                {renderSessionSelect(line.sessions, (val) => updateCompLine(index, 'sessions', val))}
+                <button type="button" onClick={() => removeCompLine(index)} className="p-2 text-destructive hover:bg-destructive/10 rounded">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+            <TabletButton type="button" variant="outline" size="sm" onClick={addCompLine} className="w-full">
+              <Plus className="h-4 w-4 mr-1" /> Add Complimentary Treatment
             </TabletButton>
           </div>
 
