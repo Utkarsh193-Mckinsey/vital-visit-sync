@@ -847,16 +847,27 @@ export type Database = {
           current_status: Database["public"]["Enums"]["visit_status"]
           doctor_notes: string | null
           doctor_staff_id: string | null
+          head_circumference_cm: number | null
           heart_rate: number | null
+          height_cm: number | null
+          hip_cm: number | null
           id: string
           is_locked: boolean
+          lmp: string | null
           nurse_staff_id: string | null
+          other_details: string | null
           patient_id: string
           reception_staff_id: string | null
+          respiratory_rate: number | null
+          spo2: number | null
+          sugar: number | null
+          temperature: number | null
           treatment_completed: boolean
+          urinalysis: string | null
           visit_date: string
           visit_number: number
           vitals_completed: boolean
+          waist_cm: number | null
           weight_kg: number | null
         }
         Insert: {
@@ -868,16 +879,27 @@ export type Database = {
           current_status?: Database["public"]["Enums"]["visit_status"]
           doctor_notes?: string | null
           doctor_staff_id?: string | null
+          head_circumference_cm?: number | null
           heart_rate?: number | null
+          height_cm?: number | null
+          hip_cm?: number | null
           id?: string
           is_locked?: boolean
+          lmp?: string | null
           nurse_staff_id?: string | null
+          other_details?: string | null
           patient_id: string
           reception_staff_id?: string | null
+          respiratory_rate?: number | null
+          spo2?: number | null
+          sugar?: number | null
+          temperature?: number | null
           treatment_completed?: boolean
+          urinalysis?: string | null
           visit_date?: string
           visit_number: number
           vitals_completed?: boolean
+          waist_cm?: number | null
           weight_kg?: number | null
         }
         Update: {
@@ -889,16 +911,27 @@ export type Database = {
           current_status?: Database["public"]["Enums"]["visit_status"]
           doctor_notes?: string | null
           doctor_staff_id?: string | null
+          head_circumference_cm?: number | null
           heart_rate?: number | null
+          height_cm?: number | null
+          hip_cm?: number | null
           id?: string
           is_locked?: boolean
+          lmp?: string | null
           nurse_staff_id?: string | null
+          other_details?: string | null
           patient_id?: string
           reception_staff_id?: string | null
+          respiratory_rate?: number | null
+          spo2?: number | null
+          sugar?: number | null
+          temperature?: number | null
           treatment_completed?: boolean
+          urinalysis?: string | null
           visit_date?: string
           visit_number?: number
           vitals_completed?: boolean
+          waist_cm?: number | null
           weight_kg?: number | null
         }
         Relationships: [
