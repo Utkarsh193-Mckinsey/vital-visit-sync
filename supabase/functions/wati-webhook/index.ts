@@ -117,20 +117,30 @@ async function sendWatiMessage(phone: string, message: string) {
   const WATI_API_URL = Deno.env.get("WATI_API_URL");
   const WATI_API_KEY = Deno.env.get("WATI_API_KEY");
 
-  if (!WATI_API_URL || !WATI_API_KEY) return null;
+  if (!WATI_API_URL || !WATI_API_KEY) {
+    console.error("WATI credentials not configured");
+    return null;
+  }
 
   const cleanPhone = phone.replace(/^\+/, "");
-  const res = await fetch(
-    `${WATI_API_URL}/sendSessionMessage/${cleanPhone}?messageText=${encodeURIComponent(message)}`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${WATI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-    }
-  );
-  return res.json();
+  try {
+    const res = await fetch(
+      `${WATI_API_URL}/sendSessionMessage/${cleanPhone}?messageText=${encodeURIComponent(message)}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${WATI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    const text = await res.text();
+    console.log("WATI response:", res.status, text);
+    try { return JSON.parse(text); } catch { return { status: res.status, body: text }; }
+  } catch (err) {
+    console.error("WATI send error:", err);
+    return null;
+  }
 }
 
 function parseAppointmentMessage(msg: string): {
@@ -289,19 +299,27 @@ Deno.serve(async (req) => {
 
       console.log("Auto-created appointment:", newApt?.id, appointmentData.name);
 
-      // If no booked_by was provided, ask who booked it
-      if (!bookedBy) {
-        const askReply = `✅ Appointment created for ${appointmentData.name} on ${appointmentData.date} at ${appointmentData.time}.\n\n❓ Who booked this appointment? Please reply with the name.`;
-        await sendWatiMessage(senderPhone, askReply);
+      // Build a confirmation reply and ask for any missing fields
+      const missingFields: string[] = [];
+      if (!bookedBy) missingFields.push("Who booked this appointment?");
 
-        // Log outbound message
-        await supabase.from("whatsapp_messages").insert({
-          phone: senderPhone,
-          patient_name: senderName || "Team",
-          direction: "outbound",
-          message_text: askReply,
-        });
+      let replyMsg = `✅ Appointment created:\n• Name: ${appointmentData.name}\n• Date: ${appointmentData.date}\n• Time: ${appointmentData.time}\n• Service: ${appointmentData.service}\n• Phone: ${appointmentData.phone}`;
+      
+      if (missingFields.length > 0) {
+        replyMsg += `\n\n❓ Please reply with:\n${missingFields.map((f, i) => `${i + 1}. ${f}`).join("\n")}`;
       }
+
+      const watiResult = await sendWatiMessage(senderPhone, replyMsg);
+      console.log("WATI reply result:", JSON.stringify(watiResult));
+
+      // Log outbound message
+      await supabase.from("whatsapp_messages").insert({
+        phone: senderPhone,
+        patient_name: senderName || "Team",
+        direction: "outbound",
+        message_text: replyMsg,
+        appointment_id: newApt?.id,
+      });
 
       return new Response(
         JSON.stringify({ success: true, intent: "booking", appointment_id: newApt?.id, asked_booked_by: !bookedBy }),
