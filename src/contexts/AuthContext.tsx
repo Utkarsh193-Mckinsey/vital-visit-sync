@@ -36,6 +36,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .select('*')
               .eq('user_id', session.user.id)
               .eq('status', 'active')
+              .order('created_date', { ascending: true })
+              .limit(1)
               .single();
             
             if (staffData) {
@@ -64,6 +66,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .select('*')
           .eq('user_id', session.user.id)
           .eq('status', 'active')
+          .order('created_date', { ascending: true })
+          .limit(1)
           .single()
           .then(({ data: staffData }) => {
             if (staffData) {
