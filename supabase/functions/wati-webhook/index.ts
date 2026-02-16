@@ -304,7 +304,27 @@ function parseDateString(dateStr: string): string | null {
   return null;
 }
 
-function getValidationIssues(apt: any): string[] {
+async function getBookingStaffNames(supabase: any): Promise<string[]> {
+  const { data } = await supabase
+    .from("staff")
+    .select("full_name")
+    .in("role", ["reception", "admin"])
+    .eq("status", "active");
+  return (data || []).map((s: any) => s.full_name as string);
+}
+
+function matchStaffName(input: string, staffNames: string[]): string | null {
+  const lower = input.toLowerCase().trim();
+  // Exact match
+  const exact = staffNames.find(n => n.toLowerCase() === lower);
+  if (exact) return exact;
+  // Partial match (first name)
+  const partial = staffNames.find(n => n.toLowerCase().split(" ")[0] === lower || n.toLowerCase().includes(lower));
+  if (partial) return partial;
+  return null;
+}
+
+function getValidationIssues(apt: any, staffNames: string[]): string[] {
   const issues: string[] = [];
   if (!isValidClinicTime(apt.appointment_time)) {
     issues.push(`⏰ Invalid time "${apt.appointment_time}" — clinic hours are 10:00 AM to 10:00 PM. Please provide a valid time.`);
@@ -317,7 +337,13 @@ function getValidationIssues(apt: any): string[] {
     issues.push(`📱 Phone number looks invalid. Please provide a valid phone number.`);
   }
   if (!apt.booked_by || apt.booked_by === "WhatsApp") {
-    issues.push("👤 Who booked this appointment?");
+    issues.push(`👤 Who booked this appointment? Please reply with one of: ${staffNames.join(", ")}`);
+  } else if (!staffNames.some(n => n.toLowerCase() === (apt.booked_by || "").toLowerCase())) {
+    // Name exists but doesn't match any staff
+    const matched = matchStaffName(apt.booked_by, staffNames);
+    if (!matched) {
+      issues.push(`👤 "${apt.booked_by}" is not a valid staff member. Please reply with one of: ${staffNames.join(", ")}`);
+    }
   }
   if (!apt.service || apt.service === "Consultation") {
     issues.push("💉 What treatment/service is this for?");
@@ -369,15 +395,19 @@ Deno.serve(async (req) => {
 
         // Use AI to parse the staff reply against the pending questions
         const pendingQuestions: string[] = [];
-        if (outboundMsg.includes("Who booked")) pendingQuestions.push("booked_by");
+        if (outboundMsg.includes("Who booked") || outboundMsg.includes("not a valid staff member")) pendingQuestions.push("booked_by");
         if (outboundMsg.includes("valid time")) pendingQuestions.push("time");
         if (outboundMsg.includes("valid date") || outboundMsg.includes("past date")) pendingQuestions.push("date");
         if (outboundMsg.includes("phone number")) pendingQuestions.push("phone");
         if (outboundMsg.includes("treatment")) pendingQuestions.push("service");
 
         if (pendingQuestions.length > 0) {
+          // Fetch valid staff names for booked_by validation
+          const staffNames = await getBookingStaffNames(supabase);
+
           // Parse reply - could be multi-line answers or single value
           const updates: Record<string, string> = {};
+          const rejections: string[] = [];
           const replyLines = messageText.trim().split("\n").map(l => l.trim()).filter(Boolean);
 
           // Try to match answers to questions using AI for complex replies
@@ -387,7 +417,6 @@ Deno.serve(async (req) => {
             const value = replyLines[0];
             
             if (field === "time") {
-              // Validate the new time
               const timeVal = parseTimeString(value);
               if (timeVal && isValidClinicTime(timeVal)) {
                 updates["appointment_time"] = timeVal;
@@ -405,13 +434,16 @@ Deno.serve(async (req) => {
             } else if (field === "service") {
               updates["service"] = value;
             } else if (field === "booked_by") {
-              updates["booked_by"] = value;
+              const matched = matchStaffName(value, staffNames);
+              if (matched) {
+                updates["booked_by"] = matched;
+              } else {
+                rejections.push(`❌ "${value}" — no staff member with this name. Please reply with one of: ${staffNames.join(", ")}`);
+              }
             }
           } else {
             // Multi-field reply - try to match by keyword or order
             for (const line of replyLines) {
-              const lower = line.toLowerCase();
-              // Try to detect field from line content
               const bookedMatch = line.match(/(?:booked\s*by|agent|by)\s*[:：-]\s*(.+)/i);
               const timeMatch = line.match(/(?:time)\s*[:：-]\s*(.+)/i) || line.match(/^(\d{1,2}[:\.]\d{2}\s*(?:AM|PM|am|pm)?)$/i);
               const dateMatch = line.match(/(?:date)\s*[:：-]\s*(.+)/i);
@@ -420,7 +452,12 @@ Deno.serve(async (req) => {
               const instrMatch = line.match(/(?:instruction|note|special)\s*[:：-]\s*(.+)/i);
 
               if (bookedMatch && pendingQuestions.includes("booked_by")) {
-                updates["booked_by"] = bookedMatch[1].trim();
+                const matched = matchStaffName(bookedMatch[1].trim(), staffNames);
+                if (matched) {
+                  updates["booked_by"] = matched;
+                } else {
+                  rejections.push(`❌ "${bookedMatch[1].trim()}" — no staff member with this name. Please reply with one of: ${staffNames.join(", ")}`);
+                }
               } else if (timeMatch && pendingQuestions.includes("time")) {
                 const tv = parseTimeString(timeMatch[1]?.trim() || line.trim());
                 if (tv && isValidClinicTime(tv)) updates["appointment_time"] = tv;
@@ -435,12 +472,44 @@ Deno.serve(async (req) => {
               } else if (instrMatch) {
                 updates["special_instructions"] = instrMatch[1].trim();
               } else if (pendingQuestions.length === 1 && replyLines.length <= 2) {
-                // Single pending question, treat entire line as answer
                 const field = pendingQuestions[0];
-                if (field === "booked_by") updates["booked_by"] = line.trim();
-                else if (field === "service") updates["service"] = line.trim();
+                if (field === "booked_by") {
+                  const matched = matchStaffName(line.trim(), staffNames);
+                  if (matched) {
+                    updates["booked_by"] = matched;
+                  } else {
+                    rejections.push(`❌ "${line.trim()}" — no staff member with this name. Please reply with one of: ${staffNames.join(", ")}`);
+                  }
+                } else if (field === "service") updates["service"] = line.trim();
               }
             }
+          }
+
+          // If there are rejections and no valid updates for that field, send rejection
+          if (rejections.length > 0 && Object.keys(updates).length === 0) {
+            await supabase.from("whatsapp_messages").insert({
+              phone: senderPhone,
+              patient_name: senderName || "Team",
+              direction: "inbound",
+              message_text: messageText,
+              appointment_id: pendingAptId,
+              ai_parsed_intent: "info_reply_invalid",
+            });
+
+            const rejectMsg = rejections.join("\n");
+            await sendWatiMessage(senderPhone, rejectMsg);
+            await supabase.from("whatsapp_messages").insert({
+              phone: senderPhone,
+              patient_name: senderName || "Team",
+              direction: "outbound",
+              message_text: rejectMsg,
+              appointment_id: pendingAptId,
+            });
+
+            return new Response(
+              JSON.stringify({ success: true, intent: "info_reply_invalid", rejections }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
           }
 
           if (Object.keys(updates).length > 0) {
@@ -469,7 +538,7 @@ Deno.serve(async (req) => {
                 .eq("id", pendingAptId)
                 .single();
 
-              const stillMissing = apt ? getValidationIssues(apt) : [];
+              const stillMissing = apt ? getValidationIssues(apt, staffNames) : [];
 
               let confirmMsg: string;
               if (stillMissing.length > 0) {
@@ -511,9 +580,13 @@ Deno.serve(async (req) => {
         ai_parsed_intent: "booking",
       });
 
-      // Extract booked_by
+      // Fetch valid booking staff names (reception/admin only, no doctors/nurses)
+      const staffNames = await getBookingStaffNames(supabase);
+
+      // Extract booked_by and validate against staff
       const bookedByMatch = messageText.match(/(?:booked\s*by|agent)\s*[:：]\s*(.+)/i);
-      const bookedBy = bookedByMatch ? bookedByMatch[1].trim() : null;
+      const rawBookedBy = bookedByMatch ? bookedByMatch[1].trim() : null;
+      const bookedBy = rawBookedBy ? matchStaffName(rawBookedBy, staffNames) : null;
 
       // Extract special instructions
       const instrMatch = messageText.match(/(?:special\s*instruction|instruction|note|remark)\s*[:：]\s*(.+)/i);
@@ -534,7 +607,11 @@ Deno.serve(async (req) => {
       if (!timeValid) validationIssues.push(`⏰ Invalid time "${appointmentData.time}" — clinic hours are 10:00 AM to 10:00 PM. Please provide a valid time.`);
       if (!dateValid) validationIssues.push(`📅 The date ${appointmentData.date} is a past date. Please provide today's date or a future date.`);
       if (!phoneValid) validationIssues.push(`📱 Phone number "${appointmentData.phone}" looks invalid. Please provide a valid phone number.`);
-      if (!bookedBy) validationIssues.push("👤 Who booked this appointment?");
+      if (!rawBookedBy) {
+        validationIssues.push(`👤 Who booked this appointment? Please reply with one of: ${staffNames.join(", ")}`);
+      } else if (!bookedBy) {
+        validationIssues.push(`👤 "${rawBookedBy}" is not a valid staff member. Please reply with one of: ${staffNames.join(", ")}`);
+      }
       if (!appointmentData.service || appointmentData.service === "Consultation") {
         validationIssues.push("💉 What treatment/service is this for?");
       }
