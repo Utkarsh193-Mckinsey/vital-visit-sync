@@ -50,6 +50,15 @@ interface VisitWithDetails extends Omit<Visit, 'consent_forms'> {
       treatment_name: string;
     };
   }[];
+  visit_consumables?: {
+    id: string;
+    quantity_used: number;
+    notes: string | null;
+    stock_item: {
+      item_name: string;
+      unit: string;
+    } | null;
+  }[];
   consent_forms?: ConsentFormWithDetails[];
 }
 
@@ -93,6 +102,15 @@ export default function VisitHistory() {
             dose_unit,
             treatment:treatments (
               treatment_name
+            )
+          ),
+          visit_consumables (
+            id,
+            quantity_used,
+            notes,
+            stock_item:stock_items (
+              item_name,
+              unit
             )
           ),
           consent_forms (
@@ -400,6 +418,24 @@ export default function VisitHistory() {
                               <span className="font-medium">{vt.treatment?.treatment_name}</span>
                               <span className="text-muted-foreground">
                                 {vt.dose_administered} {vt.dose_unit}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Consumables Used */}
+                    {visit.visit_consumables && visit.visit_consumables.length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="text-sm font-medium mb-2">Consumables Used</h4>
+                        <div className="space-y-2">
+                          {visit.visit_consumables.map((vc) => (
+                            <div key={vc.id} className="bg-muted/50 rounded-lg p-3 flex justify-between">
+                              <span className="font-medium">{vc.stock_item?.item_name || 'Unknown'}</span>
+                              <span className="text-muted-foreground">
+                                {vc.quantity_used} {vc.stock_item?.unit || ''}
+                                {vc.notes && <span className="ml-2 text-xs">({vc.notes})</span>}
                               </span>
                             </div>
                           ))}

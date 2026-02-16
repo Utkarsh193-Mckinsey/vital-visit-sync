@@ -8,7 +8,7 @@ import { TabletInput } from '@/components/ui/tablet-input';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, CheckCircle, Syringe, FileText, User, Package, AlertTriangle, FileSignature } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Syringe, FileText, User, Package, AlertTriangle, FileSignature, Plus, Save } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -60,6 +60,11 @@ interface TreatmentEntry {
   sessionsPurchased: number;
   commonDoses: string[];
   hasConsentSigned: boolean;
+  isCustomDose: boolean;
+  customDoseValue: string;
+  customDoseUnit: string;
+  customBrand: string;
+  saveAsDefault: boolean;
 }
 
 export default function TreatmentAdmin() {
@@ -128,13 +133,18 @@ export default function TreatmentAdmin() {
         packageId: pkg.id,
         treatmentId: pkg.treatment_id,
         treatmentName: pkg.treatment?.treatment_name || 'Unknown Treatment',
-        doseAdministered: (pkg.treatment as any)?.default_dose || '',  // Pre-fill with default dose
+        doseAdministered: (pkg.treatment as any)?.default_dose || '',
         doseUnit: pkg.treatment?.dosage_unit || 'Session',
         administrationDetails: '',
         sessionsRemaining: pkg.sessions_remaining,
         sessionsPurchased: pkg.sessions_purchased,
         commonDoses: (pkg.treatment?.common_doses as string[]) || [],
         hasConsentSigned: signedTreatmentIds.has(pkg.treatment_id),
+        isCustomDose: false,
+        customDoseValue: '',
+        customDoseUnit: pkg.treatment?.dosage_unit || 'Session',
+        customBrand: '',
+        saveAsDefault: false,
       }));
       
       setTreatments(entries);
@@ -150,11 +160,23 @@ export default function TreatmentAdmin() {
     }
   };
 
+  const DOSE_UNITS = ['mg', 'ml', 'Units', 'mcg', 'Session'];
+
   const handleDoseChange = (index: number, value: string) => {
     const treatment = treatments[index];
     
     // Treat "__skip__" as empty (clearing the dose)
     const actualValue = value === '__skip__' ? '' : value;
+    
+    // If selecting custom, toggle custom mode
+    if (value === 'custom') {
+      setTreatments(prev => {
+        const updated = [...prev];
+        updated[index] = { ...updated[index], isCustomDose: true, doseAdministered: '' };
+        return updated;
+      });
+      return;
+    }
     
     // If trying to set a dose but consent not signed, show warning
     if (actualValue && !treatment.hasConsentSigned) {
@@ -164,15 +186,95 @@ export default function TreatmentAdmin() {
     
     setTreatments(prev => {
       const updated = [...prev];
-      updated[index] = { ...updated[index], doseAdministered: actualValue };
+      updated[index] = { ...updated[index], doseAdministered: actualValue, isCustomDose: false };
       return updated;
     });
+  };
+
+  const handleCustomDoseConfirm = (index: number) => {
+    const treatment = treatments[index];
+    if (!treatment.customDoseValue.trim()) return;
+    
+    // Check consent
+    if (!treatment.hasConsentSigned) {
+      setConsentWarning({ treatmentName: treatment.treatmentName, treatmentId: treatment.treatmentId, index });
+      return;
+    }
+    
+    setTreatments(prev => {
+      const updated = [...prev];
+      updated[index] = {
+        ...updated[index],
+        doseAdministered: treatment.customDoseValue.trim(),
+        doseUnit: treatment.customDoseUnit,
+      };
+      return updated;
+    });
+  };
+
+  const handleSaveCustomDoseAsDefault = async (index: number) => {
+    const treatment = treatments[index];
+    if (!treatment.customDoseValue.trim()) return;
+    
+    try {
+      // Fetch current treatment to get existing common_doses
+      const { data: treatmentData } = await supabase
+        .from('treatments')
+        .select('common_doses, dosage_unit')
+        .eq('id', treatment.treatmentId)
+        .single();
+      
+      const existingDoses: string[] = (treatmentData?.common_doses as string[]) || [];
+      const newDose = treatment.customDoseValue.trim();
+      
+      if (!existingDoses.includes(newDose)) {
+        const updatedDoses = [...existingDoses, newDose];
+        await supabase
+          .from('treatments')
+          .update({ 
+            common_doses: updatedDoses,
+            dosage_unit: treatment.customDoseUnit as any,
+          })
+          .eq('id', treatment.treatmentId);
+        
+        // Update local state
+        setTreatments(prev => {
+          const updated = [...prev];
+          updated[index] = {
+            ...updated[index],
+            commonDoses: updatedDoses,
+            saveAsDefault: false,
+          };
+          return updated;
+        });
+        
+        toast({
+          title: 'Dose Saved',
+          description: `${newDose} ${treatment.customDoseUnit} added as a default dose for ${treatment.treatmentName}.`,
+        });
+      }
+    } catch (error) {
+      console.error('Error saving custom dose:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save dose as default.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const updateTreatmentDetails = (index: number, value: string) => {
     setTreatments(prev => {
       const updated = [...prev];
       updated[index] = { ...updated[index], administrationDetails: value };
+      return updated;
+    });
+  };
+
+  const updateCustomField = (index: number, field: keyof TreatmentEntry, value: any) => {
+    setTreatments(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
       return updated;
     });
   };
@@ -211,7 +313,7 @@ export default function TreatmentAdmin() {
             package_id: treatment.packageId,
             dose_administered: treatment.doseAdministered,
             dose_unit: treatment.doseUnit,
-            administration_details: treatment.administrationDetails || null,
+            administration_details: [treatment.customBrand, treatment.administrationDetails].filter(Boolean).join(' - ') || null,
             performed_by: staff.id,
             sessions_deducted: 1,
           });
@@ -351,7 +453,7 @@ export default function TreatmentAdmin() {
         <TabletCard className="mb-6">
           <TabletCardContent className="p-4">
             <h4 className="font-medium mb-3 flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-600" />
+              <CheckCircle className="h-4 w-4 text-success" />
               Vitals Recorded
             </h4>
             <div className="grid grid-cols-3 gap-4 text-sm">
@@ -422,7 +524,7 @@ export default function TreatmentAdmin() {
                     <label className="text-sm font-medium mb-1 block">
                       Dose <span className="text-muted-foreground font-normal">(leave empty to skip)</span>
                     </label>
-                    {treatment.commonDoses.length > 0 ? (
+                    {treatment.commonDoses.length > 0 && !treatment.isCustomDose ? (
                       <Select
                         value={treatment.doseAdministered}
                         onValueChange={(value) => handleDoseChange(index, value)}
@@ -440,39 +542,95 @@ export default function TreatmentAdmin() {
                             </SelectItem>
                           ))}
                           <SelectItem value="custom" className="py-3 text-muted-foreground">
-                            Custom dose...
+                            + Custom dose...
                           </SelectItem>
                         </SelectContent>
                       </Select>
-                    ) : (
-                      <div className="flex gap-2">
+                    ) : treatment.isCustomDose ? (
+                      <div className="space-y-3">
+                        <div className="flex gap-2">
+                          <TabletInput
+                            type="text"
+                            placeholder="Dose value (e.g. 2.5)"
+                            value={treatment.customDoseValue}
+                            onChange={(e) => updateCustomField(index, 'customDoseValue', e.target.value)}
+                            className="flex-1"
+                          />
+                          <Select
+                            value={treatment.customDoseUnit}
+                            onValueChange={(value) => updateCustomField(index, 'customDoseUnit', value)}
+                          >
+                            <SelectTrigger className="w-24 h-12">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {DOSE_UNITS.map((unit) => (
+                                <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                         <TabletInput
                           type="text"
-                          placeholder="Amount"
-                          value={treatment.doseAdministered}
-                          onChange={(e) => handleDoseChange(index, e.target.value)}
-                          className="flex-1"
+                          placeholder="Brand name (optional)"
+                          value={treatment.customBrand}
+                          onChange={(e) => updateCustomField(index, 'customBrand', e.target.value)}
                         />
-                        <span className="flex items-center px-3 bg-muted rounded-lg text-sm">
-                          {treatment.doseUnit}
-                        </span>
+                        <div className="flex items-center gap-3">
+                          <TabletButton
+                            size="sm"
+                            onClick={() => handleCustomDoseConfirm(index)}
+                            leftIcon={<CheckCircle className="h-3 w-3" />}
+                            disabled={!treatment.customDoseValue.trim()}
+                          >
+                            Use This Dose
+                          </TabletButton>
+                          <TabletButton
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              handleCustomDoseConfirm(index);
+                              handleSaveCustomDoseAsDefault(index);
+                            }}
+                            leftIcon={<Save className="h-3 w-3" />}
+                            disabled={!treatment.customDoseValue.trim()}
+                          >
+                            Use & Save as Default
+                          </TabletButton>
+                          {treatment.commonDoses.length > 0 && (
+                            <TabletButton
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => updateCustomField(index, 'isCustomDose', false)}
+                            >
+                              Cancel
+                            </TabletButton>
+                          )}
+                        </div>
                       </div>
-                    )}
-                    {treatment.doseAdministered === 'custom' && treatment.commonDoses.length > 0 && (
-                      <div className="flex gap-2 mt-2">
-                        <TabletInput
-                          type="text"
-                          placeholder="Enter custom dose"
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              handleDoseChange(index, e.target.value);
-                            }
-                          }}
-                          className="flex-1"
-                        />
-                        <span className="flex items-center px-3 bg-muted rounded-lg text-sm">
-                          {treatment.doseUnit}
-                        </span>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <TabletInput
+                            type="text"
+                            placeholder="Amount"
+                            value={treatment.doseAdministered}
+                            onChange={(e) => handleDoseChange(index, e.target.value)}
+                            className="flex-1"
+                          />
+                          <span className="flex items-center px-3 bg-muted rounded-lg text-sm">
+                            {treatment.doseUnit}
+                          </span>
+                        </div>
+                        <TabletButton
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => updateCustomField(index, 'isCustomDose', true)}
+                          leftIcon={<Plus className="h-3 w-3" />}
+                          className="text-xs"
+                        >
+                          Create new dose with unit & brand
+                        </TabletButton>
                       </div>
                     )}
                   </div>
