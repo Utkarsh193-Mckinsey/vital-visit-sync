@@ -80,10 +80,9 @@ Deno.serve(async (req) => {
             confirmed_at: new Date().toISOString(),
           }).select().single();
 
-          // Send WATI confirmation
-          await sendWatiMessage(request.phone,
-            `Hi ${request.patient_name}, your appointment has been rescheduled to ${newDate} at ${newTime}. See you at Cosmique Clinic!`
-          );
+          // DISABLED: No messages to patients
+          // await sendWatiMessage(request.phone, `Hi ${request.patient_name}, your appointment has been rescheduled...`);
+          console.log("Reschedule approved (no message sent to patient):", request.patient_name);
 
           if (request.appointment_id) {
             await supabase.from("appointment_communications").insert({
@@ -102,9 +101,9 @@ Deno.serve(async (req) => {
             }).eq("id", request.appointment_id);
           }
 
-          await sendWatiMessage(request.phone,
-            `Hi ${request.patient_name}, your appointment has been cancelled as requested. Feel free to contact us anytime to book a new appointment. — Cosmique Clinic`
-          );
+          // DISABLED: No messages to patients
+          // await sendWatiMessage(request.phone, `Hi ${request.patient_name}, your appointment has been cancelled...`);
+          console.log("Cancellation approved (no message sent to patient):", request.patient_name);
 
           if (request.appointment_id) {
             await supabase.from("appointment_communications").insert({
@@ -135,7 +134,9 @@ Deno.serve(async (req) => {
         }
 
         const msg = `Hi ${request.patient_name}, the time you requested is not available. How about ${alt_date} at ${alt_time}? Let us know if that works for you!`;
-        await sendWatiMessage(request.phone, msg);
+        // DISABLED: No messages to patients
+        // await sendWatiMessage(request.phone, msg);
+        console.log("Alternative suggested (no message sent to patient):", request.patient_name);
 
         if (request.appointment_id) {
           await supabase.from("appointment_communications").insert({
@@ -160,7 +161,9 @@ Deno.serve(async (req) => {
           });
         }
 
-        await sendWatiMessage(request.phone, message);
+        // DISABLED: No messages to patients
+        // await sendWatiMessage(request.phone, message);
+        console.log("Reply composed (no message sent to patient):", request.patient_name);
 
         if (request.appointment_id) {
           await supabase.from("appointment_communications").insert({
@@ -180,7 +183,9 @@ Deno.serve(async (req) => {
       case "decline": {
         const reason = params.reason || "We're unable to accommodate this request at this time.";
         const msg = `Hi ${request.patient_name}, ${reason} Please contact us if you need further assistance. — Cosmique Clinic`;
-        await sendWatiMessage(request.phone, msg);
+        // DISABLED: No messages to patients
+        // await sendWatiMessage(request.phone, msg);
+        console.log("Request declined (no message sent to patient):", request.patient_name);
 
         if (request.appointment_id) {
           await supabase.from("appointment_communications").insert({

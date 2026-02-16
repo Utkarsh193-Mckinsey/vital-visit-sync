@@ -181,28 +181,9 @@ Deno.serve(async (req) => {
             })
             .eq("id", appointmentId);
 
-          // Send WhatsApp confirmation
-          if (WATI_API_URL && WATI_API_KEY && appointment) {
-            const phone = appointment.phone.replace(/^\+/, "");
-            const msg = `Hi ${appointment.patient_name}, as confirmed on our call, we'll see you ${appointment.appointment_date} at ${appointment.appointment_time}. Looking forward to it!`;
-            await fetch(
-              `${WATI_API_URL}/sendSessionMessage/${phone}?messageText=${encodeURIComponent(msg)}`,
-              {
-                method: "POST",
-                headers: {
-                  Authorization: `Bearer ${WATI_API_KEY}`,
-                  "Content-Type": "application/json",
-                },
-              }
-            );
-
-            await supabase.from("appointment_communications").insert({
-              appointment_id: appointmentId,
-              channel: "whatsapp",
-              direction: "outbound",
-              message_sent: msg,
-            });
-          }
+          // DISABLED: No messages to patients
+          // WhatsApp confirmation after call is paused
+          console.log("Call confirmed (no WhatsApp message sent to patient):", appointment?.patient_name);
         } else if (parsed.intent === "reschedule") {
           await supabase.from("pending_requests").insert({
             appointment_id: appointmentId,

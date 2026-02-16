@@ -393,7 +393,7 @@ Deno.serve(async (req) => {
     // Process based on intent
     if (appointment) {
       if (parsed.intent === "confirm" && parsed.confidence === "high") {
-        // Auto-confirm
+        // Auto-confirm (update DB only, do NOT send message to patient)
         await supabase
           .from("appointments")
           .update({
@@ -403,25 +403,13 @@ Deno.serve(async (req) => {
           })
           .eq("id", appointment.id);
 
-        const reply = `Great! Your appointment is confirmed for ${appointment.appointment_date} at ${appointment.appointment_time}. See you at Cosmique Clinic!`;
-        await sendWatiMessage(senderPhone, reply);
+        // DISABLED: No auto-reply to patients
+        // const reply = `Great! Your appointment is confirmed...`;
+        // await sendWatiMessage(senderPhone, reply);
 
-        // Log outbound reply to both tables
-        await supabase.from("whatsapp_messages").insert({
-          phone: senderPhone,
-          patient_name: appointment.patient_name,
-          direction: "outbound",
-          message_text: reply,
-          appointment_id: appointment.id,
-        });
-        await supabase.from("appointment_communications").insert({
-          appointment_id: appointment.id,
-          channel: "whatsapp",
-          direction: "outbound",
-          message_sent: reply,
-        });
+        console.log("Patient confirmed (no auto-reply sent):", appointment.patient_name);
       } else if (parsed.intent === "reschedule") {
-        // Create pending request
+        // Create pending request (no reply to patient)
         await supabase.from("pending_requests").insert({
           appointment_id: appointment.id,
           patient_name: appointment.patient_name,
@@ -434,16 +422,8 @@ Deno.serve(async (req) => {
           status: "pending",
         });
 
-        const reply = "Thank you! Our team will confirm your new appointment shortly.";
-        await sendWatiMessage(senderPhone, reply);
-
-        await supabase.from("whatsapp_messages").insert({
-          phone: senderPhone, patient_name: appointment.patient_name,
-          direction: "outbound", message_text: reply, appointment_id: appointment.id,
-        });
-        await supabase.from("appointment_communications").insert({
-          appointment_id: appointment.id, channel: "whatsapp", direction: "outbound", message_sent: reply,
-        });
+        // DISABLED: No auto-reply to patients
+        console.log("Patient wants to reschedule (no auto-reply sent):", appointment.patient_name);
 
         await supabase
           .from("appointments")
@@ -462,17 +442,8 @@ Deno.serve(async (req) => {
           status: "pending",
         });
 
-        const reply = "We're sorry to hear that. Our team will process your cancellation.";
-        await sendWatiMessage(senderPhone, reply);
-
-        await supabase.from("whatsapp_messages").insert({
-          phone: senderPhone, patient_name: appointment.patient_name,
-          direction: "outbound", message_text: reply, appointment_id: appointment.id,
-        });
-        await supabase.from("appointment_communications").insert({
-          appointment_id: appointment.id, channel: "whatsapp", direction: "outbound",
-          message_sent: reply,
-        });
+        // DISABLED: No auto-reply to patients
+        console.log("Patient wants to cancel (no auto-reply sent):", appointment.patient_name);
 
         await supabase
           .from("appointments")

@@ -44,62 +44,10 @@ Deno.serve(async (req) => {
 
     const results: { id: string; success: boolean; error?: string }[] = [];
 
-    for (const apt of appointments || []) {
-      try {
-        // Format phone - remove leading + if present for WATI
-        const phone = apt.phone.replace(/^\+/, "");
-
-        // Send WATI template message
-        const watiRes = await fetch(
-          `${WATI_API_URL}/sendTemplateMessage?whatsappNumber=${phone}`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${WATI_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              template_name: TEMPLATE_NAME,
-              broadcast_name: `reminder_24hr_${apt.id}`,
-              parameters: [
-                { name: "patient_name", value: apt.patient_name },
-                { name: "appointment_date", value: apt.appointment_date },
-                { name: "appointment_time", value: apt.appointment_time },
-                { name: "service", value: apt.service },
-              ],
-            }),
-          }
-        );
-
-        const watiData = await watiRes.json();
-
-        // Log communication
-        await supabase.from("appointment_communications").insert({
-          appointment_id: apt.id,
-          channel: "whatsapp",
-          direction: "outbound",
-          message_sent: `24hr reminder sent via template ${TEMPLATE_NAME} for ${apt.appointment_date} at ${apt.appointment_time}`,
-          raw_response: watiData,
-        });
-
-        // Update appointment
-        await supabase
-          .from("appointments")
-          .update({
-            reminder_24hr_sent: true,
-            reminder_24hr_sent_at: new Date().toISOString(),
-            confirmation_status:
-              apt.confirmation_status === "unconfirmed"
-                ? "message_sent"
-                : apt.confirmation_status,
-          })
-          .eq("id", apt.id);
-
-        results.push({ id: apt.id, success: true });
-      } catch (e) {
-        results.push({ id: apt.id, success: false, error: String(e) });
-      }
-    }
+    // DISABLED: Patient messaging is currently turned off
+    // All reminders are paused - no messages sent to patients
+    console.log(`Found ${(appointments || []).length} appointments for 24hr reminders, but patient messaging is DISABLED`);
+    const results: { id: string; success: boolean; error?: string }[] = [];
 
     return new Response(
       JSON.stringify({
