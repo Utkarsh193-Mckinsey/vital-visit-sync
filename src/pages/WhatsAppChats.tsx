@@ -93,14 +93,65 @@ export default function WhatsAppChats() {
 
   return (
     <PageContainer maxWidth="full">
-      <PageHeader
-        title="WhatsApp Chats"
-        subtitle={`${threads.length} conversations`}
-      />
+      {selectedPhone && selectedThread ? (
+        // Full-screen chat view (like WhatsApp)
+        <div className="flex flex-col h-[calc(100vh-120px)]">
+          {/* Chat header with back button */}
+          <div className="flex items-center gap-3 p-4 border-b border-border bg-muted/30 rounded-t-lg">
+            <button
+              className="p-2 rounded-lg hover:bg-muted transition-colors"
+              onClick={() => setSelectedPhone(null)}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+              <User className="h-5 w-5 text-green-700" />
+            </div>
+            <div>
+              <p className="font-medium text-foreground">{selectedThread.patient_name}</p>
+              <p className="text-xs text-muted-foreground">{selectedThread.phone}</p>
+            </div>
+          </div>
 
-      <div className="flex gap-4 h-[calc(100vh-180px)]">
-        {/* Thread list */}
-        <div className={`${selectedPhone ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-96 shrink-0`}>
+          {/* Messages */}
+          <ScrollArea className="flex-1 p-4 bg-background">
+            <div className="space-y-3 max-w-2xl mx-auto">
+              {selectedThread.messages.map(msg => {
+                const isInbound = msg.direction === 'inbound';
+                return (
+                  <div key={msg.id} className={`flex ${isInbound ? 'justify-start' : 'justify-end'}`}>
+                    <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
+                      isInbound
+                        ? 'bg-muted text-foreground rounded-bl-sm'
+                        : 'bg-green-600 text-white rounded-br-sm'
+                    }`}>
+                      <p className="text-sm whitespace-pre-wrap">{msg.message_text}</p>
+                      <div className={`flex items-center gap-1 mt-1 ${isInbound ? 'text-muted-foreground' : 'text-green-200'}`}>
+                        <Clock className="h-2.5 w-2.5" />
+                        <span className="text-[10px]">
+                          {format(new Date(msg.created_at), 'dd MMM, h:mm a')}
+                        </span>
+                        {isInbound && msg.ai_parsed_intent && (
+                          <Badge variant="outline" className="text-[9px] ml-1 h-4 px-1 border-muted-foreground/30">
+                            {msg.ai_parsed_intent}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={messagesEndRef} />
+            </div>
+          </ScrollArea>
+        </div>
+      ) : (
+        // Thread list view
+        <>
+          <PageHeader
+            title="WhatsApp Chats"
+            subtitle={`${threads.length} conversations`}
+          />
           <div className="mb-3 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <TabletInput
@@ -110,7 +161,7 @@ export default function WhatsAppChats() {
               className="pl-9 h-11"
             />
           </div>
-          <ScrollArea className="flex-1">
+          <ScrollArea className="h-[calc(100vh-260px)]">
             <div className="space-y-1">
               {loading ? (
                 <div className="flex justify-center py-12">
@@ -126,25 +177,21 @@ export default function WhatsAppChats() {
                   <button
                     key={thread.phone}
                     onClick={() => setSelectedPhone(thread.phone)}
-                    className={`w-full text-left p-3 rounded-lg transition-colors ${
-                      selectedPhone === thread.phone
-                        ? 'bg-primary/10 border border-primary/20'
-                        : 'hover:bg-muted/50'
-                    }`}
+                    className="w-full text-left p-4 rounded-lg transition-colors hover:bg-muted/50 border border-transparent hover:border-border"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-                        <User className="h-5 w-5 text-green-700" />
+                      <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                        <User className="h-6 w-6 text-green-700" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <span className="font-medium text-sm text-foreground truncate">{thread.patient_name}</span>
-                          <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">
+                          <span className="font-medium text-foreground truncate">{thread.patient_name}</span>
+                          <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
                             {formatDistanceToNow(new Date(thread.last_time), { addSuffix: true })}
                           </span>
                         </div>
-                        <p className="text-xs text-muted-foreground truncate">{thread.last_message}</p>
-                        <p className="text-[10px] text-muted-foreground">{thread.phone}</p>
+                        <p className="text-sm text-muted-foreground truncate mt-0.5">{thread.last_message}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{thread.phone}</p>
                       </div>
                     </div>
                   </button>
@@ -152,66 +199,8 @@ export default function WhatsAppChats() {
               )}
             </div>
           </ScrollArea>
-        </div>
-
-        {/* Chat view */}
-        <div className={`${selectedPhone ? 'flex' : 'hidden md:flex'} flex-col flex-1 border border-border rounded-lg overflow-hidden`}>
-          {selectedThread ? (
-            <>
-              <div className="flex items-center gap-3 p-4 border-b border-border bg-muted/30">
-                <button className="md:hidden p-1" onClick={() => setSelectedPhone(null)}>
-                  <ArrowLeft className="h-5 w-5" />
-                </button>
-                <div className="h-9 w-9 rounded-full bg-green-100 flex items-center justify-center">
-                  <User className="h-4 w-4 text-green-700" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm text-foreground">{selectedThread.patient_name}</p>
-                  <p className="text-xs text-muted-foreground">{selectedThread.phone}</p>
-                </div>
-              </div>
-
-              <ScrollArea className="flex-1 p-4">
-                <div className="space-y-3 max-w-2xl mx-auto">
-                  {selectedThread.messages.map(msg => {
-                    const isInbound = msg.direction === 'inbound';
-                    return (
-                      <div key={msg.id} className={`flex ${isInbound ? 'justify-start' : 'justify-end'}`}>
-                        <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
-                          isInbound
-                            ? 'bg-muted text-foreground rounded-bl-sm'
-                            : 'bg-green-600 text-white rounded-br-sm'
-                        }`}>
-                          <p className="text-sm whitespace-pre-wrap">{msg.message_text}</p>
-                          <div className={`flex items-center gap-1 mt-1 ${isInbound ? 'text-muted-foreground' : 'text-green-200'}`}>
-                            <Clock className="h-2.5 w-2.5" />
-                            <span className="text-[10px]">
-                              {format(new Date(msg.created_at), 'dd MMM, h:mm a')}
-                            </span>
-                            {isInbound && msg.ai_parsed_intent && (
-                              <Badge variant="outline" className="text-[9px] ml-1 h-4 px-1 border-muted-foreground/30">
-                                {msg.ai_parsed_intent}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  <div ref={messagesEndRef} />
-                </div>
-              </ScrollArea>
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground">
-              <div className="text-center">
-                <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                <p className="text-sm">Select a conversation to view messages</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+        </>
+      )}
     </PageContainer>
   );
 }
