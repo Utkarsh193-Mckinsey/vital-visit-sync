@@ -258,41 +258,91 @@ export type Database = {
           },
         ]
       }
+      package_payments: {
+        Row: {
+          amount: number
+          created_date: string
+          id: string
+          notes: string | null
+          package_id: string
+          payment_date: string
+          payment_method: string
+        }
+        Insert: {
+          amount: number
+          created_date?: string
+          id?: string
+          notes?: string | null
+          package_id: string
+          payment_date?: string
+          payment_method?: string
+        }
+        Update: {
+          amount?: number
+          created_date?: string
+          id?: string
+          notes?: string | null
+          package_id?: string
+          payment_date?: string
+          payment_method?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_payments_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       packages: {
         Row: {
+          amount_paid: number
           created_by: string | null
           expiry_date: string | null
           id: string
+          next_payment_amount: number | null
+          next_payment_date: string | null
           patient_id: string
           payment_status: Database["public"]["Enums"]["payment_status"]
           purchase_date: string
           sessions_purchased: number
           sessions_remaining: number
           status: Database["public"]["Enums"]["package_status"]
+          total_amount: number | null
           treatment_id: string
         }
         Insert: {
+          amount_paid?: number
           created_by?: string | null
           expiry_date?: string | null
           id?: string
+          next_payment_amount?: number | null
+          next_payment_date?: string | null
           patient_id: string
           payment_status?: Database["public"]["Enums"]["payment_status"]
           purchase_date?: string
           sessions_purchased: number
           sessions_remaining: number
           status?: Database["public"]["Enums"]["package_status"]
+          total_amount?: number | null
           treatment_id: string
         }
         Update: {
+          amount_paid?: number
           created_by?: string | null
           expiry_date?: string | null
           id?: string
+          next_payment_amount?: number | null
+          next_payment_date?: string | null
           patient_id?: string
           payment_status?: Database["public"]["Enums"]["payment_status"]
           purchase_date?: string
           sessions_purchased?: number
           sessions_remaining?: number
           status?: Database["public"]["Enums"]["package_status"]
+          total_amount?: number | null
           treatment_id?: string
         }
         Relationships: [
