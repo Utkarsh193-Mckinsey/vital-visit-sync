@@ -258,6 +258,10 @@ Deno.serve(async (req) => {
         ai_parsed_intent: "booking",
       });
 
+      // Extract booked_by from message - look for "Booked by" or "Agent" line
+      const bookedByMatch = messageText.match(/(?:booked\s*by|agent)\s*[:：]\s*(.+)/i);
+      const bookedBy = bookedByMatch ? bookedByMatch[1].trim() : null;
+
       // Create the appointment
       const { data: newApt, error: aptError } = await supabase
         .from("appointments")
@@ -269,7 +273,7 @@ Deno.serve(async (req) => {
           service: appointmentData.service,
           status: "upcoming",
           confirmation_status: "unconfirmed",
-          booked_by: "WhatsApp",
+          booked_by: bookedBy || "WhatsApp",
           is_new_patient: false,
         })
         .select()
@@ -285,8 +289,22 @@ Deno.serve(async (req) => {
 
       console.log("Auto-created appointment:", newApt?.id, appointmentData.name);
 
+      // If no booked_by was provided, ask who booked it
+      if (!bookedBy) {
+        const askReply = `✅ Appointment created for ${appointmentData.name} on ${appointmentData.date} at ${appointmentData.time}.\n\n❓ Who booked this appointment? Please reply with the name.`;
+        await sendWatiMessage(senderPhone, askReply);
+
+        // Log outbound message
+        await supabase.from("whatsapp_messages").insert({
+          phone: senderPhone,
+          patient_name: senderName || "Team",
+          direction: "outbound",
+          message_text: askReply,
+        });
+      }
+
       return new Response(
-        JSON.stringify({ success: true, intent: "booking", appointment_id: newApt?.id }),
+        JSON.stringify({ success: true, intent: "booking", appointment_id: newApt?.id, asked_booked_by: !bookedBy }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
