@@ -256,6 +256,77 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Check if this is a staff reply to a missing-info question
+    // Look for the most recent appointment created from this sender's phone where booked_by is still 'WhatsApp'
+    // Staff replies are typically short (a name like "Dr Deepika" or "Rizza")
+    const isShortReply = messageText.trim().length < 50 && !messageText.includes("\n");
+    if (isShortReply) {
+      // Check if we recently asked this sender for missing info
+      const { data: recentOutbound } = await supabase
+        .from("whatsapp_messages")
+        .select("appointment_id, message_text")
+        .eq("phone", senderPhone)
+        .eq("direction", "outbound")
+        .ilike("message_text", "%Please reply with%")
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (recentOutbound && recentOutbound.length > 0 && recentOutbound[0].appointment_id) {
+        const pendingAptId = recentOutbound[0].appointment_id;
+        const outboundMsg = recentOutbound[0].message_text || "";
+
+        // Check if the question was about "Who booked"
+        if (outboundMsg.includes("Who booked")) {
+          const bookedByValue = messageText.trim();
+
+          // Update the appointment with the booked_by info
+          const { error: updateErr } = await supabase
+            .from("appointments")
+            .update({ booked_by: bookedByValue })
+            .eq("id", pendingAptId)
+            .eq("booked_by", "WhatsApp"); // Only update if still the default
+
+          if (!updateErr) {
+            console.log(`Updated booked_by to "${bookedByValue}" for appointment ${pendingAptId}`);
+
+            // Log the inbound message
+            await supabase.from("whatsapp_messages").insert({
+              phone: senderPhone,
+              patient_name: senderName || "Team",
+              direction: "inbound",
+              message_text: messageText,
+              appointment_id: pendingAptId,
+              ai_parsed_intent: "info_reply",
+            });
+
+            // Fetch the updated appointment for confirmation
+            const { data: updatedApt } = await supabase
+              .from("appointments")
+              .select("patient_name, appointment_date, appointment_time, service, booked_by")
+              .eq("id", pendingAptId)
+              .single();
+
+            // Send confirmation back to staff
+            const confirmMsg = `✅ Updated! Appointment for ${updatedApt?.patient_name} on ${updatedApt?.appointment_date} at ${updatedApt?.appointment_time} is now booked by: ${bookedByValue}`;
+            await sendWatiMessage(senderPhone, confirmMsg);
+
+            await supabase.from("whatsapp_messages").insert({
+              phone: senderPhone,
+              patient_name: senderName || "Team",
+              direction: "outbound",
+              message_text: confirmMsg,
+              appointment_id: pendingAptId,
+            });
+
+            return new Response(
+              JSON.stringify({ success: true, intent: "info_reply", appointment_id: pendingAptId, updated_field: "booked_by", value: bookedByValue }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
+      }
+    }
+
     // Check if this is a structured appointment booking message from the team
     const appointmentData = parseAppointmentMessage(messageText);
     if (appointmentData) {
