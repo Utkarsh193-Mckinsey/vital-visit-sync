@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import Analytics from "./pages/Analytics";
 import PatientSearch from "./pages/PatientSearch";
 import PatientRegistration from "./pages/PatientRegistration";
+import AddExistingPatient from "./pages/AddExistingPatient";
 import PatientDashboard from "./pages/PatientDashboard";
 import ConsentSigning from "./pages/ConsentSigning";
 import VisitHistory from "./pages/VisitHistory";
@@ -147,7 +148,12 @@ function AppRoutes() {
           <PatientRegistration />
         </ProtectedRoute>
       } />
-      
+
+      <Route path="/patient/add-existing" element={
+        <ProtectedRoute allowedRoles={['admin', 'reception']}>
+          <AddExistingPatient />
+        </ProtectedRoute>
+      } />
       <Route path="/patient/:patientId" element={
         <ProtectedRoute allowedRoles={['admin', 'reception']}>
           <PatientDashboard />

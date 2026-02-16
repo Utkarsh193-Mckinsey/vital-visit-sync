@@ -4,6 +4,7 @@ import SignatureCanvas from 'react-signature-canvas';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { TabletButton } from '@/components/ui/tablet-button';
+import { TabletInput } from '@/components/ui/tablet-input';
 import { TabletCard, TabletCardContent, TabletCardHeader, TabletCardTitle } from '@/components/ui/tablet-card';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
@@ -47,6 +48,7 @@ export default function PatientRegistration() {
     medical_diabetes_details: '',
     medical_other: false,
     medical_other_details: '',
+    file_number: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -196,6 +198,7 @@ export default function PatientRegistration() {
         medical_other: formData.medical_other,
         medical_other_details: formData.medical_other_details.trim() || null,
         registration_signature_url: signatureUrl,
+        file_number: formData.file_number.trim() || null,
         language: language,
         status: 'active',
       } as any).select().single();
@@ -346,6 +349,21 @@ export default function PatientRegistration() {
       />
 
       <form onSubmit={handleSubmit}>
+        {/* File Number */}
+        <TabletCard className="mb-6">
+          <TabletCardHeader>
+            <TabletCardTitle>Patient File Number</TabletCardTitle>
+          </TabletCardHeader>
+          <TabletCardContent>
+            <TabletInput
+              label="File Number"
+              placeholder="Enter patient file number"
+              value={formData.file_number}
+              onChange={(e) => handleChange('file_number', e.target.value)}
+            />
+          </TabletCardContent>
+        </TabletCard>
+
         <PatientInfoSection formData={formData} errors={errors} onChange={(f, v) => handleChange(f, v)} />
 
         {/* Emirates ID Photos */}
