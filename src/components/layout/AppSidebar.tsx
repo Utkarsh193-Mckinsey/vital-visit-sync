@@ -30,7 +30,8 @@ import {
   UserX,
   CalendarClock,
   LayoutDashboard,
-  BarChart3
+  BarChart3,
+  MessageCircle
 } from 'lucide-react';
 import { TabletButton } from '@/components/ui/tablet-button';
 import cosmiqueLogo from '@/assets/cosmique-symbol.png';
@@ -98,6 +99,12 @@ const navigationItems: NavItem[] = [
     icon: Bot,
     roles: ['admin', 'reception'],
     countKey: 'pendingRequests' as const
+  },
+  { 
+    title: 'WhatsApp Chats', 
+    url: '/whatsapp', 
+    icon: MessageCircle,
+    roles: ['admin', 'reception']
   },
   { 
     title: 'No Show', 
