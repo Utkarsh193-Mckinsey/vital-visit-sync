@@ -23,6 +23,7 @@ import {
 import type { Patient, Package, Treatment, Visit } from '@/types/database';
 import AddPackageModal from '@/components/patient/AddPackageModal';
 import TreatmentSelectionModal from '@/components/patient/TreatmentSelectionModal';
+import PatientProgress from '@/components/patient/PatientProgress';
 
 interface PackageWithTreatment extends Package {
   treatment: Treatment;
@@ -302,6 +303,11 @@ export default function PatientDashboard() {
         >
           View Visit History
         </TabletButton>
+      </div>
+
+      {/* Patient Progress Analytics */}
+      <div className="mb-6">
+        <PatientProgress patientId={patientId!} />
       </div>
 
       {/* Visit Status Sections */}

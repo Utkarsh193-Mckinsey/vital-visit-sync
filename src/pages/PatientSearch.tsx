@@ -52,7 +52,7 @@ export default function PatientSearch() {
         )
       `)
       .eq('status', 'active')
-      .order('full_name', { ascending: true });
+      .order('registration_date', { ascending: false });
 
     if (!error && data) {
       setAllPatients(data as unknown as PatientWithPackages[]);
