@@ -14,14 +14,16 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
     : format(today, 'yyyy-MM-dd');
 
   // Fetch all data in parallel
-  const [patientsRes, visitsRes, consumablesRes] = await Promise.all([
-    // All registered patients
+  const [patientsRes, visitsRes, consumablesRes, packagesRes, paymentsRes] = await Promise.all([
+    // New registered patients in date range
     supabase
       .from('patients')
       .select('*')
+      .gte('registration_date', today.toISOString())
+      .lt('registration_date', tomorrow.toISOString())
       .order('registration_date', { ascending: false }),
 
-    // Today's completed visits with treatments and patient info
+    // Completed visits with treatments and patient info
     supabase
       .from('visits')
       .select(`
@@ -43,7 +45,7 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
       .lt('completed_date', tomorrow.toISOString())
       .order('completed_date', { ascending: false }),
 
-    // Today's consumables used
+    // Consumables used
     supabase
       .from('visit_consumables')
       .select(`
@@ -59,93 +61,271 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
       `)
       .gte('created_date', today.toISOString())
       .lt('created_date', tomorrow.toISOString()),
+
+    // Packages purchased in date range
+    supabase
+      .from('packages')
+      .select(`
+        *,
+        patient:patients (full_name, phone_number),
+        treatment:treatments (treatment_name, category)
+      `)
+      .gte('purchase_date', today.toISOString())
+      .lt('purchase_date', tomorrow.toISOString())
+      .order('purchase_date', { ascending: false }),
+
+    // All package payments in date range
+    supabase
+      .from('package_payments')
+      .select(`
+        *,
+        package:packages (
+          id,
+          patient:patients (full_name),
+          treatment:treatments (treatment_name)
+        )
+      `)
+      .gte('payment_date', today.toISOString())
+      .lt('payment_date', tomorrow.toISOString()),
   ]);
 
   if (patientsRes.error) throw patientsRes.error;
   if (visitsRes.error) throw visitsRes.error;
   if (consumablesRes.error) throw consumablesRes.error;
+  if (packagesRes.error) throw packagesRes.error;
+  if (paymentsRes.error) throw paymentsRes.error;
 
-  // Sheet 1: Registered Patients
+  // ===== Sheet 1: New Registered Patients =====
   const patientsData = (patientsRes.data || []).map((p: any) => ({
     'Full Name': p.full_name,
     'Phone Number': p.phone_number,
-    'Email': p.email,
+    'Email': p.email || '',
     'Date of Birth': p.date_of_birth ? format(new Date(p.date_of_birth), 'dd/MM/yyyy') : '',
     'Emirates ID': p.emirates_id || '',
+    'Gender': p.gender || '',
+    'Nationality': p.nationality || '',
     'Address': p.address || '',
-    'Status': p.status,
+    'Emergency Contact': p.emergency_contact_name || '',
+    'Emergency Phone': p.emergency_contact_number || '',
     'Registration Date': p.registration_date ? format(new Date(p.registration_date), 'dd/MM/yyyy HH:mm') : '',
   }));
 
-  // Sheet 2: Treatments Done Today
-  const treatmentsData: any[] = [];
+  // ===== Sheet 2: Treatment-wise Summary =====
+  // Group by treatment name, list patients under each, then total
+  const treatmentMap: Record<string, { patients: { name: string; dose: string; unit: string; doctor: string; nurse: string }[]; totalDoses: Record<string, number> }> = {};
+
   (visitsRes.data || []).forEach((visit: any) => {
     const patientName = visit.patient?.full_name || 'Unknown';
-    const visitDoctorName = visit.doctor_staff?.full_name || '-';
-    const visitNurseName = visit.nurse_staff?.full_name || '-';
-
-    if (visit.visit_treatments && visit.visit_treatments.length > 0) {
-      visit.visit_treatments.forEach((vt: any) => {
-        treatmentsData.push({
-          'Patient Name': patientName,
-          'Treatment': vt.treatment?.treatment_name || '-',
-          'Category': vt.treatment?.category || '-',
-          'Dose': `${vt.dose_administered} ${vt.dose_unit}`,
-          'Doctor': vt.doctor_staff?.full_name || visitDoctorName,
-          'Nurse': vt.nurse_staff?.full_name || visitNurseName,
-          'Time': vt.timestamp ? format(new Date(vt.timestamp), 'HH:mm') : '-',
-          'Doctor Notes': visit.doctor_notes || '',
-          'Vitals - BP': visit.blood_pressure_systolic && visit.blood_pressure_diastolic
-            ? `${visit.blood_pressure_systolic}/${visit.blood_pressure_diastolic}`
-            : '-',
-          'Vitals - HR': visit.heart_rate || '-',
-          'Vitals - Weight (kg)': visit.weight_kg || '-',
-        });
+    (visit.visit_treatments || []).forEach((vt: any) => {
+      const treatmentName = vt.treatment?.treatment_name || 'Unknown';
+      if (!treatmentMap[treatmentName]) {
+        treatmentMap[treatmentName] = { patients: [], totalDoses: {} };
+      }
+      const doseStr = `${vt.dose_administered} ${vt.dose_unit}`;
+      treatmentMap[treatmentName].patients.push({
+        name: patientName,
+        dose: vt.dose_administered,
+        unit: vt.dose_unit,
+        doctor: vt.doctor_staff?.full_name || visit.doctor_staff?.full_name || '-',
+        nurse: vt.nurse_staff?.full_name || visit.nurse_staff?.full_name || '-',
       });
-    } else {
-      treatmentsData.push({
-        'Patient Name': patientName,
-        'Treatment': 'No treatments recorded',
-        'Category': '-',
-        'Dose': '-',
-        'Doctor': visitDoctorName,
-        'Nurse': visitNurseName,
-        'Time': visit.completed_date ? format(new Date(visit.completed_date), 'HH:mm') : '-',
-        'Doctor Notes': visit.doctor_notes || '',
-        'Vitals - BP': '-',
-        'Vitals - HR': '-',
-        'Vitals - Weight (kg)': '-',
-      });
-    }
+      // Accumulate totals by unit
+      const unit = vt.dose_unit || 'units';
+      const doseNum = parseFloat(vt.dose_administered) || 0;
+      treatmentMap[treatmentName].totalDoses[unit] = (treatmentMap[treatmentName].totalDoses[unit] || 0) + (doseNum > 0 ? doseNum : 1);
+    });
   });
 
-  // Sheet 3: Consumables Used Today
-  const consumablesData = (consumablesRes.data || []).map((c: any) => ({
-    'Item Name': c.stock_item?.item_name || '-',
-    'Brand': c.stock_item?.brand || '-',
-    'Variant': c.stock_item?.variant || '-',
-    'Category': c.stock_item?.category || '-',
-    'Quantity Used': c.quantity_used,
-    'Unit': c.stock_item?.unit || '-',
-    'Patient': c.visit?.patient?.full_name || '-',
-    'Notes': c.notes || '',
-    'Time': c.created_date ? format(new Date(c.created_date), 'HH:mm') : '-',
-  }));
+  const treatmentWiseData: any[] = [];
+  Object.entries(treatmentMap).forEach(([treatmentName, info]) => {
+    // Treatment header
+    treatmentWiseData.push({
+      'Treatment': `▶ ${treatmentName}`,
+      'Patient': '',
+      'Dose': '',
+      'Unit': '',
+      'Doctor': '',
+      'Nurse': '',
+    });
+    // Each patient row
+    info.patients.forEach(p => {
+      treatmentWiseData.push({
+        'Treatment': '',
+        'Patient': p.name,
+        'Dose': p.dose,
+        'Unit': p.unit,
+        'Doctor': p.doctor,
+        'Nurse': p.nurse,
+      });
+    });
+    // Total row
+    const totalStr = Object.entries(info.totalDoses).map(([unit, total]) => `${total} ${unit}`).join(', ');
+    treatmentWiseData.push({
+      'Treatment': '',
+      'Patient': `TOTAL ${treatmentName}`,
+      'Dose': totalStr,
+      'Unit': '',
+      'Doctor': '',
+      'Nurse': '',
+    });
+    // Empty spacer row
+    treatmentWiseData.push({ 'Treatment': '', 'Patient': '', 'Dose': '', 'Unit': '', 'Doctor': '', 'Nurse': '' });
+  });
+
+  // ===== Sheet 3: Patient-wise Summary =====
+  const patientVisitMap: Record<string, any[]> = {};
+  (visitsRes.data || []).forEach((visit: any) => {
+    const patientName = visit.patient?.full_name || 'Unknown';
+    if (!patientVisitMap[patientName]) patientVisitMap[patientName] = [];
+    patientVisitMap[patientName].push(visit);
+  });
+
+  const patientWiseData: any[] = [];
+  Object.entries(patientVisitMap).forEach(([patientName, visits]) => {
+    // Patient header
+    patientWiseData.push({
+      'Patient': `▶ ${patientName}`,
+      'Visit #': '',
+      'Treatment': '',
+      'Dose': '',
+      'Doctor': '',
+      'Nurse': '',
+      'BP': '',
+      'HR': '',
+      'Weight (kg)': '',
+      'Doctor Notes': '',
+    });
+
+    visits.forEach((visit: any) => {
+      const bp = visit.blood_pressure_systolic && visit.blood_pressure_diastolic
+        ? `${visit.blood_pressure_systolic}/${visit.blood_pressure_diastolic}` : '-';
+      
+      if (visit.visit_treatments && visit.visit_treatments.length > 0) {
+        visit.visit_treatments.forEach((vt: any, idx: number) => {
+          patientWiseData.push({
+            'Patient': '',
+            'Visit #': idx === 0 ? visit.visit_number : '',
+            'Treatment': vt.treatment?.treatment_name || '-',
+            'Dose': `${vt.dose_administered} ${vt.dose_unit}`,
+            'Doctor': vt.doctor_staff?.full_name || visit.doctor_staff?.full_name || '-',
+            'Nurse': vt.nurse_staff?.full_name || visit.nurse_staff?.full_name || '-',
+            'BP': idx === 0 ? bp : '',
+            'HR': idx === 0 ? (visit.heart_rate || '-') : '',
+            'Weight (kg)': idx === 0 ? (visit.weight_kg || '-') : '',
+            'Doctor Notes': idx === 0 ? (visit.doctor_notes || '') : '',
+          });
+        });
+      } else {
+        patientWiseData.push({
+          'Patient': '',
+          'Visit #': visit.visit_number,
+          'Treatment': 'No treatments recorded',
+          'Dose': '-',
+          'Doctor': visit.doctor_staff?.full_name || '-',
+          'Nurse': visit.nurse_staff?.full_name || '-',
+          'BP': bp,
+          'HR': visit.heart_rate || '-',
+          'Weight (kg)': visit.weight_kg || '-',
+          'Doctor Notes': visit.doctor_notes || '',
+        });
+      }
+    });
+
+    // Spacer
+    patientWiseData.push({ 'Patient': '', 'Visit #': '', 'Treatment': '', 'Dose': '', 'Doctor': '', 'Nurse': '', 'BP': '', 'HR': '', 'Weight (kg)': '', 'Doctor Notes': '' });
+  });
+
+  // ===== Sheet 4: Daily Sales =====
+  // Group packages by patient, show what they bought, payment details
+  const packagesByPatient: Record<string, any[]> = {};
+  (packagesRes.data || []).forEach((pkg: any) => {
+    const name = pkg.patient?.full_name || 'Unknown';
+    if (!packagesByPatient[name]) packagesByPatient[name] = [];
+    packagesByPatient[name].push(pkg);
+  });
+
+  // Build payment lookup: package_id -> payments[]
+  const paymentsByPackage: Record<string, any[]> = {};
+  (paymentsRes.data || []).forEach((pay: any) => {
+    if (!paymentsByPackage[pay.package_id]) paymentsByPackage[pay.package_id] = [];
+    paymentsByPackage[pay.package_id].push(pay);
+  });
+
+  const salesData: any[] = [];
+  let grandTotal = 0;
+
+  Object.entries(packagesByPatient).forEach(([patientName, packages]) => {
+    // Patient header
+    salesData.push({
+      'Patient': `▶ ${patientName}`,
+      'Treatment': '',
+      'Sessions': '',
+      'Total Amount': '',
+      'Amount Paid': '',
+      'Payment Method': '',
+      'Payment Status': '',
+      'Balance': '',
+    });
+
+    let patientTotal = 0;
+    packages.forEach((pkg: any) => {
+      const payments = paymentsByPackage[pkg.id] || [];
+      const paymentMethods = payments.length > 0
+        ? payments.map((p: any) => `${p.payment_method}: ${p.amount}`).join(', ')
+        : (pkg.amount_paid > 0 ? 'Recorded' : '-');
+      
+      const totalAmt = pkg.total_amount || 0;
+      const paidAmt = pkg.amount_paid || 0;
+      const balance = totalAmt - paidAmt;
+      patientTotal += paidAmt;
+
+      salesData.push({
+        'Patient': '',
+        'Treatment': pkg.treatment?.treatment_name || '-',
+        'Sessions': pkg.sessions_purchased,
+        'Total Amount': totalAmt,
+        'Amount Paid': paidAmt,
+        'Payment Method': paymentMethods,
+        'Payment Status': pkg.payment_status,
+        'Balance': balance > 0 ? balance : 0,
+      });
+    });
+
+    grandTotal += patientTotal;
+  });
+
+  // Grand total row
+  if (salesData.length > 0) {
+    salesData.push({ 'Patient': '', 'Treatment': '', 'Sessions': '', 'Total Amount': '', 'Amount Paid': '', 'Payment Method': '', 'Payment Status': '', 'Balance': '' });
+    salesData.push({
+      'Patient': 'TOTAL SALES',
+      'Treatment': '',
+      'Sessions': '',
+      'Total Amount': (packagesRes.data || []).reduce((sum: number, p: any) => sum + (p.total_amount || 0), 0),
+      'Amount Paid': grandTotal,
+      'Payment Method': '',
+      'Payment Status': '',
+      'Balance': '',
+    });
+  }
 
   // Create workbook
   const wb = XLSX.utils.book_new();
 
-  const ws1 = XLSX.utils.json_to_sheet(patientsData.length > 0 ? patientsData : [{ 'No Data': 'No patients registered' }]);
-  XLSX.utils.book_append_sheet(wb, ws1, 'Registered Patients');
+  const ws1 = XLSX.utils.json_to_sheet(patientsData.length > 0 ? patientsData : [{ 'Info': 'No new patients registered' }]);
+  XLSX.utils.book_append_sheet(wb, ws1, 'New Patients');
 
-  const ws2 = XLSX.utils.json_to_sheet(treatmentsData.length > 0 ? treatmentsData : [{ 'No Data': 'No treatments completed today' }]);
-  XLSX.utils.book_append_sheet(wb, ws2, 'Treatments Today');
+  const ws2 = XLSX.utils.json_to_sheet(treatmentWiseData.length > 0 ? treatmentWiseData : [{ 'Info': 'No treatments performed' }]);
+  XLSX.utils.book_append_sheet(wb, ws2, 'Treatment-wise');
 
-  const ws3 = XLSX.utils.json_to_sheet(consumablesData.length > 0 ? consumablesData : [{ 'No Data': 'No consumables used today' }]);
-  XLSX.utils.book_append_sheet(wb, ws3, 'Consumables Used');
+  const ws3 = XLSX.utils.json_to_sheet(patientWiseData.length > 0 ? patientWiseData : [{ 'Info': 'No completed visits' }]);
+  XLSX.utils.book_append_sheet(wb, ws3, 'Patient-wise');
+
+  const ws4 = XLSX.utils.json_to_sheet(salesData.length > 0 ? salesData : [{ 'Info': 'No packages sold' }]);
+  XLSX.utils.book_append_sheet(wb, ws4, 'Daily Sales');
 
   // Auto-width columns for each sheet
-  [ws1, ws2, ws3].forEach(ws => {
+  [ws1, ws2, ws3, ws4].forEach(ws => {
     const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
     const colWidths: number[] = [];
     for (let C = range.s.c; C <= range.e.c; C++) {

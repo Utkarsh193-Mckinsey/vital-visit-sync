@@ -8,8 +8,24 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import {
   CalendarDays, Users, Bot, UserX, TrendingUp, TrendingDown,
-  Clock, CheckCircle, AlertCircle, Minus, Send
+  Clock, CheckCircle, AlertCircle, Minus, Send, Download, Calendar, ChevronDown
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { TabletInput } from '@/components/ui/tablet-input';
+import { Label } from '@/components/ui/label';
+import { exportDailyReport } from '@/utils/exportDailyReport';
 import { format, addDays, subDays, startOfWeek, endOfWeek, isToday } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -23,6 +39,41 @@ interface DayStat {
 export default function Dashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const handleExportToday = async () => {
+    setIsExporting(true);
+    try {
+      await exportDailyReport();
+      toast.success('Daily report downloaded successfully.');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Could not generate the report.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportCustom = async () => {
+    if (!startDate || !endDate) { toast.error('Please select both dates.'); return; }
+    if (new Date(startDate) > new Date(endDate)) { toast.error('Start date must be before end date.'); return; }
+    setIsExporting(true);
+    setShowDatePicker(false);
+    try {
+      const from = new Date(startDate); from.setHours(0, 0, 0, 0);
+      const to = new Date(endDate); to.setHours(23, 59, 59, 999);
+      await exportDailyReport(from, to);
+      toast.success('Custom date report downloaded successfully.');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Could not generate the report.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // Stat card data
   const [todayTotal, setTodayTotal] = useState(0);
@@ -136,7 +187,55 @@ export default function Dashboard() {
 
   return (
     <PageContainer maxWidth="full">
-      <PageHeader title="Dashboard" subtitle={format(new Date(), 'EEEE, MMMM d, yyyy')} />
+      <PageHeader 
+        title="Dashboard" 
+        subtitle={format(new Date(), 'EEEE, MMMM d, yyyy')}
+        action={
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <TabletButton disabled={isExporting} leftIcon={<Download className="h-5 w-5" />}>
+                {isExporting ? 'Exporting...' : 'Export Report'}
+                <ChevronDown className="h-4 w-4 ml-1" />
+              </TabletButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={handleExportToday} className="gap-2 py-3 text-base cursor-pointer">
+                <Download className="h-4 w-4" />
+                Export Today's Report
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowDatePicker(true)} className="gap-2 py-3 text-base cursor-pointer">
+                <Calendar className="h-4 w-4" />
+                Export Custom Date Report
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
+      />
+
+      {/* Custom Date Range Dialog */}
+      <Dialog open={showDatePicker} onOpenChange={setShowDatePicker}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Export Custom Date Report</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="dash-start-date">Start Date</Label>
+              <TabletInput id="dash-start-date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="dash-end-date">End Date</Label>
+              <TabletInput id="dash-end-date" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <TabletButton variant="outline" onClick={() => setShowDatePicker(false)}>Cancel</TabletButton>
+            <TabletButton onClick={handleExportCustom} disabled={isExporting} leftIcon={<Download className="h-5 w-5" />}>
+              {isExporting ? 'Exporting...' : 'Export'}
+            </TabletButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
