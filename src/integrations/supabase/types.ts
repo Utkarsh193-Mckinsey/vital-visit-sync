@@ -1004,6 +1004,50 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_messages: {
+        Row: {
+          ai_confidence: string | null
+          ai_parsed_intent: string | null
+          appointment_id: string | null
+          created_at: string
+          direction: string
+          id: string
+          message_text: string
+          patient_name: string | null
+          phone: string
+        }
+        Insert: {
+          ai_confidence?: string | null
+          ai_parsed_intent?: string | null
+          appointment_id?: string | null
+          created_at?: string
+          direction?: string
+          id?: string
+          message_text: string
+          patient_name?: string | null
+          phone: string
+        }
+        Update: {
+          ai_confidence?: string | null
+          ai_parsed_intent?: string | null
+          appointment_id?: string | null
+          created_at?: string
+          direction?: string
+          id?: string
+          message_text?: string
+          patient_name?: string | null
+          phone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

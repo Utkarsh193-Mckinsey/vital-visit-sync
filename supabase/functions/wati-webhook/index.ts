@@ -185,19 +185,30 @@ Deno.serve(async (req) => {
 
     const parsed = await parseMessageWithAI(messageText, context);
 
-    // Log communication
-    const commLog: any = {
-      channel: "whatsapp",
+    // Log to whatsapp_messages table
+    await supabase.from("whatsapp_messages").insert({
+      phone: senderPhone,
+      patient_name: appointment?.patient_name || "Unknown",
       direction: "inbound",
-      patient_reply: messageText,
+      message_text: messageText,
       ai_parsed_intent: parsed.intent,
       ai_confidence: parsed.confidence,
-      needs_human_review: parsed.needs_human || false,
-      raw_response: parsed,
-    };
-    if (appointment) commLog.appointment_id = appointment.id;
+      appointment_id: appointment?.id || null,
+    });
 
-    await supabase.from("appointment_communications").insert(commLog);
+    // Also log to appointment_communications if we have an appointment
+    if (appointment) {
+      await supabase.from("appointment_communications").insert({
+        appointment_id: appointment.id,
+        channel: "whatsapp",
+        direction: "inbound",
+        patient_reply: messageText,
+        ai_parsed_intent: parsed.intent,
+        ai_confidence: parsed.confidence,
+        needs_human_review: parsed.needs_human || false,
+        raw_response: parsed,
+      });
+    }
 
     // Stop any active follow-up sequence when patient responds
     if (senderPhone) {
@@ -225,7 +236,14 @@ Deno.serve(async (req) => {
         const reply = `Great! Your appointment is confirmed for ${appointment.appointment_date} at ${appointment.appointment_time}. See you at Cosmique Clinic!`;
         await sendWatiMessage(senderPhone, reply);
 
-        // Log outbound reply
+        // Log outbound reply to both tables
+        await supabase.from("whatsapp_messages").insert({
+          phone: senderPhone,
+          patient_name: appointment.patient_name,
+          direction: "outbound",
+          message_text: reply,
+          appointment_id: appointment.id,
+        });
         await supabase.from("appointment_communications").insert({
           appointment_id: appointment.id,
           channel: "whatsapp",
@@ -249,11 +267,12 @@ Deno.serve(async (req) => {
         const reply = "Thank you! Our team will confirm your new appointment shortly.";
         await sendWatiMessage(senderPhone, reply);
 
+        await supabase.from("whatsapp_messages").insert({
+          phone: senderPhone, patient_name: appointment.patient_name,
+          direction: "outbound", message_text: reply, appointment_id: appointment.id,
+        });
         await supabase.from("appointment_communications").insert({
-          appointment_id: appointment.id,
-          channel: "whatsapp",
-          direction: "outbound",
-          message_sent: reply,
+          appointment_id: appointment.id, channel: "whatsapp", direction: "outbound", message_sent: reply,
         });
 
         await supabase
@@ -276,10 +295,12 @@ Deno.serve(async (req) => {
         const reply = "We're sorry to hear that. Our team will process your cancellation.";
         await sendWatiMessage(senderPhone, reply);
 
+        await supabase.from("whatsapp_messages").insert({
+          phone: senderPhone, patient_name: appointment.patient_name,
+          direction: "outbound", message_text: reply, appointment_id: appointment.id,
+        });
         await supabase.from("appointment_communications").insert({
-          appointment_id: appointment.id,
-          channel: "whatsapp",
-          direction: "outbound",
+          appointment_id: appointment.id, channel: "whatsapp", direction: "outbound",
           message_sent: reply,
         });
 
