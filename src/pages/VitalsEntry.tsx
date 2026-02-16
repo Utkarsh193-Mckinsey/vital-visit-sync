@@ -8,6 +8,13 @@ import { TabletInput } from '@/components/ui/tablet-input';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Save, User, Activity } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { Visit, Patient } from '@/types/database';
 
 interface VisitWithPatient extends Visit {
@@ -30,6 +37,8 @@ export default function VitalsEntry() {
     blood_pressure_diastolic: '',
     heart_rate: '',
   });
+  const [selectedNurseId, setSelectedNurseId] = useState('');
+  const [nurses, setNurses] = useState<{ id: string; full_name: string }[]>([]);
 
   useEffect(() => {
     const fetchVisit = async () => {
@@ -69,7 +78,18 @@ export default function VitalsEntry() {
       setIsLoading(false);
     };
 
+    const fetchNurses = async () => {
+      const { data } = await supabase
+        .from('staff')
+        .select('id, full_name')
+        .eq('status', 'active')
+        .eq('role', 'nurse')
+        .order('full_name');
+      if (data) setNurses(data);
+    };
+
     fetchVisit();
+    fetchNurses();
   }, [visitId, navigate, toast]);
 
   const handleSaveVitals = async () => {
@@ -77,8 +97,19 @@ export default function VitalsEntry() {
     
     setIsSaving(true);
 
+    if (!selectedNurseId) {
+      toast({
+        title: 'Select Nurse',
+        description: 'Please select who is recording vitals.',
+        variant: 'destructive',
+      });
+      setIsSaving(false);
+      return;
+    }
+
     const updateData: Record<string, unknown> = {
       vitals_completed: true,
+      nurse_staff_id: selectedNurseId,
     };
 
     if (vitals.weight_kg) updateData.weight_kg = parseFloat(vitals.weight_kg);
@@ -184,6 +215,23 @@ export default function VitalsEntry() {
           <div className="flex items-center gap-2 mb-6">
             <Activity className="h-5 w-5 text-primary" />
             <h3 className="text-lg font-semibold">Vital Signs</h3>
+          </div>
+
+          {/* Nurse Selection */}
+          <div className="mb-6">
+            <label className="text-sm font-medium mb-1 block">Recorded By (Nurse / Beauty Therapist) *</label>
+            <Select value={selectedNurseId} onValueChange={setSelectedNurseId}>
+              <SelectTrigger className="h-12">
+                <SelectValue placeholder="Select your name" />
+              </SelectTrigger>
+              <SelectContent>
+                {nurses.map(n => (
+                  <SelectItem key={n.id} value={n.id} className="py-3">
+                    {n.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-6">

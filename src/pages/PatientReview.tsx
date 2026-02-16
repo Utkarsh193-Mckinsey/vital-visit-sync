@@ -9,6 +9,13 @@ import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Eraser, CheckCircle, Loader2, User, Phone, HeartPulse, AlertCircle, Download, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { generateRegistrationPDF, getRegistrationFileName } from '@/utils/generateRegistrationPDF';
 import { downloadPDF, getFirstName } from '@/utils/pdfDownload';
 
@@ -21,6 +28,8 @@ export default function PatientReview() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [doctorSignatureDataUrl, setDoctorSignatureDataUrl] = useState('');
   const [signatureError, setSignatureError] = useState('');
+  const [selectedDoctorId, setSelectedDoctorId] = useState('');
+  const [doctors, setDoctors] = useState<{ id: string; full_name: string }[]>([]);
   const signatureRef = useRef<SignatureCanvas>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -39,7 +48,17 @@ export default function PatientReview() {
       setPatient(data);
       setLoading(false);
     };
+    const fetchDoctors = async () => {
+      const { data } = await supabase
+        .from('staff')
+        .select('id, full_name')
+        .eq('status', 'active')
+        .eq('role', 'doctor')
+        .order('full_name');
+      if (data) setDoctors(data);
+    };
     fetchPatient();
+    fetchDoctors();
   }, [patientId]);
 
   const clearSignature = () => {
@@ -48,6 +67,10 @@ export default function PatientReview() {
   };
 
   const handleApprove = async () => {
+    if (!selectedDoctorId) {
+      toast({ title: 'Select Doctor', description: 'Please select which doctor is reviewing.', variant: 'destructive' });
+      return;
+    }
     if (signatureRef.current?.isEmpty()) {
       setSignatureError('Doctor signature is required');
       return;
@@ -80,7 +103,7 @@ export default function PatientReview() {
       const { error: updateError } = await supabase.from('patients').update({
         doctor_signature_url: urlData.publicUrl,
         doctor_reviewed: true,
-        doctor_reviewed_by: staff?.id || null,
+        doctor_reviewed_by: selectedDoctorId,
         doctor_reviewed_date: new Date().toISOString(),
       } as any).eq('id', patientId!);
 
@@ -277,9 +300,29 @@ export default function PatientReview() {
         </TabletCard>
       )}
 
-      {/* Doctor Signature */}
+      {/* Doctor Selection & Signature */}
       {!patient.doctor_reviewed ? (
         <>
+          <TabletCard className="mb-6">
+            <TabletCardHeader>
+              <TabletCardTitle>Reviewing Doctor *</TabletCardTitle>
+            </TabletCardHeader>
+            <TabletCardContent>
+              <Select value={selectedDoctorId} onValueChange={setSelectedDoctorId}>
+                <SelectTrigger className="h-12">
+                  <SelectValue placeholder="Select your name" />
+                </SelectTrigger>
+                <SelectContent>
+                  {doctors.map(d => (
+                    <SelectItem key={d.id} value={d.id} className="py-3">
+                      {d.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </TabletCardContent>
+          </TabletCard>
+
           <TabletCard className="mb-6">
             <TabletCardHeader>
               <div className="flex items-center justify-between">
