@@ -304,6 +304,37 @@ function parseDateString(dateStr: string): string | null {
   return null;
 }
 
+function normalizePhone(phone: string): string {
+  // Strip spaces, dashes, parens
+  let clean = phone.replace(/[\s\-()]/g, "");
+  // Remove leading + 
+  clean = clean.replace(/^\+/, "");
+  // Remove leading 00 country prefix
+  clean = clean.replace(/^00/, "");
+  // Remove 971 country code to get local number
+  if (clean.startsWith("971") && clean.length > 9) {
+    clean = clean.substring(3);
+  }
+  // Ensure starts with 0 for local format
+  if (!clean.startsWith("0") && clean.length <= 10) {
+    clean = "0" + clean;
+  }
+  return clean;
+}
+
+function getPhoneVariants(phone: string): string[] {
+  const local = normalizePhone(phone);
+  // Return all formats: local (0xx), international without + (971xx), with + (+971xx)
+  const withoutLeadingZero = local.startsWith("0") ? local.substring(1) : local;
+  return [
+    local,                          // 0501234567
+    `971${withoutLeadingZero}`,     // 971501234567
+    `+971${withoutLeadingZero}`,    // +971501234567
+    withoutLeadingZero,             // 501234567
+    phone,                          // original
+  ];
+}
+
 async function getBookingStaffNames(supabase: any): Promise<string[]> {
   const { data } = await supabase
     .from("staff")
@@ -374,6 +405,125 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: "Missing phone or message" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // ============================================================
+    // STEP 0: Check if this is a reply to a booking conflict (YES/NO to replace)
+    // ============================================================
+    {
+      const lowerMsg = messageText.trim().toLowerCase();
+      if (lowerMsg === "yes" || lowerMsg === "no") {
+        const { data: conflictOutbound } = await supabase
+          .from("whatsapp_messages")
+          .select("appointment_id, message_text, created_at")
+          .eq("phone", senderPhone)
+          .eq("direction", "outbound")
+          .eq("ai_parsed_intent", "booking_conflict_ask")
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (conflictOutbound && conflictOutbound.length > 0 && conflictOutbound[0].appointment_id) {
+          const existingAptId = conflictOutbound[0].appointment_id;
+
+          await supabase.from("whatsapp_messages").insert({
+            phone: senderPhone,
+            patient_name: senderName || "Team",
+            direction: "inbound",
+            message_text: messageText,
+            appointment_id: existingAptId,
+            ai_parsed_intent: lowerMsg === "yes" ? "conflict_replace" : "conflict_keep",
+          });
+
+          if (lowerMsg === "no") {
+            const keepMsg = "✅ Keeping the existing appointment. No changes made.";
+            await sendWatiMessage(senderPhone, keepMsg);
+            await supabase.from("whatsapp_messages").insert({
+              phone: senderPhone, patient_name: senderName || "Team",
+              direction: "outbound", message_text: keepMsg, appointment_id: existingAptId,
+            });
+            return new Response(
+              JSON.stringify({ success: true, intent: "conflict_keep" }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
+          // YES — find the original new booking data from the conflict message
+          const conflictMsg = conflictOutbound[0].message_text || "";
+          const newDateMatch = conflictMsg.match(/🆕 New booking request:[\s\S]*?Date:\s*(\S+)/);
+          const newTimeMatch = conflictMsg.match(/🆕 New booking request:[\s\S]*?Time:\s*(\S+)/);
+          const newServiceMatch = conflictMsg.match(/🆕 New booking request:[\s\S]*?Service:\s*(.+)/);
+
+          // Also find the original inbound booking message to get full data
+          const { data: originalBooking } = await supabase
+            .from("whatsapp_messages")
+            .select("message_text")
+            .eq("phone", senderPhone)
+            .eq("ai_parsed_intent", "booking_conflict")
+            .order("created_at", { ascending: false })
+            .limit(1);
+
+          if (originalBooking && originalBooking.length > 0) {
+            const origData = parseAppointmentMessage(originalBooking[0].message_text);
+
+            if (origData) {
+              // Cancel the old appointment
+              await supabase
+                .from("appointments")
+                .update({ status: "cancelled", updated_at: new Date().toISOString() })
+                .eq("id", existingAptId);
+
+              // Extract booked_by and special instructions from original
+              const staffNames = await getBookingStaffNames(supabase);
+              const bookedByMatch = originalBooking[0].message_text.match(/(?:booked\s*by|agent)\s*[:：]\s*(.+)/i);
+              const rawBookedBy = bookedByMatch ? bookedByMatch[1].trim() : null;
+              const bookedBy = rawBookedBy ? matchStaffName(rawBookedBy, staffNames) : null;
+              const instrMatch = originalBooking[0].message_text.match(/(?:special\s*instruction|instruction|note|remark)\s*[:：]\s*(.+)/i);
+              const specialInstructions = instrMatch ? instrMatch[1].trim() : null;
+              const phoneClean = origData.phone.replace(/\s+/g, "").replace(/[^\d+]/g, "");
+
+              // Create new appointment
+              const { data: newApt } = await supabase
+                .from("appointments")
+                .insert({
+                  patient_name: origData.name,
+                  phone: phoneClean.length >= 7 ? phoneClean : origData.phone,
+                  appointment_date: origData.date,
+                  appointment_time: origData.time,
+                  service: origData.service,
+                  status: "upcoming",
+                  confirmation_status: "unconfirmed",
+                  booked_by: bookedBy || "WhatsApp",
+                  is_new_patient: false,
+                  special_instructions: specialInstructions,
+                })
+                .select()
+                .single();
+
+              // Check validation issues on new appointment
+              const validationIssues = newApt ? getValidationIssues(newApt, staffNames) : [];
+
+              let confirmMsg = `✅ Old appointment cancelled and replaced!\n• Name: ${origData.name}\n• Date: ${origData.date}\n• Time: ${origData.time}\n• Service: ${origData.service}`;
+              if (bookedBy) confirmMsg += `\n• Booked by: ${bookedBy}`;
+              if (specialInstructions) confirmMsg += `\n• Notes: ${specialInstructions}`;
+
+              if (validationIssues.length > 0) {
+                confirmMsg += `\n\n⚠️ Issues found:\n${validationIssues.map((f, i) => `${i + 1}. ${f}`).join("\n")}\n\n❓ Please reply with the corrections.`;
+              }
+
+              await sendWatiMessage(senderPhone, confirmMsg);
+              await supabase.from("whatsapp_messages").insert({
+                phone: senderPhone, patient_name: senderName || "Team",
+                direction: "outbound", message_text: confirmMsg, appointment_id: newApt?.id,
+              });
+
+              return new Response(
+                JSON.stringify({ success: true, intent: "conflict_replaced", new_id: newApt?.id, cancelled_id: existingAptId }),
+                { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+              );
+            }
+          }
+        }
+      }
     }
 
     // ============================================================
@@ -571,8 +721,11 @@ Deno.serve(async (req) => {
     // ============================================================
     const appointmentData = parseAppointmentMessage(messageText);
     if (appointmentData) {
+      // Normalize phone for matching
+      const patientPhoneVariants = getPhoneVariants(appointmentData.phone);
+
       // DUPLICATE DETECTION: Check if same patient+date+time was booked in last 2 minutes
-      const { data: existingApts } = await supabase
+      const { data: existingDups } = await supabase
         .from("appointments")
         .select("id, booked_by")
         .eq("patient_name", appointmentData.name)
@@ -580,10 +733,53 @@ Deno.serve(async (req) => {
         .eq("appointment_time", appointmentData.time)
         .gte("created_at", new Date(Date.now() - 2 * 60 * 1000).toISOString());
 
-      if (existingApts && existingApts.length > 0) {
+      if (existingDups && existingDups.length > 0) {
         console.log("Duplicate booking detected, skipping:", appointmentData.name, appointmentData.date);
         return new Response(
-          JSON.stringify({ success: true, intent: "duplicate_booking", existing_id: existingApts[0].id }),
+          JSON.stringify({ success: true, intent: "duplicate_booking", existing_id: existingDups[0].id }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // CHECK FOR EXISTING ACTIVE APPOINTMENT by phone number
+      const today = new Date().toISOString().split("T")[0];
+      const { data: existingActiveApts } = await supabase
+        .from("appointments")
+        .select("id, patient_name, appointment_date, appointment_time, service, booked_by")
+        .in("phone", patientPhoneVariants)
+        .gte("appointment_date", today)
+        .in("status", ["upcoming", "checked_in"])
+        .order("appointment_date")
+        .limit(1);
+
+      if (existingActiveApts && existingActiveApts.length > 0) {
+        const existing = existingActiveApts[0];
+        console.log("Existing active appointment found for phone:", appointmentData.phone, existing.id);
+
+        // Log the incoming message
+        await supabase.from("whatsapp_messages").insert({
+          phone: senderPhone,
+          patient_name: senderName || "Team",
+          direction: "inbound",
+          message_text: messageText,
+          ai_parsed_intent: "booking_conflict",
+        });
+
+        // Store the new booking data in the message for later retrieval
+        const conflictMsg = `⚠️ This patient already has an active appointment:\n• ${existing.patient_name}\n• Date: ${existing.appointment_date}\n• Time: ${existing.appointment_time}\n• Service: ${existing.service}\n• Booked by: ${existing.booked_by || "N/A"}\n\n🆕 New booking request:\n• Date: ${appointmentData.date}\n• Time: ${appointmentData.time}\n• Service: ${appointmentData.service}\n\n❓ Reply YES to replace the existing appointment, or NO to keep it.`;
+
+        await sendWatiMessage(senderPhone, conflictMsg);
+        await supabase.from("whatsapp_messages").insert({
+          phone: senderPhone,
+          patient_name: senderName || "Team",
+          direction: "outbound",
+          message_text: conflictMsg,
+          appointment_id: existing.id,
+          ai_parsed_intent: "booking_conflict_ask",
+        });
+
+        return new Response(
+          JSON.stringify({ success: true, intent: "booking_conflict", existing_id: existing.id }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
