@@ -125,7 +125,7 @@ async function sendWatiMessage(phone: string, message: string) {
   const cleanPhone = phone.replace(/^\+/, "");
   try {
     const res = await fetch(
-      `${WATI_API_URL}/sendSessionMessage/${cleanPhone}?messageText=${encodeURIComponent(message)}`,
+      `${WATI_API_URL}/api/v1/sendSessionMessage/${cleanPhone}?messageText=${encodeURIComponent(message)}`,
       {
         method: "POST",
         headers: {
