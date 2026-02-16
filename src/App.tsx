@@ -29,6 +29,7 @@ import Appointments from "./pages/Appointments";
 import NoShow from "./pages/NoShow";
 import Rescheduled from "./pages/Rescheduled";
 import PersonalAssistant from "./pages/PersonalAssistant";
+import WhatsAppChats from "./pages/WhatsAppChats";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -237,6 +238,12 @@ function AppRoutes() {
       <Route path="/assistant" element={
         <ProtectedRoute allowedRoles={['admin', 'reception']}>
           <PersonalAssistant />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/whatsapp" element={
+        <ProtectedRoute allowedRoles={['admin', 'reception']}>
+          <WhatsAppChats />
         </ProtectedRoute>
       } />
 
