@@ -8,7 +8,7 @@ import { TabletInput } from '@/components/ui/tablet-input';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, CheckCircle, Syringe, FileText, User, Package, AlertTriangle, FileSignature, Plus, Save } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Check, Syringe, FileText, User, Package, AlertTriangle, FileSignature, Plus, Save } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -90,6 +90,9 @@ export default function TreatmentAdmin() {
   const [selectedNurseId, setSelectedNurseId] = useState('');
   const [doctors, setDoctors] = useState<StaffOption[]>([]);
   const [nurses, setNurses] = useState<StaffOption[]>([]);
+  const [doseUnits, setDoseUnits] = useState(['mg', 'ml', 'Units', 'mcg', 'Session', 'vial', 'pen', 'amp']);
+  const [addingUnitForIndex, setAddingUnitForIndex] = useState<number | null>(null);
+  const [newUnitValue, setNewUnitValue] = useState('');
   const { staff } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -190,7 +193,20 @@ export default function TreatmentAdmin() {
     }
   };
 
-  const DOSE_UNITS = ['mg', 'ml', 'Units', 'mcg', 'Session'];
+  const addNewUnit = (unit: string, index?: number) => {
+    const trimmed = unit.trim();
+    if (!trimmed) return;
+    if (!doseUnits.includes(trimmed)) {
+      setDoseUnits(prev => [...prev, trimmed]);
+    }
+    if (index !== undefined) {
+      updateCustomField(index, 'customDoseUnit', trimmed);
+    }
+    setNewUnitValue('');
+    setAddingUnitForIndex(null);
+  };
+
+  const DOSE_UNITS = doseUnits;
 
   const handleDoseChange = (index: number, value: string) => {
     const treatment = treatments[index];
@@ -638,19 +654,49 @@ export default function TreatmentAdmin() {
                             onChange={(e) => updateCustomField(index, 'customDoseValue', e.target.value)}
                             className="flex-1"
                           />
-                          <Select
-                            value={treatment.customDoseUnit}
-                            onValueChange={(value) => updateCustomField(index, 'customDoseUnit', value)}
-                          >
-                            <SelectTrigger className="w-24 h-12">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {DOSE_UNITS.map((unit) => (
-                                <SelectItem key={unit} value={unit}>{unit}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          {addingUnitForIndex === index ? (
+                            <div className="flex gap-1">
+                              <TabletInput
+                                type="text"
+                                placeholder="New unit"
+                                value={newUnitValue}
+                                onChange={(e) => setNewUnitValue(e.target.value)}
+                                className="w-20 h-12"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') addNewUnit(newUnitValue, index);
+                                  if (e.key === 'Escape') setAddingUnitForIndex(null);
+                                }}
+                              />
+                              <TabletButton size="icon" className="h-12 w-10" onClick={() => addNewUnit(newUnitValue, index)}>
+                                <Check className="h-3 w-3" />
+                              </TabletButton>
+                            </div>
+                          ) : (
+                            <div className="flex gap-1">
+                              <Select
+                                value={treatment.customDoseUnit}
+                                onValueChange={(value) => updateCustomField(index, 'customDoseUnit', value)}
+                              >
+                                <SelectTrigger className="w-24 h-12">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {DOSE_UNITS.map((unit) => (
+                                    <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <TabletButton
+                                size="icon"
+                                variant="ghost"
+                                className="h-12 w-8"
+                                onClick={() => { setAddingUnitForIndex(index); setNewUnitValue(''); }}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </TabletButton>
+                            </div>
+                          )}
                         </div>
                         <TabletInput
                           type="text"
