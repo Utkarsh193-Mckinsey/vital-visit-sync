@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { SelectWithAdd } from '@/components/ui/select-with-add';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import type { StockItem } from '@/types/database';
 
-const CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   'Syringes',
   'Needles',
   'Cannula',
@@ -36,9 +37,9 @@ const CATEGORIES = [
   'Other',
 ];
 
-const BASE_UNITS = ['pcs', 'ml', 'mg', 'mcg', 'Units', 'amp'];
-const PACKAGING_UNITS = ['Box', 'Pack', 'Vial', 'Bottle', 'Carton', 'Strip', 'Blister'];
-const UNITS = [...BASE_UNITS, 'vial', 'pack', 'box'];
+const DEFAULT_BASE_UNITS = ['pcs', 'ml', 'mg', 'mcg', 'Units', 'amp'];
+const DEFAULT_PACKAGING_UNITS = ['Box', 'Pack', 'Vial', 'Bottle', 'Carton', 'Strip', 'Blister'];
+const DEFAULT_UNITS = [...DEFAULT_BASE_UNITS, 'vial', 'pack', 'box'];
 
 interface ConsumableFormData {
   item_name: string;
@@ -81,6 +82,10 @@ export default function ConsumablesManager() {
   const [addStockStep, setAddStockStep] = useState<'packaging' | 'base_unit' | 'quantity'>('packaging');
   const [brandSearch, setBrandSearch] = useState('');
   const [showBrandDropdown, setShowBrandDropdown] = useState(false);
+  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  const [units, setUnits] = useState<string[]>(DEFAULT_UNITS);
+  const [packagingUnits, setPackagingUnits] = useState<string[]>(DEFAULT_PACKAGING_UNITS);
+  const [baseUnits, setBaseUnits] = useState<string[]>(DEFAULT_BASE_UNITS);
   const { toast } = useToast();
 
   // Get unique brands for autocomplete
@@ -418,40 +423,28 @@ export default function ConsumablesManager() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="block text-sm font-medium">Category *</label>
-                <Select
+                <SelectWithAdd
                   value={formData.category}
                   onValueChange={(value) => setFormData({ ...formData, category: value })}
-                >
-                  <SelectTrigger className="h-14">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map((cat) => (
-                      <SelectItem key={cat} value={cat} className="py-3">
-                        {cat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={categories}
+                  onAddOption={(opt) => setCategories(prev => [...prev, opt])}
+                  placeholder="Select category"
+                  triggerClassName="h-14"
+                  itemClassName="py-3"
+                />
               </div>
 
               <div className="space-y-2">
                 <label className="block text-sm font-medium">Unit</label>
-                <Select
+                <SelectWithAdd
                   value={formData.unit}
                   onValueChange={(value) => setFormData({ ...formData, unit: value })}
-                >
-                  <SelectTrigger className="h-14">
-                    <SelectValue placeholder="Select unit" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {UNITS.map((unit) => (
-                      <SelectItem key={unit} value={unit} className="py-3">
-                        {unit}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={units}
+                  onAddOption={(opt) => { setUnits(prev => [...prev, opt]); setBaseUnits(prev => [...prev, opt]); }}
+                  placeholder="Select unit"
+                  triggerClassName="h-14"
+                  itemClassName="py-3"
+                />
               </div>
             </div>
 
@@ -459,21 +452,15 @@ export default function ConsumablesManager() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="block text-sm font-medium">Packaging Unit</label>
-                <Select
+                <SelectWithAdd
                   value={formData.packaging_unit}
                   onValueChange={(value) => setFormData({ ...formData, packaging_unit: value })}
-                >
-                  <SelectTrigger className="h-14">
-                    <SelectValue placeholder="How it comes (Box, Vial...)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PACKAGING_UNITS.map((pu) => (
-                      <SelectItem key={pu} value={pu} className="py-3">
-                        {pu}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={packagingUnits}
+                  onAddOption={(opt) => setPackagingUnits(prev => [...prev, opt])}
+                  placeholder="How it comes (Box, Vial...)"
+                  triggerClassName="h-14"
+                  itemClassName="py-3"
+                />
               </div>
 
               <TabletInput
@@ -640,7 +627,7 @@ export default function ConsumablesManager() {
                           <>
                             <div className="text-sm font-medium">How does this item come?</div>
                             <div className="flex flex-wrap gap-2">
-                              {PACKAGING_UNITS.map((pu) => (
+                              {packagingUnits.map((pu) => (
                                 <TabletButton
                                   key={pu}
                                   size="sm"
@@ -683,7 +670,7 @@ export default function ConsumablesManager() {
                                   <SelectValue placeholder="Unit" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {BASE_UNITS.map((u) => (
+                                  {baseUnits.map((u) => (
                                     <SelectItem key={u} value={u}>
                                       {u}
                                     </SelectItem>
