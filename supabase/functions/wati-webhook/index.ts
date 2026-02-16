@@ -571,6 +571,23 @@ Deno.serve(async (req) => {
     // ============================================================
     const appointmentData = parseAppointmentMessage(messageText);
     if (appointmentData) {
+      // DUPLICATE DETECTION: Check if same patient+date+time was booked in last 2 minutes
+      const { data: existingApts } = await supabase
+        .from("appointments")
+        .select("id, booked_by")
+        .eq("patient_name", appointmentData.name)
+        .eq("appointment_date", appointmentData.date)
+        .eq("appointment_time", appointmentData.time)
+        .gte("created_at", new Date(Date.now() - 2 * 60 * 1000).toISOString());
+
+      if (existingApts && existingApts.length > 0) {
+        console.log("Duplicate booking detected, skipping:", appointmentData.name, appointmentData.date);
+        return new Response(
+          JSON.stringify({ success: true, intent: "duplicate_booking", existing_id: existingApts[0].id }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       // Log the message
       await supabase.from("whatsapp_messages").insert({
         phone: senderPhone,
