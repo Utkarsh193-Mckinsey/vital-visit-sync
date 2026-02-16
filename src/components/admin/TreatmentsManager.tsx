@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { SelectWithAdd } from '@/components/ui/select-with-add';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,8 +26,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-const DOSAGE_UNITS: DosageUnit[] = ['mg', 'ml', 'Units', 'mcg', 'Session'];
-const CATEGORIES = ['Hair Treatment', 'Face Treatment Injectable', 'Face Treatment non Invasive', 'IV drip', 'Fat loss', 'Body Contouring'];
+const DEFAULT_DOSAGE_UNITS: string[] = ['mg', 'ml', 'Units', 'mcg', 'Session'];
+const DEFAULT_CATEGORIES = ['Hair Treatment', 'Face Treatment Injectable', 'Face Treatment non Invasive', 'IV drip', 'Fat loss', 'Body Contouring'];
 
 interface TreatmentFormData {
   treatment_name: string;
@@ -59,6 +60,8 @@ export default function TreatmentsManager() {
   const [isSaving, setIsSaving] = useState(false);
   const [newDose, setNewDose] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  const [dosageUnits, setDosageUnits] = useState<string[]>(DEFAULT_DOSAGE_UNITS);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -248,40 +251,28 @@ export default function TreatmentsManager() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="block text-sm font-medium">Category *</label>
-                <Select 
-                  value={formData.category} 
+                <SelectWithAdd
+                  value={formData.category}
                   onValueChange={(value) => setFormData({ ...formData, category: value })}
-                >
-                  <SelectTrigger className="h-14">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map((cat) => (
-                      <SelectItem key={cat} value={cat} className="py-3">
-                        {cat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={categories}
+                  onAddOption={(opt) => setCategories(prev => [...prev, opt])}
+                  placeholder="Select category"
+                  triggerClassName="h-14"
+                  itemClassName="py-3"
+                />
               </div>
 
               <div className="space-y-2">
                 <label className="block text-sm font-medium">Dosage Unit *</label>
-                <Select 
-                  value={formData.dosage_unit} 
+                <SelectWithAdd
+                  value={formData.dosage_unit}
                   onValueChange={(value) => setFormData({ ...formData, dosage_unit: value as DosageUnit })}
-                >
-                  <SelectTrigger className="h-14">
-                    <SelectValue placeholder="Select unit" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DOSAGE_UNITS.map((unit) => (
-                      <SelectItem key={unit} value={unit} className="py-3">
-                        {unit}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={dosageUnits}
+                  onAddOption={(opt) => setDosageUnits(prev => [...prev, opt])}
+                  placeholder="Select unit"
+                  triggerClassName="h-14"
+                  itemClassName="py-3"
+                />
               </div>
             </div>
 
