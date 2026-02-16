@@ -1,24 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
-import { TabletCard } from '@/components/ui/tablet-card';
 import { TabletInput } from '@/components/ui/tablet-input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageSquare, Search, User, ArrowLeft, Clock } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 
-interface CommRecord {
+interface WaMsg {
   id: string;
-  appointment_id: string;
-  channel: string;
+  phone: string;
+  patient_name: string | null;
   direction: string;
-  message_sent: string | null;
-  patient_reply: string | null;
+  message_text: string;
   ai_parsed_intent: string | null;
   created_at: string;
-  call_status: string | null;
-  call_summary: string | null;
 }
 
 interface ConversationThread {
@@ -26,8 +22,7 @@ interface ConversationThread {
   patient_name: string;
   last_message: string;
   last_time: string;
-  unread: boolean;
-  messages: CommRecord[];
+  messages: WaMsg[];
 }
 
 export default function WhatsAppChats() {
@@ -38,54 +33,37 @@ export default function WhatsAppChats() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const fetchChats = async () => {
-    // Get all communications with their appointment info
-    const { data: comms } = await supabase
-      .from('appointment_communications')
+    const { data: msgs } = await supabase
+      .from('whatsapp_messages')
       .select('*')
-      .eq('channel', 'whatsapp')
       .order('created_at', { ascending: true });
 
-    if (!comms || comms.length === 0) {
+    if (!msgs || msgs.length === 0) {
       setThreads([]);
       setLoading(false);
       return;
     }
 
-    // Get appointment IDs to fetch phone numbers
-    const aptIds = [...new Set(comms.map(c => c.appointment_id))];
-    const { data: apts } = await supabase
-      .from('appointments')
-      .select('id, phone, patient_name')
-      .in('id', aptIds);
-
-    const aptMap: Record<string, { phone: string; patient_name: string }> = {};
-    (apts || []).forEach(a => { aptMap[a.id] = { phone: a.phone, patient_name: a.patient_name }; });
-
-    // Group by phone
     const phoneMap: Record<string, ConversationThread> = {};
-    comms.forEach(c => {
-      const apt = aptMap[c.appointment_id];
-      if (!apt) return;
-      const phone = apt.phone;
+    msgs.forEach(m => {
+      const phone = m.phone;
       if (!phoneMap[phone]) {
         phoneMap[phone] = {
           phone,
-          patient_name: apt.patient_name,
+          patient_name: m.patient_name || 'Unknown',
           last_message: '',
-          last_time: c.created_at,
-          unread: false,
+          last_time: m.created_at,
           messages: [],
         };
       }
-      phoneMap[phone].messages.push(c);
-      const msgText = c.direction === 'inbound' ? c.patient_reply : c.message_sent;
-      if (msgText) {
-        phoneMap[phone].last_message = msgText;
-        phoneMap[phone].last_time = c.created_at;
+      phoneMap[phone].messages.push(m);
+      if (m.patient_name && m.patient_name !== 'Unknown') {
+        phoneMap[phone].patient_name = m.patient_name;
       }
+      phoneMap[phone].last_message = m.message_text;
+      phoneMap[phone].last_time = m.created_at;
     });
 
-    // Sort threads by last message time (newest first)
     const sorted = Object.values(phoneMap).sort(
       (a, b) => new Date(b.last_time).getTime() - new Date(a.last_time).getTime()
     );
@@ -98,7 +76,7 @@ export default function WhatsAppChats() {
     fetchChats();
     const channel = supabase
       .channel('whatsapp-chats')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'appointment_communications' }, fetchChats)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'whatsapp_messages' }, fetchChats)
       .subscribe();
     return () => { channel.unsubscribe(); };
   }, []);
@@ -180,12 +158,8 @@ export default function WhatsAppChats() {
         <div className={`${selectedPhone ? 'flex' : 'hidden md:flex'} flex-col flex-1 border border-border rounded-lg overflow-hidden`}>
           {selectedThread ? (
             <>
-              {/* Chat header */}
               <div className="flex items-center gap-3 p-4 border-b border-border bg-muted/30">
-                <button
-                  className="md:hidden p-1"
-                  onClick={() => setSelectedPhone(null)}
-                >
+                <button className="md:hidden p-1" onClick={() => setSelectedPhone(null)}>
                   <ArrowLeft className="h-5 w-5" />
                 </button>
                 <div className="h-9 w-9 rounded-full bg-green-100 flex items-center justify-center">
@@ -197,27 +171,18 @@ export default function WhatsAppChats() {
                 </div>
               </div>
 
-              {/* Messages */}
               <ScrollArea className="flex-1 p-4">
                 <div className="space-y-3 max-w-2xl mx-auto">
                   {selectedThread.messages.map(msg => {
                     const isInbound = msg.direction === 'inbound';
-                    const text = isInbound ? msg.patient_reply : msg.message_sent;
-                    if (!text) return null;
-
                     return (
-                      <div
-                        key={msg.id}
-                        className={`flex ${isInbound ? 'justify-start' : 'justify-end'}`}
-                      >
-                        <div
-                          className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
-                            isInbound
-                              ? 'bg-muted text-foreground rounded-bl-sm'
-                              : 'bg-green-600 text-white rounded-br-sm'
-                          }`}
-                        >
-                          <p className="text-sm whitespace-pre-wrap">{text}</p>
+                      <div key={msg.id} className={`flex ${isInbound ? 'justify-start' : 'justify-end'}`}>
+                        <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
+                          isInbound
+                            ? 'bg-muted text-foreground rounded-bl-sm'
+                            : 'bg-green-600 text-white rounded-br-sm'
+                        }`}>
+                          <p className="text-sm whitespace-pre-wrap">{msg.message_text}</p>
                           <div className={`flex items-center gap-1 mt-1 ${isInbound ? 'text-muted-foreground' : 'text-green-200'}`}>
                             <Clock className="h-2.5 w-2.5" />
                             <span className="text-[10px]">
