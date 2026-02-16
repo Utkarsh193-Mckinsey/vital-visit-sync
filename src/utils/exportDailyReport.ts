@@ -33,7 +33,9 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
           dose_administered,
           dose_unit,
           timestamp,
-          treatment:treatments (treatment_name, category)
+          treatment:treatments (treatment_name, category),
+          doctor_staff:staff!visit_treatments_doctor_staff_id_fkey (full_name),
+          nurse_staff:staff!visit_treatments_nurse_staff_id_fkey (full_name)
         )
       `)
       .eq('current_status', 'completed')
@@ -79,8 +81,8 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
   const treatmentsData: any[] = [];
   (visitsRes.data || []).forEach((visit: any) => {
     const patientName = visit.patient?.full_name || 'Unknown';
-    const doctorName = visit.doctor_staff?.full_name || '-';
-    const nurseName = visit.nurse_staff?.full_name || '-';
+    const visitDoctorName = visit.doctor_staff?.full_name || '-';
+    const visitNurseName = visit.nurse_staff?.full_name || '-';
 
     if (visit.visit_treatments && visit.visit_treatments.length > 0) {
       visit.visit_treatments.forEach((vt: any) => {
@@ -89,8 +91,8 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
           'Treatment': vt.treatment?.treatment_name || '-',
           'Category': vt.treatment?.category || '-',
           'Dose': `${vt.dose_administered} ${vt.dose_unit}`,
-          'Doctor': doctorName,
-          'Nurse': nurseName,
+          'Doctor': vt.doctor_staff?.full_name || visitDoctorName,
+          'Nurse': vt.nurse_staff?.full_name || visitNurseName,
           'Time': vt.timestamp ? format(new Date(vt.timestamp), 'HH:mm') : '-',
           'Doctor Notes': visit.doctor_notes || '',
           'Vitals - BP': visit.blood_pressure_systolic && visit.blood_pressure_diastolic
@@ -106,8 +108,8 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
         'Treatment': 'No treatments recorded',
         'Category': '-',
         'Dose': '-',
-        'Doctor': doctorName,
-        'Nurse': nurseName,
+        'Doctor': visitDoctorName,
+        'Nurse': visitNurseName,
         'Time': visit.completed_date ? format(new Date(visit.completed_date), 'HH:mm') : '-',
         'Doctor Notes': visit.doctor_notes || '',
         'Vitals - BP': '-',

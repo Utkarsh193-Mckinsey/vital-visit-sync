@@ -9,6 +9,8 @@ interface VisitTreatmentDetail {
   dose_unit: string;
   timestamp: string;
   treatment: Treatment;
+  doctor_staff?: Staff | null;
+  nurse_staff?: Staff | null;
 }
 
 interface VisitConsumableDetail {
@@ -125,11 +127,19 @@ export function VisitDetailsCard({ visit }: VisitDetailsCardProps) {
                 </h4>
                 <ul className="space-y-1.5">
                   {visit.visit_treatments.map((vt) => (
-                    <li key={vt.id} className="text-sm flex justify-between bg-muted/50 rounded-md p-2">
-                      <span>{vt.treatment.treatment_name}</span>
-                      <span className="text-muted-foreground font-medium">
-                        {vt.dose_administered} {vt.dose_unit}
-                      </span>
+                    <li key={vt.id} className="text-sm bg-muted/50 rounded-md p-2">
+                      <div className="flex justify-between">
+                        <span>{vt.treatment.treatment_name}</span>
+                        <span className="text-muted-foreground font-medium">
+                          {vt.dose_administered} {vt.dose_unit}
+                        </span>
+                      </div>
+                      {(vt.doctor_staff || vt.nurse_staff) && (
+                        <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
+                          {vt.doctor_staff && <span>Dr: {vt.doctor_staff.full_name}</span>}
+                          {vt.nurse_staff && <span>Nurse: {vt.nurse_staff.full_name}</span>}
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>

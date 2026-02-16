@@ -121,7 +121,9 @@ export default function CompletedToday() {
           dose_administered,
           dose_unit,
           timestamp,
-          treatment:treatments (*)
+          treatment:treatments (*),
+          doctor_staff:staff!visit_treatments_doctor_staff_id_fkey (*),
+          nurse_staff:staff!visit_treatments_nurse_staff_id_fkey (*)
         ),
         visit_consumables (
           id,
