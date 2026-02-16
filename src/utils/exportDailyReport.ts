@@ -97,6 +97,7 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
 
   // ===== Sheet 1: New Registered Patients =====
   const patientsData = (patientsRes.data || []).map((p: any) => ({
+    'Date': p.registration_date ? format(new Date(p.registration_date), 'dd/MM/yyyy') : '',
     'Full Name': p.full_name,
     'Phone Number': p.phone_number,
     'Email': p.email || '',
@@ -107,22 +108,22 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
     'Address': p.address || '',
     'Emergency Contact': p.emergency_contact_name || '',
     'Emergency Phone': p.emergency_contact_number || '',
-    'Registration Date': p.registration_date ? format(new Date(p.registration_date), 'dd/MM/yyyy HH:mm') : '',
   }));
 
   // ===== Sheet 2: Treatment-wise Summary =====
   // Group by treatment name, list patients under each, then total
-  const treatmentMap: Record<string, { patients: { name: string; dose: string; unit: string; doctor: string; nurse: string }[]; totalDoses: Record<string, number> }> = {};
+  const treatmentMap: Record<string, { patients: { date: string; name: string; dose: string; unit: string; doctor: string; nurse: string }[]; totalDoses: Record<string, number> }> = {};
 
   (visitsRes.data || []).forEach((visit: any) => {
     const patientName = visit.patient?.full_name || 'Unknown';
+    const visitDate = visit.completed_date ? format(new Date(visit.completed_date), 'dd/MM/yyyy') : '';
     (visit.visit_treatments || []).forEach((vt: any) => {
       const treatmentName = vt.treatment?.treatment_name || 'Unknown';
       if (!treatmentMap[treatmentName]) {
         treatmentMap[treatmentName] = { patients: [], totalDoses: {} };
       }
-      const doseStr = `${vt.dose_administered} ${vt.dose_unit}`;
       treatmentMap[treatmentName].patients.push({
+        date: visitDate,
         name: patientName,
         dose: vt.dose_administered,
         unit: vt.dose_unit,
@@ -138,8 +139,8 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
 
   const treatmentWiseData: any[] = [];
   Object.entries(treatmentMap).forEach(([treatmentName, info]) => {
-    // Treatment header
     treatmentWiseData.push({
+      'Date': '',
       'Treatment': `▶ ${treatmentName}`,
       'Patient': '',
       'Dose': '',
@@ -147,9 +148,9 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
       'Doctor': '',
       'Nurse': '',
     });
-    // Each patient row
     info.patients.forEach(p => {
       treatmentWiseData.push({
+        'Date': p.date,
         'Treatment': '',
         'Patient': p.name,
         'Dose': p.dose,
@@ -158,9 +159,9 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
         'Nurse': p.nurse,
       });
     });
-    // Total row
     const totalStr = Object.entries(info.totalDoses).map(([unit, total]) => `${total} ${unit}`).join(', ');
     treatmentWiseData.push({
+      'Date': '',
       'Treatment': '',
       'Patient': `TOTAL ${treatmentName}`,
       'Dose': totalStr,
@@ -168,8 +169,7 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
       'Doctor': '',
       'Nurse': '',
     });
-    // Empty spacer row
-    treatmentWiseData.push({ 'Treatment': '', 'Patient': '', 'Dose': '', 'Unit': '', 'Doctor': '', 'Nurse': '' });
+    treatmentWiseData.push({ 'Date': '', 'Treatment': '', 'Patient': '', 'Dose': '', 'Unit': '', 'Doctor': '', 'Nurse': '' });
   });
 
   // ===== Sheet 3: Patient-wise Summary =====
@@ -182,8 +182,8 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
 
   const patientWiseData: any[] = [];
   Object.entries(patientVisitMap).forEach(([patientName, visits]) => {
-    // Patient header
     patientWiseData.push({
+      'Date': '',
       'Patient': `▶ ${patientName}`,
       'Visit #': '',
       'Treatment': '',
@@ -199,10 +199,12 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
     visits.forEach((visit: any) => {
       const bp = visit.blood_pressure_systolic && visit.blood_pressure_diastolic
         ? `${visit.blood_pressure_systolic}/${visit.blood_pressure_diastolic}` : '-';
+      const visitDate = visit.completed_date ? format(new Date(visit.completed_date), 'dd/MM/yyyy') : '';
       
       if (visit.visit_treatments && visit.visit_treatments.length > 0) {
         visit.visit_treatments.forEach((vt: any, idx: number) => {
           patientWiseData.push({
+            'Date': idx === 0 ? visitDate : '',
             'Patient': '',
             'Visit #': idx === 0 ? visit.visit_number : '',
             'Treatment': vt.treatment?.treatment_name || '-',
@@ -217,6 +219,7 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
         });
       } else {
         patientWiseData.push({
+          'Date': visitDate,
           'Patient': '',
           'Visit #': visit.visit_number,
           'Treatment': 'No treatments recorded',
@@ -231,8 +234,7 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
       }
     });
 
-    // Spacer
-    patientWiseData.push({ 'Patient': '', 'Visit #': '', 'Treatment': '', 'Dose': '', 'Doctor': '', 'Nurse': '', 'BP': '', 'HR': '', 'Weight (kg)': '', 'Doctor Notes': '' });
+    patientWiseData.push({ 'Date': '', 'Patient': '', 'Visit #': '', 'Treatment': '', 'Dose': '', 'Doctor': '', 'Nurse': '', 'BP': '', 'HR': '', 'Weight (kg)': '', 'Doctor Notes': '' });
   });
 
   // ===== Sheet 4: Daily Sales =====
@@ -255,8 +257,8 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
   let grandTotal = 0;
 
   Object.entries(packagesByPatient).forEach(([patientName, packages]) => {
-    // Patient header
     salesData.push({
+      'Date': '',
       'Patient': `▶ ${patientName}`,
       'Treatment': '',
       'Sessions': '',
@@ -278,8 +280,10 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
       const paidAmt = pkg.amount_paid || 0;
       const balance = totalAmt - paidAmt;
       patientTotal += paidAmt;
+      const pkgDate = pkg.purchase_date ? format(new Date(pkg.purchase_date), 'dd/MM/yyyy') : '';
 
       salesData.push({
+        'Date': pkgDate,
         'Patient': '',
         'Treatment': pkg.treatment?.treatment_name || '-',
         'Sessions': pkg.sessions_purchased,
@@ -296,8 +300,9 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
 
   // Grand total row
   if (salesData.length > 0) {
-    salesData.push({ 'Patient': '', 'Treatment': '', 'Sessions': '', 'Total Amount': '', 'Amount Paid': '', 'Payment Method': '', 'Payment Status': '', 'Balance': '' });
+    salesData.push({ 'Date': '', 'Patient': '', 'Treatment': '', 'Sessions': '', 'Total Amount': '', 'Amount Paid': '', 'Payment Method': '', 'Payment Status': '', 'Balance': '' });
     salesData.push({
+      'Date': '',
       'Patient': 'TOTAL SALES',
       'Treatment': '',
       'Sessions': '',
