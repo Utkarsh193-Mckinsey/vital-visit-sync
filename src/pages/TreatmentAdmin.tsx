@@ -328,13 +328,22 @@ export default function TreatmentAdmin() {
   const handleCompleteVisit = async () => {
     if (!visit || !staff) return;
 
+    if (!selectedDoctorId) {
+      toast({
+        title: 'Select Doctor',
+        description: 'Please select which doctor is administering the treatment.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     // Filter only treatments that have a dose entered (non-empty)
     const treatmentsToAdminister = treatments.filter(t => t.doseAdministered.trim() !== '');
 
     setIsSaving(true);
 
     try {
-      const doctorId = selectedDoctorId || staff.id;
+      const doctorId = selectedDoctorId;
       const nurseId = selectedNurseId && selectedNurseId !== '__none__' ? selectedNurseId : null;
 
       // First update visit (without locking) so RLS allows subsequent updates
