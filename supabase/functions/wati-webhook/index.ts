@@ -148,6 +148,7 @@ Deno.serve(async (req) => {
     // WATI webhook payload - extract message details
     const senderPhone = body.waId || body.senderPhone || body.from || "";
     const messageText = body.text || body.message || body.body || "";
+    const senderName = body.senderName || body.pushName || "";
     const timestamp = body.timestamp || new Date().toISOString();
 
     if (!senderPhone || !messageText) {
@@ -188,7 +189,7 @@ Deno.serve(async (req) => {
     // Log to whatsapp_messages table
     await supabase.from("whatsapp_messages").insert({
       phone: senderPhone,
-      patient_name: appointment?.patient_name || "Unknown",
+      patient_name: appointment?.patient_name || senderName || "Unknown",
       direction: "inbound",
       message_text: messageText,
       ai_parsed_intent: parsed.intent,
