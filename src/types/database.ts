@@ -33,6 +33,7 @@ export interface Patient {
   registration_signature_url?: string;
   registration_date: string;
   status: PatientStatus;
+  file_number?: string;
 }
 
 export interface Treatment {

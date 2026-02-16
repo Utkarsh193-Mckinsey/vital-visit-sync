@@ -7,7 +7,7 @@ import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletCard, TabletCardContent } from '@/components/ui/tablet-card';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
-import { Search, UserPlus, Phone, LogOut, Settings, Users, CreditCard, X } from 'lucide-react';
+import { Search, UserPlus, Phone, LogOut, Settings, Users, CreditCard, X, UserCheck } from 'lucide-react';
 import EmiratesIdCapture, { ExtractedIdData } from '@/components/patient/EmiratesIdCapture';
 import type { Patient, Package, Visit } from '@/types/database';
 
@@ -178,15 +178,24 @@ export default function PatientSearch() {
         </div>
       </form>
 
-      <TabletButton
-        variant="outline"
-        fullWidth
-        onClick={handleNewPatient}
-        leftIcon={<UserPlus />}
-        className="mb-6"
-      >
-        New Patient Registration
-      </TabletButton>
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <TabletButton
+          variant="outline"
+          fullWidth
+          onClick={handleNewPatient}
+          leftIcon={<UserPlus />}
+        >
+          New Patient Registration
+        </TabletButton>
+        <TabletButton
+          variant="outline"
+          fullWidth
+          onClick={() => navigate('/patient/add-existing')}
+          leftIcon={<UserCheck />}
+        >
+          Add Existing Patient
+        </TabletButton>
+      </div>
 
       {/* Patient List */}
       <div className="space-y-4">

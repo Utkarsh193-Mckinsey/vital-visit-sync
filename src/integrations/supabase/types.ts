@@ -384,6 +384,7 @@ export type Database = {
           emergency_contact_relationship: string | null
           emirate: string | null
           emirates_id: string | null
+          file_number: string | null
           full_name: string
           gender: string | null
           id: string
@@ -418,6 +419,7 @@ export type Database = {
           emergency_contact_relationship?: string | null
           emirate?: string | null
           emirates_id?: string | null
+          file_number?: string | null
           full_name: string
           gender?: string | null
           id?: string
@@ -452,6 +454,7 @@ export type Database = {
           emergency_contact_relationship?: string | null
           emirate?: string | null
           emirates_id?: string | null
+          file_number?: string | null
           full_name?: string
           gender?: string | null
           id?: string
