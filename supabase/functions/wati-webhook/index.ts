@@ -231,6 +231,100 @@ function parseAppointmentMessage(msg: string): {
   return { name, phone, date: parsedDate, time: timeStr, service, doctor };
 }
 
+function parseTimeString(timeStr: string): string | null {
+  // Parse various time formats: "3:00 PM", "15:00", "3pm", etc.
+  const cleaned = timeStr.trim().replace(".", ":");
+  
+  // Try "3:00 PM" or "15:00"
+  const match = cleaned.match(/(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?/i);
+  if (match) {
+    let h = parseInt(match[1]);
+    const m = match[2];
+    const ampm = match[3]?.toUpperCase();
+    if (ampm === "PM" && h < 12) h += 12;
+    if (ampm === "AM" && h === 12) h = 0;
+    return `${h.toString().padStart(2, "0")}:${m}`;
+  }
+  
+  // Try "3pm" or "3 pm"
+  const simpleMatch = cleaned.match(/(\d{1,2})\s*(AM|PM|am|pm)/i);
+  if (simpleMatch) {
+    let h = parseInt(simpleMatch[1]);
+    const ampm = simpleMatch[2].toUpperCase();
+    if (ampm === "PM" && h < 12) h += 12;
+    if (ampm === "AM" && h === 12) h = 0;
+    return `${h.toString().padStart(2, "0")}:00`;
+  }
+  
+  return null;
+}
+
+function isValidClinicTime(time24: string): boolean {
+  // Clinic hours: 10:00 AM (10:00) to 10:00 PM (22:00)
+  // DB may store as HH:MM:SS so handle both formats
+  const match = time24.match(/^(\d{2}):(\d{2})(?::(\d{2}))?$/);
+  if (!match) return false;
+  const h = parseInt(match[1]);
+  return h >= 10 && h <= 22;
+}
+
+function isPastDate(dateStr: string): boolean {
+  // Check if date is before today (UAE timezone UTC+4)
+  const now = new Date();
+  const uaeOffset = 4 * 60; // UAE is UTC+4
+  const uaeNow = new Date(now.getTime() + (uaeOffset + now.getTimezoneOffset()) * 60000);
+  const todayStr = uaeNow.toISOString().split("T")[0];
+  return dateStr < todayStr;
+}
+
+function parseDateString(dateStr: string): string | null {
+  // Parse various date formats
+  const isoMatch = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) return isoMatch[0];
+
+  const slashMatch = dateStr.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (slashMatch) return `${slashMatch[3]}-${slashMatch[2].padStart(2, "0")}-${slashMatch[1].padStart(2, "0")}`;
+
+  const months: Record<string, string> = {
+    january: "01", february: "02", march: "03", april: "04",
+    may: "05", june: "06", july: "07", august: "08",
+    september: "09", october: "10", november: "11", december: "12",
+  };
+
+  const dmy = dateStr.match(/(\d{1,2})(?:st|nd|rd|th)?\s+(\w+)\s+(\d{4})/i);
+  if (dmy && months[dmy[2].toLowerCase()]) {
+    return `${dmy[3]}-${months[dmy[2].toLowerCase()]}-${dmy[1].padStart(2, "0")}`;
+  }
+
+  const mdy = dateStr.match(/(\w+)\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})/i);
+  if (mdy && months[mdy[1].toLowerCase()]) {
+    return `${mdy[3]}-${months[mdy[1].toLowerCase()]}-${mdy[2].padStart(2, "0")}`;
+  }
+
+  return null;
+}
+
+function getValidationIssues(apt: any): string[] {
+  const issues: string[] = [];
+  if (!isValidClinicTime(apt.appointment_time)) {
+    issues.push(`⏰ Invalid time "${apt.appointment_time}" — clinic hours are 10:00 AM to 10:00 PM. Please provide a valid time.`);
+  }
+  if (isPastDate(apt.appointment_date)) {
+    issues.push(`📅 The date ${apt.appointment_date} is a past date. Please provide today's date or a future date.`);
+  }
+  const phoneClean = (apt.phone || "").replace(/\s+/g, "").replace(/[^\d+]/g, "");
+  if (phoneClean.length < 7) {
+    issues.push(`📱 Phone number looks invalid. Please provide a valid phone number.`);
+  }
+  if (!apt.booked_by || apt.booked_by === "WhatsApp") {
+    issues.push("👤 Who booked this appointment?");
+  }
+  if (!apt.service || apt.service === "Consultation") {
+    issues.push("💉 What treatment/service is this for?");
+  }
+  return issues;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -256,18 +350,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if this is a staff reply to a missing-info question
-    // Look for the most recent appointment created from this sender's phone where booked_by is still 'WhatsApp'
-    // Staff replies are typically short (a name like "Dr Deepika" or "Rizza")
-    const isShortReply = messageText.trim().length < 50 && !messageText.includes("\n");
-    if (isShortReply) {
-      // Check if we recently asked this sender for missing info
+    // ============================================================
+    // STEP 1: Check if this is a staff reply to a missing/invalid info question
+    // ============================================================
+    {
       const { data: recentOutbound } = await supabase
         .from("whatsapp_messages")
-        .select("appointment_id, message_text")
+        .select("appointment_id, message_text, created_at")
         .eq("phone", senderPhone)
         .eq("direction", "outbound")
-        .ilike("message_text", "%Please reply with%")
+        .or("message_text.ilike.%❓ Please reply%,message_text.ilike.%⚠️ Issues found%")
         .order("created_at", { ascending: false })
         .limit(1);
 
@@ -275,59 +367,139 @@ Deno.serve(async (req) => {
         const pendingAptId = recentOutbound[0].appointment_id;
         const outboundMsg = recentOutbound[0].message_text || "";
 
-        // Check if the question was about "Who booked"
-        if (outboundMsg.includes("Who booked")) {
-          const bookedByValue = messageText.trim();
+        // Use AI to parse the staff reply against the pending questions
+        const pendingQuestions: string[] = [];
+        if (outboundMsg.includes("Who booked")) pendingQuestions.push("booked_by");
+        if (outboundMsg.includes("valid time")) pendingQuestions.push("time");
+        if (outboundMsg.includes("valid date") || outboundMsg.includes("past date")) pendingQuestions.push("date");
+        if (outboundMsg.includes("phone number")) pendingQuestions.push("phone");
+        if (outboundMsg.includes("treatment")) pendingQuestions.push("service");
 
-          // Update the appointment with the booked_by info
-          const { error: updateErr } = await supabase
-            .from("appointments")
-            .update({ booked_by: bookedByValue })
-            .eq("id", pendingAptId)
-            .eq("booked_by", "WhatsApp"); // Only update if still the default
+        if (pendingQuestions.length > 0) {
+          // Parse reply - could be multi-line answers or single value
+          const updates: Record<string, string> = {};
+          const replyLines = messageText.trim().split("\n").map(l => l.trim()).filter(Boolean);
 
-          if (!updateErr) {
-            console.log(`Updated booked_by to "${bookedByValue}" for appointment ${pendingAptId}`);
+          // Try to match answers to questions using AI for complex replies
+          if (pendingQuestions.length === 1 && replyLines.length === 1) {
+            // Simple single answer
+            const field = pendingQuestions[0];
+            const value = replyLines[0];
+            
+            if (field === "time") {
+              // Validate the new time
+              const timeVal = parseTimeString(value);
+              if (timeVal && isValidClinicTime(timeVal)) {
+                updates["appointment_time"] = timeVal;
+              }
+            } else if (field === "date") {
+              const dateVal = parseDateString(value);
+              if (dateVal && !isPastDate(dateVal)) {
+                updates["appointment_date"] = dateVal;
+              }
+            } else if (field === "phone") {
+              const cleanPhone = value.replace(/\s+/g, "").replace(/[^\d+]/g, "");
+              if (cleanPhone.length >= 7) {
+                updates["phone"] = cleanPhone;
+              }
+            } else if (field === "service") {
+              updates["service"] = value;
+            } else if (field === "booked_by") {
+              updates["booked_by"] = value;
+            }
+          } else {
+            // Multi-field reply - try to match by keyword or order
+            for (const line of replyLines) {
+              const lower = line.toLowerCase();
+              // Try to detect field from line content
+              const bookedMatch = line.match(/(?:booked\s*by|agent|by)\s*[:：-]\s*(.+)/i);
+              const timeMatch = line.match(/(?:time)\s*[:：-]\s*(.+)/i) || line.match(/^(\d{1,2}[:\.]\d{2}\s*(?:AM|PM|am|pm)?)$/i);
+              const dateMatch = line.match(/(?:date)\s*[:：-]\s*(.+)/i);
+              const phoneMatch = line.match(/(?:phone|number)\s*[:：-]\s*([\d\s+()-]+)/i);
+              const serviceMatch = line.match(/(?:service|treatment)\s*[:：-]\s*(.+)/i);
+              const instrMatch = line.match(/(?:instruction|note|special)\s*[:：-]\s*(.+)/i);
 
-            // Log the inbound message
-            await supabase.from("whatsapp_messages").insert({
-              phone: senderPhone,
-              patient_name: senderName || "Team",
-              direction: "inbound",
-              message_text: messageText,
-              appointment_id: pendingAptId,
-              ai_parsed_intent: "info_reply",
-            });
+              if (bookedMatch && pendingQuestions.includes("booked_by")) {
+                updates["booked_by"] = bookedMatch[1].trim();
+              } else if (timeMatch && pendingQuestions.includes("time")) {
+                const tv = parseTimeString(timeMatch[1]?.trim() || line.trim());
+                if (tv && isValidClinicTime(tv)) updates["appointment_time"] = tv;
+              } else if (dateMatch && pendingQuestions.includes("date")) {
+                const dv = parseDateString(dateMatch[1].trim());
+                if (dv && !isPastDate(dv)) updates["appointment_date"] = dv;
+              } else if (phoneMatch && pendingQuestions.includes("phone")) {
+                const cp = phoneMatch[1].trim().replace(/\s+/g, "");
+                if (cp.length >= 7) updates["phone"] = cp;
+              } else if (serviceMatch && pendingQuestions.includes("service")) {
+                updates["service"] = serviceMatch[1].trim();
+              } else if (instrMatch) {
+                updates["special_instructions"] = instrMatch[1].trim();
+              } else if (pendingQuestions.length === 1 && replyLines.length <= 2) {
+                // Single pending question, treat entire line as answer
+                const field = pendingQuestions[0];
+                if (field === "booked_by") updates["booked_by"] = line.trim();
+                else if (field === "service") updates["service"] = line.trim();
+              }
+            }
+          }
 
-            // Fetch the updated appointment for confirmation
-            const { data: updatedApt } = await supabase
+          if (Object.keys(updates).length > 0) {
+            const { error: updateErr } = await supabase
               .from("appointments")
-              .select("patient_name, appointment_date, appointment_time, service, booked_by")
-              .eq("id", pendingAptId)
-              .single();
+              .update(updates)
+              .eq("id", pendingAptId);
 
-            // Send confirmation back to staff
-            const confirmMsg = `✅ Updated! Appointment for ${updatedApt?.patient_name} on ${updatedApt?.appointment_date} at ${updatedApt?.appointment_time} is now booked by: ${bookedByValue}`;
-            await sendWatiMessage(senderPhone, confirmMsg);
+            if (!updateErr) {
+              const updatedFields = Object.entries(updates).map(([k, v]) => `${k}: ${v}`).join(", ");
+              console.log(`Updated appointment ${pendingAptId}: ${updatedFields}`);
 
-            await supabase.from("whatsapp_messages").insert({
-              phone: senderPhone,
-              patient_name: senderName || "Team",
-              direction: "outbound",
-              message_text: confirmMsg,
-              appointment_id: pendingAptId,
-            });
+              await supabase.from("whatsapp_messages").insert({
+                phone: senderPhone,
+                patient_name: senderName || "Team",
+                direction: "inbound",
+                message_text: messageText,
+                appointment_id: pendingAptId,
+                ai_parsed_intent: "info_reply",
+              });
 
-            return new Response(
-              JSON.stringify({ success: true, intent: "info_reply", appointment_id: pendingAptId, updated_field: "booked_by", value: bookedByValue }),
-              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
+              // Check if there are still pending issues
+              const { data: apt } = await supabase
+                .from("appointments")
+                .select("*")
+                .eq("id", pendingAptId)
+                .single();
+
+              const stillMissing = apt ? getValidationIssues(apt) : [];
+
+              let confirmMsg: string;
+              if (stillMissing.length > 0) {
+                confirmMsg = `✅ Updated: ${updatedFields}\n\n⚠️ Still need:\n${stillMissing.map((f, i) => `${i + 1}. ${f}`).join("\n")}\n\n❓ Please reply with the above.`;
+              } else {
+                confirmMsg = `✅ All good! Appointment for ${apt?.patient_name} on ${apt?.appointment_date} at ${apt?.appointment_time} is complete.\n• Service: ${apt?.service}\n• Booked by: ${apt?.booked_by}${apt?.special_instructions ? `\n• Notes: ${apt.special_instructions}` : ""}`;
+              }
+
+              await sendWatiMessage(senderPhone, confirmMsg);
+              await supabase.from("whatsapp_messages").insert({
+                phone: senderPhone,
+                patient_name: senderName || "Team",
+                direction: "outbound",
+                message_text: confirmMsg,
+                appointment_id: pendingAptId,
+              });
+
+              return new Response(
+                JSON.stringify({ success: true, intent: "info_reply", appointment_id: pendingAptId, updates, still_missing: stillMissing }),
+                { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+              );
+            }
           }
         }
       }
     }
 
-    // Check if this is a structured appointment booking message from the team
+    // ============================================================
+    // STEP 2: Check if this is a structured appointment booking message
+    // ============================================================
     const appointmentData = parseAppointmentMessage(messageText);
     if (appointmentData) {
       // Log the message
@@ -339,23 +511,48 @@ Deno.serve(async (req) => {
         ai_parsed_intent: "booking",
       });
 
-      // Extract booked_by from message - look for "Booked by" or "Agent" line
+      // Extract booked_by
       const bookedByMatch = messageText.match(/(?:booked\s*by|agent)\s*[:：]\s*(.+)/i);
       const bookedBy = bookedByMatch ? bookedByMatch[1].trim() : null;
 
-      // Create the appointment
+      // Extract special instructions
+      const instrMatch = messageText.match(/(?:special\s*instruction|instruction|note|remark)\s*[:：]\s*(.+)/i);
+      const specialInstructions = instrMatch ? instrMatch[1].trim() : null;
+
+      // Validate time (10 AM - 10 PM)
+      const timeValid = isValidClinicTime(appointmentData.time);
+      
+      // Validate date (today or future)
+      const dateValid = !isPastDate(appointmentData.date);
+
+      // Validate phone
+      const phoneClean = appointmentData.phone.replace(/\s+/g, "").replace(/[^\d+]/g, "");
+      const phoneValid = phoneClean.length >= 7;
+
+      // Build validation issues
+      const validationIssues: string[] = [];
+      if (!timeValid) validationIssues.push(`⏰ Invalid time "${appointmentData.time}" — clinic hours are 10:00 AM to 10:00 PM. Please provide a valid time.`);
+      if (!dateValid) validationIssues.push(`📅 The date ${appointmentData.date} is a past date. Please provide today's date or a future date.`);
+      if (!phoneValid) validationIssues.push(`📱 Phone number "${appointmentData.phone}" looks invalid. Please provide a valid phone number.`);
+      if (!bookedBy) validationIssues.push("👤 Who booked this appointment?");
+      if (!appointmentData.service || appointmentData.service === "Consultation") {
+        validationIssues.push("💉 What treatment/service is this for?");
+      }
+
+      // Create the appointment (even with issues, so we can update later)
       const { data: newApt, error: aptError } = await supabase
         .from("appointments")
         .insert({
           patient_name: appointmentData.name,
-          phone: appointmentData.phone,
-          appointment_date: appointmentData.date,
+          phone: phoneValid ? phoneClean : appointmentData.phone,
+          appointment_date: dateValid ? appointmentData.date : appointmentData.date,
           appointment_time: appointmentData.time,
           service: appointmentData.service,
           status: "upcoming",
           confirmation_status: "unconfirmed",
           booked_by: bookedBy || "WhatsApp",
           is_new_patient: false,
+          special_instructions: specialInstructions,
         })
         .select()
         .single();
@@ -370,20 +567,19 @@ Deno.serve(async (req) => {
 
       console.log("Auto-created appointment:", newApt?.id, appointmentData.name);
 
-      // Build a confirmation reply and ask for any missing fields
-      const missingFields: string[] = [];
-      if (!bookedBy) missingFields.push("Who booked this appointment?");
-
-      let replyMsg = `✅ Appointment created:\n• Name: ${appointmentData.name}\n• Date: ${appointmentData.date}\n• Time: ${appointmentData.time}\n• Service: ${appointmentData.service}\n• Phone: ${appointmentData.phone}`;
+      // Build confirmation reply
+      let replyMsg = `✅ Appointment created:\n• Name: ${appointmentData.name}\n• Date: ${appointmentData.date}${!dateValid ? " ⚠️" : ""}\n• Time: ${appointmentData.time}${!timeValid ? " ⚠️" : ""}\n• Service: ${appointmentData.service}\n• Phone: ${appointmentData.phone}${!phoneValid ? " ⚠️" : ""}`;
       
-      if (missingFields.length > 0) {
-        replyMsg += `\n\n❓ Please reply with:\n${missingFields.map((f, i) => `${i + 1}. ${f}`).join("\n")}`;
+      if (bookedBy) replyMsg += `\n• Booked by: ${bookedBy}`;
+      if (specialInstructions) replyMsg += `\n• Special Instructions: ${specialInstructions}`;
+
+      if (validationIssues.length > 0) {
+        replyMsg += `\n\n⚠️ Issues found:\n${validationIssues.map((f, i) => `${i + 1}. ${f}`).join("\n")}\n\n❓ Please reply with the corrections.`;
       }
 
       const watiResult = await sendWatiMessage(senderPhone, replyMsg);
       console.log("WATI reply result:", JSON.stringify(watiResult));
 
-      // Log outbound message
       await supabase.from("whatsapp_messages").insert({
         phone: senderPhone,
         patient_name: senderName || "Team",
@@ -393,7 +589,7 @@ Deno.serve(async (req) => {
       });
 
       return new Response(
-        JSON.stringify({ success: true, intent: "booking", appointment_id: newApt?.id, asked_booked_by: !bookedBy }),
+        JSON.stringify({ success: true, intent: "booking", appointment_id: newApt?.id, issues: validationIssues }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

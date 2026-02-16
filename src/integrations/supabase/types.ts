@@ -95,6 +95,7 @@ export type Database = {
           reminder_2hr_sent_at: string | null
           rescheduled_from: string | null
           service: string
+          special_instructions: string | null
           status: string
           updated_at: string | null
         }
@@ -119,6 +120,7 @@ export type Database = {
           reminder_2hr_sent_at?: string | null
           rescheduled_from?: string | null
           service: string
+          special_instructions?: string | null
           status?: string
           updated_at?: string | null
         }
@@ -143,6 +145,7 @@ export type Database = {
           reminder_2hr_sent_at?: string | null
           rescheduled_from?: string | null
           service?: string
+          special_instructions?: string | null
           status?: string
           updated_at?: string | null
         }
