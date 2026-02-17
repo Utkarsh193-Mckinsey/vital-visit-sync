@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { TabletInput } from '@/components/ui/tablet-input';
@@ -26,10 +27,11 @@ interface ConversationThread {
 }
 
 export default function WhatsAppChats() {
+  const [searchParams] = useSearchParams();
   const [threads, setThreads] = useState<ConversationThread[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
+  const [selectedPhone, setSelectedPhone] = useState<string | null>(searchParams.get('phone'));
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const fetchChats = async () => {
