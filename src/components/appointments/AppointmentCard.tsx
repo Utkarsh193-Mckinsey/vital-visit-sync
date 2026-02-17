@@ -176,7 +176,7 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
         <div className="flex items-center gap-1 min-w-[90px]">
           <Clock className="h-3.5 w-3.5 text-primary flex-shrink-0" />
           <div>
-            <span className="font-bold text-foreground text-xs">{formatTime(apt.appointment_time)}</span>
+            <span className="text-foreground text-xs">{formatTime(apt.appointment_time)}</span>
             <span className="text-[11px] text-muted-foreground ml-1">{apt.appointment_date}</span>
           </div>
         </div>
@@ -188,7 +188,7 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
         <div className="flex items-center gap-1.5 min-w-[140px]">
           <User className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
           <div className="min-w-0">
-            <span className="font-semibold text-foreground text-xs truncate block">{apt.patient_name}</span>
+            <span className="text-foreground text-xs truncate block">{apt.patient_name}</span>
             <span className="text-[11px] text-muted-foreground flex items-center gap-1">
               <Phone className="h-2.5 w-2.5" />{apt.phone}
               <WhatsAppLink phone={apt.phone} iconSize="h-3 w-3" />
@@ -203,7 +203,7 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
         </div>
 
         {/* Service */}
-        <span className="text-xs font-medium text-foreground min-w-[90px]">{apt.service}</span>
+        <span className="text-xs text-foreground min-w-[90px]">{apt.service}</span>
 
         {/* Booked by */}
         {apt.booked_by && (
