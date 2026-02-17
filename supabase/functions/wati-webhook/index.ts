@@ -475,8 +475,23 @@ Deno.serve(async (req) => {
               // Extract booked_by and special instructions from original
               const staffNames = await getBookingStaffNames(supabase);
               const bookedByMatch = originalBooking[0].message_text.match(/(?:booked\s*by|agent)\s*[:：]\s*(.+)/i);
-              const rawBookedBy = bookedByMatch ? bookedByMatch[1].trim() : null;
-              const bookedBy = rawBookedBy ? matchStaffName(rawBookedBy, staffNames) : null;
+              let rawBookedBy = bookedByMatch ? bookedByMatch[1].trim() : null;
+              let bookedBy = rawBookedBy ? matchStaffName(rawBookedBy, staffNames) : null;
+
+              // If no explicit "Booked by:" found, scan remaining lines for a staff name
+              if (!bookedBy) {
+                const msgLines = originalBooking[0].message_text.split("\n").map((l: string) => l.trim()).filter(Boolean);
+                for (const line of msgLines) {
+                  if (/^(name|phone|date|time|service|booked\s*by|agent|appointment|special|instruction|note|remark)\s*[:：]/i.test(line)) continue;
+                  if (/^[•\-]\s*(time|service|date|phone|name)/i.test(line)) continue;
+                  const matched = matchStaffName(line, staffNames);
+                  if (matched) {
+                    bookedBy = matched;
+                    rawBookedBy = line;
+                    break;
+                  }
+                }
+              }
               const instrMatch = originalBooking[0].message_text.match(/(?:special\s*instruction|instruction|note|remark)\s*[:：]\s*(.+)/i);
               const specialInstructions = instrMatch ? instrMatch[1].trim() : null;
               const phoneClean = origData.phone.replace(/\s+/g, "").replace(/[^\d+]/g, "");
@@ -798,8 +813,25 @@ Deno.serve(async (req) => {
 
       // Extract booked_by and validate against staff
       const bookedByMatch = messageText.match(/(?:booked\s*by|agent)\s*[:：]\s*(.+)/i);
-      const rawBookedBy = bookedByMatch ? bookedByMatch[1].trim() : null;
-      const bookedBy = rawBookedBy ? matchStaffName(rawBookedBy, staffNames) : null;
+      let rawBookedBy = bookedByMatch ? bookedByMatch[1].trim() : null;
+      let bookedBy = rawBookedBy ? matchStaffName(rawBookedBy, staffNames) : null;
+
+      // If no explicit "Booked by:" found, scan remaining lines for a staff name
+      if (!bookedBy) {
+        const msgLines = messageText.split("\n").map(l => l.trim()).filter(Boolean);
+        for (const line of msgLines) {
+          // Skip lines that are part of structured fields (Name:, Phone:, Date:, Time:, Service:)
+          if (/^(name|phone|date|time|service|booked\s*by|agent|appointment|special|instruction|note|remark)\s*[:：]/i.test(line)) continue;
+          // Skip lines starting with bullet points that are field values
+          if (/^[•\-]\s*(time|service|date|phone|name)/i.test(line)) continue;
+          const matched = matchStaffName(line, staffNames);
+          if (matched) {
+            bookedBy = matched;
+            rawBookedBy = line;
+            break;
+          }
+        }
+      }
 
       // Extract special instructions
       const instrMatch = messageText.match(/(?:special\s*instruction|instruction|note|remark)\s*[:：]\s*(.+)/i);
