@@ -5,7 +5,7 @@ import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletCard, TabletCardContent } from '@/components/ui/tablet-card';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, UserCheck, Clock, Stethoscope, CheckCircle2, PackageCheck } from 'lucide-react';
+import { Loader2, UserCheck, Clock, Stethoscope, CheckCircle2, PackageCheck, Plus } from 'lucide-react';
 import { ConsultationModal } from '@/components/patient/ConsultationModal';
 import { WhatsAppLink } from '@/components/ui/whatsapp-link';
 
@@ -63,7 +63,12 @@ export default function NewPatients() {
 
   return (
     <PageContainer maxWidth="full">
-      <PageHeader title="New Patient Registrations" />
+      <div className="flex items-center justify-between mb-4">
+        <PageHeader title="New Patient Registrations" />
+        <TabletButton onClick={() => navigate('/register')} leftIcon={<Plus />}>
+          Manual Entry
+        </TabletButton>
+      </div>
 
       {totalCount === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
