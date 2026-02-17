@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletCard, TabletCardContent, TabletCardHeader, TabletCardTitle } from '@/components/ui/tablet-card';
-import { Camera, RotateCcw, ChevronRight, Loader2, CreditCard, AlertCircle } from 'lucide-react';
+import { Camera, RotateCcw, ChevronRight, Loader2, CreditCard, AlertCircle, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -144,10 +144,11 @@ export default function EmiratesIdCapture({ onDataExtracted, onSkip, showSkip = 
           {showSkip && onSkip && (
             <TabletButton
               fullWidth
-              variant="ghost"
+              variant="outline"
               onClick={onSkip}
+              leftIcon={<Plus />}
             >
-              Skip — Enter Manually
+              Manual Entry
             </TabletButton>
           )}
         </div>
