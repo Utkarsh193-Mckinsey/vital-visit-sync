@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { frontImage, backImage } = await req.json();
+    const { frontImage, backImage, documentType, otherDocName } = await req.json();
 
     if (!frontImage) {
       return new Response(
@@ -26,16 +26,20 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY not configured");
     }
 
+    const docName = documentType === 'emirates_id' ? 'UAE Emirates ID card' 
+      : documentType === 'passport' ? 'passport' 
+      : (otherDocName || 'identity document');
+
     const content: any[] = [
       {
         type: "text",
-        text: `Extract all information from this UAE Emirates ID card. Return a JSON object with these fields:
+        text: `Extract all information from this ${docName}. Return a JSON object with these fields:
 - full_name: The person's full name in English
 - date_of_birth: Date of birth in YYYY-MM-DD format
-- emirates_id: The Emirates ID number (format: 784-XXXX-XXXXXXX-X)
+- emirates_id: The Emirates ID number if visible (format: 784-XXXX-XXXXXXX-X), or null
 - nationality: Nationality
 - gender: Gender (Male/Female)
-- expiry_date: Card expiry date in YYYY-MM-DD format
+- expiry_date: Card/document expiry date in YYYY-MM-DD format if visible
 
 If any field is not visible or readable, set it to null. Return ONLY the JSON object, no other text.`,
       },
@@ -74,7 +78,6 @@ If any field is not visible or readable, set it to null. Return ONLY the JSON ob
     const data = await response.json();
     const rawText = data.choices?.[0]?.message?.content || "";
 
-    // Extract JSON from the response
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       console.error("Could not parse JSON from AI response:", rawText);
