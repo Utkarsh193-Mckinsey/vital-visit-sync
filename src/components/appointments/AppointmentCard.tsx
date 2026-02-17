@@ -171,58 +171,58 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
     <>
     <TabletCard className="p-2.5">
       {/* Single row layout */}
-      <div className="flex items-center gap-2.5 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap">
         {/* Time & Date */}
-        <div className="flex items-center gap-1 min-w-[90px]">
-          <Clock className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+        <div className="flex items-center gap-1 min-w-[80px]">
+          <Clock className="h-3 w-3 text-primary flex-shrink-0" />
           <div>
-            <span className="text-foreground text-xs">{formatTime(apt.appointment_time)}</span>
-            <span className="text-[11px] text-muted-foreground ml-1">{apt.appointment_date}</span>
+            <span className="text-foreground text-[10px]">{formatTime(apt.appointment_time)}</span>
+            <span className="text-[9px] text-muted-foreground ml-1">{apt.appointment_date}</span>
           </div>
         </div>
 
         {/* Confirmation badge */}
-        <Badge className={`${confirm.className} text-[10px] flex-shrink-0`}>{confirm.label}</Badge>
+        <Badge className={`${confirm.className} text-[8px] px-1.5 py-0 flex-shrink-0`}>{confirm.label}</Badge>
 
         {/* Patient name + phone */}
-        <div className="flex items-center gap-1.5 min-w-[140px]">
-          <User className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+        <div className="flex items-center gap-1 min-w-[120px]">
+          <User className="h-3 w-3 text-muted-foreground flex-shrink-0" />
           <div className="min-w-0">
-            <span className="text-foreground text-xs truncate block">{apt.patient_name}</span>
-            <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-              <Phone className="h-2.5 w-2.5" />{apt.phone}
-              <WhatsAppLink phone={apt.phone} iconSize="h-3 w-3" />
+            <span className="text-foreground text-[10px] truncate block">{apt.patient_name}</span>
+            <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
+              <Phone className="h-2 w-2" />{apt.phone}
+              <WhatsAppLink phone={apt.phone} iconSize="h-2.5 w-2.5" />
             </span>
           </div>
-          {apt.is_new_patient && <Badge variant="secondary" className="text-[10px] h-4">NEW</Badge>}
+          {apt.is_new_patient && <Badge variant="secondary" className="text-[8px] h-3.5 px-1">NEW</Badge>}
           {apt.no_show_count > 0 && (
-            <Badge variant="destructive" className="text-[10px] h-4 flex items-center gap-0.5">
-              <AlertTriangle className="h-2.5 w-2.5" />{apt.no_show_count}x
+            <Badge variant="destructive" className="text-[8px] h-3.5 px-1 flex items-center gap-0.5">
+              <AlertTriangle className="h-2 w-2" />{apt.no_show_count}x
             </Badge>
           )}
         </div>
 
         {/* Service */}
-        <span className="text-xs text-foreground min-w-[90px]">{apt.service}</span>
+        <span className="text-[10px] text-foreground min-w-[70px]">{apt.service}</span>
 
         {/* Booked by */}
         {apt.booked_by && (
-          <span className="text-[11px] text-muted-foreground min-w-[70px]">
+          <span className="text-[9px] text-muted-foreground">
             <span className="text-muted-foreground/70">by</span> {apt.booked_by}
           </span>
         )}
 
         {/* Reminder status */}
         {showReminderStatus && (
-          <div className="flex items-center gap-1">
-            {apt.reminder_24hr_sent && <Badge variant="outline" className="text-[10px] h-5">📱 24hr</Badge>}
-            {apt.reminder_2hr_sent && <Badge variant="outline" className="text-[10px] h-5 border-destructive text-destructive">⚠️ 2hr</Badge>}
-            {!apt.reminder_24hr_sent && !apt.reminder_2hr_sent && <Badge variant="outline" className="text-[10px] h-5">No reminders</Badge>}
+          <div className="flex items-center gap-0.5">
+            {apt.reminder_24hr_sent && <Badge variant="outline" className="text-[8px] h-4 px-1">📱 24hr</Badge>}
+            {apt.reminder_2hr_sent && <Badge variant="outline" className="text-[8px] h-4 px-1 border-destructive text-destructive">⚠️ 2hr</Badge>}
+            {!apt.reminder_24hr_sent && !apt.reminder_2hr_sent && <Badge variant="outline" className="text-[8px] h-4 px-1">No reminders</Badge>}
           </div>
         )}
 
         {showSlotAvailable && (
-          <Badge className="bg-blue-100 text-blue-800 text-[10px] h-5">🔓 Slot</Badge>
+          <Badge className="bg-blue-100 text-blue-800 text-[8px] h-4 px-1">🔓 Slot</Badge>
         )}
 
         {/* Spacer */}
@@ -231,55 +231,55 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
         {/* Actions */}
         <div className="flex items-center gap-0.5 flex-shrink-0">
           <Select value={apt.status} onValueChange={v => onUpdateStatus(apt.id, v)}>
-            <SelectTrigger className={`h-5 w-[80px] text-[9px] rounded-full border-0 px-1.5 ${statusColors[apt.status] || ''}`}>
+            <SelectTrigger className={`h-5 w-[75px] text-[8px] rounded-full border-0 px-1.5 [&>svg]:h-2.5 [&>svg]:w-2.5 ${statusColors[apt.status] || ''}`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {STATUS_OPTIONS.map(s => (
-                <SelectItem key={s} value={s} className="capitalize text-[11px]">{s.replace(/_/g, ' ')}</SelectItem>
+                <SelectItem key={s} value={s} className="capitalize text-[10px] py-1">{s.replace(/_/g, ' ')}</SelectItem>
               ))}
             </SelectContent>
           </Select>
 
           <Select value={apt.confirmation_status} onValueChange={v => onUpdateConfirmation(apt.id, v)}>
-            <SelectTrigger className="h-5 w-[90px] text-[9px] rounded-full border px-1.5">
+            <SelectTrigger className="h-5 w-[95px] text-[8px] rounded-full border px-1.5 [&>svg]:h-2.5 [&>svg]:w-2.5">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {CONFIRMATION_OPTIONS.map(s => (
-                <SelectItem key={s} value={s} className="capitalize text-[11px]">{s.replace(/_/g, ' ')}</SelectItem>
+                <SelectItem key={s} value={s} className="capitalize text-[10px] py-1">{s.replace(/_/g, ' ')}</SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          <Button variant="outline" size="sm" className="text-[9px] h-5 px-1.5 rounded-md gap-0.5" onClick={handleCallPatient} disabled={calling}>
+          <Button variant="outline" size="sm" className="text-[8px] h-5 px-1.5 rounded gap-0.5" onClick={handleCallPatient} disabled={calling}>
             {calling ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <><PhoneCall className="h-2.5 w-2.5" /> Call</>}
           </Button>
 
           {showReminderStatus && (
-            <Button variant="outline" size="sm" className="text-[9px] h-5 px-1.5 rounded-md gap-0.5" onClick={() => onUpdateConfirmation(apt.id, 'confirmed_call')}>
+            <Button variant="outline" size="sm" className="text-[8px] h-5 px-1.5 rounded gap-0.5" onClick={() => onUpdateConfirmation(apt.id, 'confirmed_call')}>
               <CheckCircle className="h-2.5 w-2.5" /> Confirm
             </Button>
           )}
 
           {apt.status === 'upcoming' && (
-            <Button variant="outline" size="sm" className="text-[9px] h-5 px-1.5 rounded-md gap-0.5" onClick={handleRegisterNewPatient}>
+            <Button variant="outline" size="sm" className="text-[8px] h-5 px-1.5 rounded gap-0.5" onClick={handleRegisterNewPatient}>
               <UserPlus className="h-2.5 w-2.5" /> Register
             </Button>
           )}
 
           {apt.status !== 'no_show' && apt.status !== 'rescheduled' && apt.status !== 'completed' && apt.status !== 'cancelled' && (
             <>
-              <Button variant="outline" size="sm" className="text-[9px] h-5 px-1.5 rounded-md gap-0.5 text-orange-600 border-orange-300 hover:bg-orange-50" onClick={() => setShowRescheduleModal(true)}>
+              <Button variant="outline" size="sm" className="text-[8px] h-5 px-1.5 rounded gap-0.5 text-orange-600 border-orange-300 hover:bg-orange-50" onClick={() => setShowRescheduleModal(true)}>
                 <CalendarClock className="h-2.5 w-2.5" /> Reschedule
               </Button>
-              <Button variant="outline" size="sm" className="text-[9px] h-5 px-1.5 rounded-md gap-0.5 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={handleNoShow}>
+              <Button variant="outline" size="sm" className="text-[8px] h-5 px-1.5 rounded gap-0.5 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={handleNoShow}>
                 <XCircle className="h-2.5 w-2.5" /> No Show
               </Button>
             </>
           )}
 
-          <Button variant="ghost" size="icon" className="h-5 w-5 rounded-md" onClick={() => onEdit(apt)}>
+          <Button variant="ghost" size="icon" className="h-5 w-5 rounded" onClick={() => onEdit(apt)}>
             <Edit className="h-2.5 w-2.5" />
           </Button>
         </div>
