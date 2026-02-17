@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import SignatureCanvas from 'react-signature-canvas';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -56,8 +56,24 @@ export default function PatientRegistration() {
   const [isDownloading, setIsDownloading] = useState(false);
   const signatureRef = useRef<SignatureCanvas>(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { staff } = useAuth();
+
+  // Pre-fill from appointment URL params
+  useEffect(() => {
+    const name = searchParams.get('name');
+    const phone = searchParams.get('phone');
+    if (name || phone) {
+      setFormData(prev => ({
+        ...prev,
+        full_name: name || prev.full_name,
+        phone_number: phone || prev.phone_number,
+      }));
+      // Skip to form directly if we have pre-filled data
+      setStep('id_capture');
+    }
+  }, [searchParams]);
 
   const handleLanguageSelect = (lang: 'en' | 'ar') => {
     setLanguage(lang);
