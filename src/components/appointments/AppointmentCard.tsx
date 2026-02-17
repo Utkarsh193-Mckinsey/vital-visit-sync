@@ -188,9 +188,9 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
             <span className="text-foreground text-[10px] truncate block">{apt.patient_name}</span>
             <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
               <Phone className="h-2 w-2" />{apt.phone}
-              <WhatsAppLink phone={apt.phone} iconSize="h-2.5 w-2.5" />
             </span>
           </div>
+          <WhatsAppLink phone={apt.phone} iconSize="h-3.5 w-3.5" />
           {apt.is_new_patient && <Badge variant="secondary" className="text-[8px] h-3.5 px-1">NEW</Badge>}
           {apt.no_show_count > 0 && (
             <Badge variant="destructive" className="text-[8px] h-3.5 px-1 flex items-center gap-0.5">
