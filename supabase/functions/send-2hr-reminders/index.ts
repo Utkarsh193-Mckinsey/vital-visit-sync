@@ -26,8 +26,11 @@ Deno.serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   try {
-    const now = new Date();
-    const todayStr = now.toISOString().split("T")[0];
+    // Clinic is in UAE (UTC+4)
+    const UAE_OFFSET_MS = 4 * 60 * 60 * 1000;
+    const nowUTC = new Date();
+    const nowUAE = new Date(nowUTC.getTime() + UAE_OFFSET_MS);
+    const todayStr = nowUAE.toISOString().split("T")[0];
 
     const { data: appointments, error: fetchErr } = await supabase
       .from("appointments")
@@ -44,9 +47,12 @@ Deno.serve(async (req) => {
     for (const appt of (appointments || [])) {
       try {
         const [hours, minutes] = appt.appointment_time.split(":").map(Number);
-        const apptTime = new Date(now);
-        apptTime.setHours(hours, minutes, 0, 0);
-        const diffMs = apptTime.getTime() - now.getTime();
+        // Build appointment time in UAE local, then convert to UTC for comparison
+        const apptDateParts = appt.appointment_date.split("-").map(Number);
+        const apptUAE = new Date(Date.UTC(apptDateParts[0], apptDateParts[1] - 1, apptDateParts[2], hours, minutes, 0));
+        // Convert UAE local to UTC by subtracting 4 hours
+        const apptUTC = new Date(apptUAE.getTime() - UAE_OFFSET_MS);
+        const diffMs = apptUTC.getTime() - nowUTC.getTime();
         const diffHours = diffMs / (1000 * 60 * 60);
 
         if (diffHours < 0 || diffHours > 2.5) continue;
