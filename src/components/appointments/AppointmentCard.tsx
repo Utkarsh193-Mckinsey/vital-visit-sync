@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Appointment, AppointmentCommunication } from '@/pages/Appointments';
 import { TabletCard } from '@/components/ui/tablet-card';
 import { Badge } from '@/components/ui/badge';
-import { TabletButton } from '@/components/ui/tablet-button';
+import { Button } from '@/components/ui/button';
 import { Phone, Clock, User, Edit, AlertTriangle, MessageSquare, PhoneCall, ChevronDown, ChevronUp, CheckCircle, Send, Loader2, UserPlus, CalendarClock, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { WhatsAppLink } from '@/components/ui/whatsapp-link';
@@ -231,7 +231,7 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
         {/* Actions */}
         <div className="flex items-center gap-1 flex-shrink-0">
           <Select value={apt.status} onValueChange={v => onUpdateStatus(apt.id, v)}>
-            <SelectTrigger className={`h-7 w-[110px] text-[11px] font-medium rounded-full border-0 ${statusColors[apt.status] || ''}`}>
+            <SelectTrigger className={`h-6 w-[100px] text-[10px] font-medium rounded-full border-0 ${statusColors[apt.status] || ''}`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -242,7 +242,7 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
           </Select>
 
           <Select value={apt.confirmation_status} onValueChange={v => onUpdateConfirmation(apt.id, v)}>
-            <SelectTrigger className="h-7 w-[125px] text-[11px] font-medium rounded-full border">
+            <SelectTrigger className="h-6 w-[115px] text-[10px] font-medium rounded-full border">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -252,36 +252,36 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
             </SelectContent>
           </Select>
 
-          <TabletButton variant="outline" size="sm" className="text-[11px] h-7 px-2" onClick={handleCallPatient} disabled={calling}>
+          <Button variant="outline" size="sm" className="text-[11px] h-6 px-2 rounded-md" onClick={handleCallPatient} disabled={calling}>
             {calling ? <Loader2 className="h-3 w-3 animate-spin" /> : <><PhoneCall className="h-3 w-3 mr-0.5" /> Call</>}
-          </TabletButton>
+          </Button>
 
           {showReminderStatus && (
-            <TabletButton variant="outline" size="sm" className="text-[11px] h-7 px-2" onClick={() => onUpdateConfirmation(apt.id, 'confirmed_call')}>
+            <Button variant="outline" size="sm" className="text-[11px] h-6 px-2 rounded-md" onClick={() => onUpdateConfirmation(apt.id, 'confirmed_call')}>
               <CheckCircle className="h-3 w-3 mr-0.5" /> Confirm
-            </TabletButton>
+            </Button>
           )}
 
           {apt.status === 'upcoming' && (
-            <TabletButton variant="outline" size="sm" className="text-[11px] h-7 px-2" onClick={handleRegisterNewPatient}>
+            <Button variant="outline" size="sm" className="text-[11px] h-6 px-2 rounded-md" onClick={handleRegisterNewPatient}>
               <UserPlus className="h-3 w-3 mr-0.5" /> Register
-            </TabletButton>
+            </Button>
           )}
 
           {apt.status !== 'no_show' && apt.status !== 'rescheduled' && apt.status !== 'completed' && apt.status !== 'cancelled' && (
             <>
-              <TabletButton variant="outline" size="sm" className="text-[11px] h-7 px-2 text-orange-600 border-orange-300 hover:bg-orange-50" onClick={() => setShowRescheduleModal(true)}>
+              <Button variant="outline" size="sm" className="text-[11px] h-6 px-2 rounded-md text-orange-600 border-orange-300 hover:bg-orange-50" onClick={() => setShowRescheduleModal(true)}>
                 <CalendarClock className="h-3 w-3 mr-0.5" /> Reschedule
-              </TabletButton>
-              <TabletButton variant="outline" size="sm" className="text-[11px] h-7 px-2 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={handleNoShow}>
+              </Button>
+              <Button variant="outline" size="sm" className="text-[11px] h-6 px-2 rounded-md text-destructive border-destructive/30 hover:bg-destructive/10" onClick={handleNoShow}>
                 <XCircle className="h-3 w-3 mr-0.5" /> No Show
-              </TabletButton>
+              </Button>
             </>
           )}
 
-          <TabletButton variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(apt)}>
-            <Edit className="h-3.5 w-3.5" />
-          </TabletButton>
+          <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md" onClick={() => onEdit(apt)}>
+            <Edit className="h-3 w-3" />
+          </Button>
         </div>
       </div>
 
@@ -357,10 +357,10 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
             <Textarea value={rescheduleReason} onChange={e => setRescheduleReason(e.target.value)} placeholder="e.g. Patient requested later date" rows={3} />
           </div>
           <div className="flex gap-3">
-            <TabletButton variant="outline" fullWidth onClick={() => setShowRescheduleModal(false)}>Cancel</TabletButton>
-            <TabletButton fullWidth onClick={handleReschedule} disabled={rescheduling}>
+            <Button variant="outline" className="w-full" onClick={() => setShowRescheduleModal(false)}>Cancel</Button>
+            <Button className="w-full" onClick={handleReschedule} disabled={rescheduling}>
               {rescheduling ? 'Saving...' : 'Confirm Reschedule'}
-            </TabletButton>
+            </Button>
           </div>
         </div>
       </DialogContent>
