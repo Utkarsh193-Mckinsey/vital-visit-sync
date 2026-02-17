@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { TabletButton } from '@/components/ui/tablet-button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, FileText, Package, Users } from 'lucide-react';
+import { ArrowLeft, FileText, Package, Users, Download } from 'lucide-react';
+import { generateUserManualPDF } from '@/utils/generateUserManualPDF';
 import ConsentTemplatesManager from '@/components/admin/ConsentTemplatesManager';
 import ConsumablesManager from '@/components/admin/ConsumablesManager';
 import StaffManager from '@/components/admin/StaffManager';
@@ -27,6 +28,13 @@ export default function AdminSettings() {
           </TabletButton>
         }
       />
+
+      <div className="flex justify-end mb-2">
+        <TabletButton variant="outline" size="sm" onClick={generateUserManualPDF} className="gap-2">
+          <Download className="h-4 w-4" />
+          Download User Manual (PDF)
+        </TabletButton>
+      </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3 h-14">
