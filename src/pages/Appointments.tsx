@@ -187,52 +187,52 @@ export default function Appointments() {
         }
       />
 
-      <div className="space-y-5">
+      <div className="space-y-3">
         {/* Tab filters */}
         <Tabs value={activeTab} onValueChange={v => setActiveTab(v as TabFilter)}>
-          <TabsList className="h-11">
-            <TabsTrigger value="today" className="text-sm px-4">Today</TabsTrigger>
-            <TabsTrigger value="tomorrow" className="text-sm px-4">Tomorrow</TabsTrigger>
-            <TabsTrigger value="this_week" className="text-sm px-4">This Week</TabsTrigger>
-            <TabsTrigger value="upcoming" className="text-sm px-4">All Upcoming</TabsTrigger>
-            <TabsTrigger value="past" className="text-sm px-4">Past</TabsTrigger>
+          <TabsList className="h-9">
+            <TabsTrigger value="today" className="text-xs px-3">Today</TabsTrigger>
+            <TabsTrigger value="tomorrow" className="text-xs px-3">Tomorrow</TabsTrigger>
+            <TabsTrigger value="this_week" className="text-xs px-3">This Week</TabsTrigger>
+            <TabsTrigger value="upcoming" className="text-xs px-3">All Upcoming</TabsTrigger>
+            <TabsTrigger value="past" className="text-xs px-3">Past</TabsTrigger>
           </TabsList>
         </Tabs>
 
         {/* Summary bar */}
-        <TabletCard className="p-4">
-          <div className="flex items-center gap-6 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-foreground">{total}</span>
-              <span className="text-sm text-muted-foreground">Total</span>
+        <TabletCard className="p-3">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xl font-bold text-foreground">{total}</span>
+              <span className="text-xs text-muted-foreground">Total</span>
             </div>
-            <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 text-sm py-1 px-3">
+            <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 text-xs py-0.5 px-2">
               ✅ {confirmedCount} Confirmed
             </Badge>
-            <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 text-sm py-1 px-3">
+            <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 text-xs py-0.5 px-2">
               ⏳ {unconfirmedCount} Unconfirmed
             </Badge>
-            <Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 text-sm py-1 px-3">
+            <Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 text-xs py-0.5 px-2">
               ❌ {cancelledCount} Cancelled
             </Badge>
-            <div className="flex-1 min-w-[150px] max-w-[300px] ml-auto">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs text-muted-foreground">Confirmation</span>
-                <span className="text-xs font-semibold text-foreground">{confirmPct}%</span>
+            <div className="flex-1 min-w-[120px] max-w-[250px] ml-auto">
+              <div className="flex items-center justify-between mb-0.5">
+                <span className="text-[11px] text-muted-foreground">Confirmation</span>
+                <span className="text-[11px] font-semibold text-foreground">{confirmPct}%</span>
               </div>
-              <Progress value={confirmPct} className="h-2.5 [&>div]:bg-green-500" />
+              <Progress value={confirmPct} className="h-2 [&>div]:bg-green-500" />
             </div>
           </div>
         </TabletCard>
 
         {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <TabletInput
             placeholder="Search by name, phone, or service..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="pl-11"
+            className="pl-10 h-9 text-sm"
           />
         </div>
 
@@ -247,7 +247,7 @@ export default function Appointments() {
             <p className="text-lg font-medium text-muted-foreground">No appointments found</p>
           </TabletCard>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* CONFIRMED section */}
             <CollapsibleSection
               title="Confirmed"
@@ -319,18 +319,18 @@ function CollapsibleSection({ title, count, borderColor, badgeColor, open, onTog
   return (
     <Collapsible open={open} onOpenChange={onToggle}>
       <CollapsibleTrigger asChild>
-        <TabletCard className={`p-3 cursor-pointer border-l-4 ${borderColor} hover:bg-muted/50 transition-colors`}>
+        <TabletCard className={`p-2.5 cursor-pointer border-l-4 ${borderColor} hover:bg-muted/50 transition-colors`}>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="font-semibold text-foreground">{title}</span>
-              <Badge className={`${badgeColor} text-xs`}>{count}</Badge>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-foreground text-sm">{title}</span>
+              <Badge className={`${badgeColor} text-[11px]`}>{count}</Badge>
             </div>
-            {open ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
+            {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
           </div>
         </TabletCard>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className={`ml-2 border-l-4 ${borderColor} pl-3 space-y-2 mt-2`}>
+        <div className={`ml-2 border-l-4 ${borderColor} pl-2.5 space-y-1.5 mt-1.5`}>
           {children}
         </div>
       </CollapsibleContent>
