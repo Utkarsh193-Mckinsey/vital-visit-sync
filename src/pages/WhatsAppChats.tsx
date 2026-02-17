@@ -26,12 +26,22 @@ interface ConversationThread {
   messages: WaMsg[];
 }
 
+// Normalize UAE phone: strip +, spaces, dashes, leading 00971/971/0 → bare digits
+const normalizePhone = (phone: string) => {
+  let p = phone.replace(/[\s\-\(\)\+]/g, '');
+  if (p.startsWith('00971')) p = p.slice(5);
+  else if (p.startsWith('971') && p.length > 9) p = p.slice(3);
+  if (p.startsWith('0')) p = p.slice(1);
+  return p;
+};
+
 export default function WhatsAppChats() {
   const [searchParams] = useSearchParams();
   const [threads, setThreads] = useState<ConversationThread[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [selectedPhone, setSelectedPhone] = useState<string | null>(searchParams.get('phone'));
+  const phoneParam = searchParams.get('phone');
+  const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const fetchChats = async () => {
@@ -83,6 +93,20 @@ export default function WhatsAppChats() {
     return () => { channel.unsubscribe(); };
   }, []);
 
+  // Auto-select thread matching phone param (with normalization)
+  useEffect(() => {
+    if (phoneParam && threads.length > 0 && !selectedPhone) {
+      const normParam = normalizePhone(phoneParam);
+      const match = threads.find(t => normalizePhone(t.phone) === normParam);
+      if (match) {
+        setSelectedPhone(match.phone);
+      } else {
+        // No matching thread — set the raw param so we show an empty chat
+        setSelectedPhone(phoneParam);
+      }
+    }
+  }, [phoneParam, threads, selectedPhone]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [selectedPhone]);
@@ -95,7 +119,7 @@ export default function WhatsAppChats() {
 
   return (
     <PageContainer maxWidth="full">
-      {selectedPhone && selectedThread ? (
+      {selectedPhone && (selectedThread || phoneParam) ? (
         // Full-screen chat view (like WhatsApp)
         <div className="flex flex-col h-[calc(100vh-120px)]">
           {/* Chat header with back button */}
@@ -110,15 +134,20 @@ export default function WhatsAppChats() {
               <User className="h-5 w-5 text-green-700" />
             </div>
             <div>
-              <p className="font-medium text-foreground">{selectedThread.patient_name}</p>
-              <p className="text-xs text-muted-foreground">{selectedThread.phone}</p>
+              <p className="font-medium text-foreground">{selectedThread?.patient_name || 'Patient'}</p>
+              <p className="text-xs text-muted-foreground">{selectedThread?.phone || selectedPhone}</p>
             </div>
           </div>
 
           {/* Messages */}
           <ScrollArea className="flex-1 p-4 bg-background">
             <div className="space-y-3 max-w-2xl mx-auto">
-              {selectedThread.messages.map(msg => {
+              {!selectedThread ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <MessageSquare className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">No WhatsApp conversation yet for this number</p>
+                </div>
+              ) : selectedThread.messages.map(msg => {
                 const isInbound = msg.direction === 'inbound';
                 return (
                   <div key={msg.id} className={`flex ${isInbound ? 'justify-start' : 'justify-end'}`}>
