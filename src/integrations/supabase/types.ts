@@ -375,6 +375,9 @@ export type Database = {
       patients: {
         Row: {
           address: string | null
+          consultation_date: string | null
+          consultation_done_by: string | null
+          consultation_status: string | null
           country_of_residence: string | null
           date_of_birth: string
           doctor_reviewed: boolean | null
@@ -407,9 +410,13 @@ export type Database = {
           registration_date: string
           registration_signature_url: string | null
           status: Database["public"]["Enums"]["patient_status"]
+          treatment_interests: string[] | null
         }
         Insert: {
           address?: string | null
+          consultation_date?: string | null
+          consultation_done_by?: string | null
+          consultation_status?: string | null
           country_of_residence?: string | null
           date_of_birth: string
           doctor_reviewed?: boolean | null
@@ -442,9 +449,13 @@ export type Database = {
           registration_date?: string
           registration_signature_url?: string | null
           status?: Database["public"]["Enums"]["patient_status"]
+          treatment_interests?: string[] | null
         }
         Update: {
           address?: string | null
+          consultation_date?: string | null
+          consultation_done_by?: string | null
+          consultation_status?: string | null
           country_of_residence?: string | null
           date_of_birth?: string
           doctor_reviewed?: boolean | null
@@ -477,8 +488,17 @@ export type Database = {
           registration_date?: string
           registration_signature_url?: string | null
           status?: Database["public"]["Enums"]["patient_status"]
+          treatment_interests?: string[] | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "patients_consultation_done_by_fkey"
+            columns: ["consultation_done_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pending_requests: {
         Row: {

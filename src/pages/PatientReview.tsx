@@ -105,6 +105,7 @@ export default function PatientReview() {
         doctor_reviewed: true,
         doctor_reviewed_by: selectedDoctorId,
         doctor_reviewed_date: new Date().toISOString(),
+        consultation_status: 'awaiting_consultation',
       } as any).eq('id', patientId!);
 
       if (updateError) throw updateError;

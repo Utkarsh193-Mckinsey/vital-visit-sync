@@ -14,7 +14,7 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
     : format(today, 'yyyy-MM-dd');
 
   // Fetch all data in parallel
-  const [patientsRes, visitsRes, consumablesRes, packagesRes, paymentsRes] = await Promise.all([
+  const [patientsRes, visitsRes, consumablesRes, packagesRes, paymentsRes, consultationsRes] = await Promise.all([
     // New registered patients in date range
     supabase
       .from('patients')
@@ -87,6 +87,18 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
       `)
       .gte('payment_date', today.toISOString())
       .lt('payment_date', tomorrow.toISOString()),
+
+    // Consultations in date range
+    supabase
+      .from('patients')
+      .select(`
+        id, full_name, phone_number, consultation_status, consultation_date, treatment_interests,
+        consultation_doctor:staff!patients_consultation_done_by_fkey (full_name)
+      `)
+      .not('consultation_status', 'is', null)
+      .gte('consultation_date', today.toISOString())
+      .lt('consultation_date', tomorrow.toISOString())
+      .order('consultation_date', { ascending: false }),
   ]);
 
   if (patientsRes.error) throw patientsRes.error;
@@ -94,6 +106,7 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
   if (consumablesRes.error) throw consumablesRes.error;
   if (packagesRes.error) throw packagesRes.error;
   if (paymentsRes.error) throw paymentsRes.error;
+  if (consultationsRes.error) throw consultationsRes.error;
 
   // ===== Sheet 1: New Registered Patients =====
   const patientsData = (patientsRes.data || []).map((p: any) => ({
@@ -314,6 +327,39 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
     });
   }
 
+  // ===== Sheet 5: Consultations =====
+  // For each consulted patient, check if they have any packages (converted)
+  const consultedPatientIds = (consultationsRes.data || []).map((c: any) => c.id);
+  let packagesByPatientId: Record<string, any[]> = {};
+  if (consultedPatientIds.length > 0) {
+    const { data: pkgsForConsulted } = await supabase
+      .from('packages')
+      .select('patient_id, total_amount, treatment:treatments(treatment_name)')
+      .in('patient_id', consultedPatientIds);
+    (pkgsForConsulted || []).forEach((pkg: any) => {
+      if (!packagesByPatientId[pkg.patient_id]) packagesByPatientId[pkg.patient_id] = [];
+      packagesByPatientId[pkg.patient_id].push(pkg);
+    });
+  }
+
+  const consultationsData = (consultationsRes.data || []).map((c: any) => {
+    const pkgs = packagesByPatientId[c.id] || [];
+    const isConverted = pkgs.length > 0;
+    const totalAmount = pkgs.reduce((sum: number, p: any) => sum + (p.total_amount || 0), 0);
+    const treatments = pkgs.map((p: any) => p.treatment?.treatment_name).filter(Boolean).join(', ');
+
+    return {
+      'Date': c.consultation_date ? format(new Date(c.consultation_date), 'dd/MM/yyyy') : '',
+      'Patient': c.full_name,
+      'Phone': c.phone_number,
+      'Consultation By': (c as any).consultation_doctor?.full_name || '-',
+      'Treatment Interest': (c.treatment_interests || []).join(', '),
+      'Status': isConverted ? 'Converted' : 'Consultation Only',
+      'Package Taken': isConverted ? treatments : '-',
+      'Amount': isConverted ? totalAmount : '-',
+    };
+  });
+
   // Create workbook
   const wb = XLSX.utils.book_new();
 
@@ -329,8 +375,11 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
   const ws4 = XLSX.utils.json_to_sheet(salesData.length > 0 ? salesData : [{ 'Info': 'No packages sold' }]);
   XLSX.utils.book_append_sheet(wb, ws4, 'Daily Sales');
 
+  const ws5 = XLSX.utils.json_to_sheet(consultationsData.length > 0 ? consultationsData : [{ 'Info': 'No consultations recorded' }]);
+  XLSX.utils.book_append_sheet(wb, ws5, 'Consultations');
+
   // Auto-width columns for each sheet
-  [ws1, ws2, ws3, ws4].forEach(ws => {
+  [ws1, ws2, ws3, ws4, ws5].forEach(ws => {
     const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
     const colWidths: number[] = [];
     for (let C = range.s.c; C <= range.e.c; C++) {
