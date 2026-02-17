@@ -184,8 +184,8 @@ export async function generateUserManualPDF() {
   const tocItems = [
     { num: '1', title: 'Getting Started', sub: ['Logging In', 'Navigation Overview'] },
     { num: '2', title: 'Admin Guide (Full Access)', sub: ['Staff Management', 'Treatment Configuration', 'Consent Forms', 'Stock Management', 'Analytics & Reports', 'WhatsApp Communication'] },
-    { num: '3', title: 'SDR / Reception Guide', sub: ['Booking via WhatsApp', 'Patient Check-In', 'New Patient Registration', 'Existing Patient Migration', 'Consent Signing', 'Vitals Entry', 'Book Next Appointment'] },
-    { num: '4', title: 'Doctor Guide', sub: ['Reviewing Registrations', 'Consultations', 'Treatment Administration'] },
+    { num: '3', title: 'SDR / Reception Guide', sub: ['Booking via WhatsApp', 'Patient Check-In', 'New Patient Registration', 'Existing Patient Migration', 'Consent Signing', 'Vitals Entry', 'Consultation', 'Book Next Appointment'] },
+    { num: '4', title: 'Doctor / Nurse Guide', sub: ['Reviewing Registrations', 'Consultations', 'Treatment Administration'] },
     { num: '5', title: 'Common Workflows & Reference', sub: ['Complete Patient Journey', 'Document Downloads', 'Role Access Matrix'] },
   ];
 
@@ -214,7 +214,7 @@ export async function generateUserManualPDF() {
   numberedItem('2.', 'Enter your email address and password');
   numberedItem('3.', 'You will land on the Dashboard -- your daily overview');
   spacer();
-  tipBox('Each staff member has a dedicated login. Contact Admin (Sarika) if you need credentials reset.');
+  tipBox('Each staff member has a dedicated login. Contact Admin if you need credentials reset.');
 
   spacer(4);
   subtitle('1.2 Navigation Overview');
@@ -423,8 +423,17 @@ export async function generateUserManualPDF() {
   numberedItem('3.', 'Submit > patient moves to "Waiting for Treatment"');
   spacer();
 
-  subtitle('3.7 Book Next Appointment');
-  body('Performed by: Admin');
+  subtitle('3.7 Conducting Consultations (SDR)');
+  body('SDR staff can also conduct consultations for patients awaiting consultation.');
+  numberedItem('1.', 'On New Patients page, find patients under "Awaiting Consultation"');
+  numberedItem('2.', 'Tap "Consult" on the patient card');
+  numberedItem('3.', 'Select your name in the modal');
+  numberedItem('4.', 'Multi-select Treatment Interests: Hair, Skin, Fat Loss, IV, etc.');
+  numberedItem('5.', 'Submit > status changes to "Consulted"');
+  spacer();
+
+  subtitle('3.8 Book Next Appointment');
+  body('Performed by: Admin or SDR');
   body('Navigate to: Book Next Appt (sidebar)');
   pageRef('Book Next Appointment', '/book-next');
   body('After a visit is completed and sessions remain:');
@@ -436,8 +445,10 @@ export async function generateUserManualPDF() {
 
   // ========== 4. DOCTOR GUIDE ==========
   addPage();
-  sectionTitle('4. Doctor Guide');
+  sectionTitle('4. Doctor / Nurse Guide');
 
+  body('Nurses have the same system access as Doctors -- all sections below apply to both roles.');
+  spacer();
   subtitle('4.1 Reviewing New Patient Registrations');
   body('Navigate to: New Patients page');
   pageRef('New Patient Registrations', '/new-patients');
@@ -522,7 +533,7 @@ export async function generateUserManualPDF() {
     { step: '8', label: 'Vitals Entry', detail: 'Nurse records weight, BP, heart rate, temp, etc.' },
     { step: '9', label: 'Treatment', detail: 'Doctor selects dose, nurse, records consumables' },
     { step: '10', label: 'Visit Completed', detail: 'Summary generated, stock auto-decremented' },
-    { step: '11', label: 'Book Next Appt', detail: 'If sessions remain (Admin)' },
+    { step: '11', label: 'Book Next Appt', detail: 'If sessions remain (Admin/SDR)' },
   ];
 
   journey.forEach(({ step, label, detail }) => {
@@ -575,13 +586,13 @@ export async function generateUserManualPDF() {
   const roleData = [
     ['Book Appointments', 'Yes', 'Yes', '--', '--'],
     ['Patient Registration', 'Yes', 'Yes', 'Yes', 'Yes'],
-    ['Doctor Review & Sign', 'Yes', '--', 'Yes', '--'],
-    ['Consultation', 'Yes', '--', 'Yes', '--'],
+    ['Doctor Review & Sign', 'Yes', '--', 'Yes', 'Yes'],
+    ['Consultation', 'Yes', 'Yes', 'Yes', 'Yes'],
     ['Vitals Entry', 'Yes', 'Yes', 'Yes', 'Yes'],
     ['Consent Signing', 'Yes', 'Yes', 'Yes', 'Yes'],
-    ['Treatment Admin', 'Yes', '--', 'Yes', '--'],
-    ['View Doctor Notes', 'Yes', '--', 'Yes', '--'],
-    ['Book Next Appt', 'Yes', '--', '--', '--'],
+    ['Treatment Admin', 'Yes', '--', 'Yes', 'Yes'],
+    ['View Doctor Notes', 'Yes', '--', 'Yes', 'Yes'],
+    ['Book Next Appt', 'Yes', 'Yes', '--', '--'],
     ['Staff Management', 'Yes', '--', '--', '--'],
     ['Treatment Config', 'Yes', '--', '--', '--'],
     ['Stock Management', 'Yes', '--', '--', '--'],
