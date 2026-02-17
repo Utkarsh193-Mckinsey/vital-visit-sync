@@ -42,6 +42,7 @@ export default function WhatsAppChats() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const phoneParam = searchParams.get('phone');
+  const nameParam = searchParams.get('name');
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [newMessage, setNewMessage] = useState('');
@@ -151,9 +152,9 @@ export default function WhatsAppChats() {
     <PageContainer maxWidth="full">
       {selectedPhone && (selectedThread || phoneParam) ? (
         // Full-screen chat view (like WhatsApp)
-        <div className="flex flex-col h-[calc(100vh-120px)]">
-          {/* Chat header with back button */}
-          <div className="flex items-center gap-3 p-4 border-b border-border bg-muted/30 rounded-t-lg">
+        <div className="flex flex-col h-[calc(100vh-80px)]">
+          {/* Chat header */}
+          <div className="flex items-center gap-3 p-3 border-b border-border bg-muted/30 shrink-0">
             <button
               className="p-2 rounded-lg hover:bg-muted transition-colors"
               onClick={() => setSelectedPhone(null)}
@@ -164,13 +165,17 @@ export default function WhatsAppChats() {
               <User className="h-5 w-5 text-green-700" />
             </div>
             <div>
-              <p className="font-medium text-foreground">{selectedThread?.patient_name || 'Patient'}</p>
+              <p className="font-medium text-foreground">
+                {selectedThread?.patient_name && selectedThread.patient_name !== 'Unknown'
+                  ? selectedThread.patient_name
+                  : nameParam || 'Patient'}
+              </p>
               <p className="text-xs text-muted-foreground">{selectedThread?.phone || selectedPhone}</p>
             </div>
           </div>
 
-          {/* Messages */}
-          <ScrollArea className="flex-1 p-4 bg-background">
+          {/* Messages area */}
+          <ScrollArea className="flex-1 p-4 bg-background min-h-0">
             <div className="space-y-3 max-w-2xl mx-auto">
               {!selectedThread ? (
                 <div className="text-center py-12 text-muted-foreground">
@@ -206,8 +211,8 @@ export default function WhatsAppChats() {
             </div>
           </ScrollArea>
 
-          {/* Message input */}
-          <div className="p-3 border-t border-border bg-muted/30">
+          {/* Message input - pinned to bottom */}
+          <div className="p-2 border-t border-border bg-muted/30 shrink-0">
             <div className="flex items-center gap-2 max-w-2xl mx-auto">
               <input
                 type="text"
