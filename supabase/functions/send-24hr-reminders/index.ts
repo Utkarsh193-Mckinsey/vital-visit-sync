@@ -57,17 +57,17 @@ This is a friendly reminder about your appointment *tomorrow* at *Cosmique Aesth
 
 ⏰ *Time:* ${appt.appointment_time.slice(0, 5)}
 
-Please confirm by replying *Yes* ✅
-If you need to reschedule, just let us know.
-
 📍 *Location:*
 Cosmique Aesthetics & Dermatology
 Beach Park Plaza, Shop No. 20
 https://share.google/7o9aW3sPGhbk3lG6j
 
-📞 For any queries: +971 50 429 6888
-
 🅿️ Free parking available
+
+👉 Reply *Yes* to confirm ✅
+👉 Reply *Query* if you have a question ❓
+
+📞 +971 50 429 6888
 
 _Cosmique Aesthetics & Dermatology_`;
 

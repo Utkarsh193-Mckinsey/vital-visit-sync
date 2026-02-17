@@ -71,6 +71,9 @@ We look forward to seeing you! 😊
 📍 Cosmique Aesthetics & Dermatology
 Beach Park Plaza, Shop No. 20
 
+👉 Reply *Yes* to confirm ✅
+👉 Reply *Query* if you have a question ❓
+
 📞 +971 50 429 6888
 
 _See you soon!_
