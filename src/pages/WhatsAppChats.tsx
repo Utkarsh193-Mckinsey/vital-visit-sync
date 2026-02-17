@@ -4,8 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { TabletInput } from '@/components/ui/tablet-input';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Search, User, ArrowLeft, Clock, Send } from 'lucide-react';
+import { MessageSquare, Search, User, ArrowLeft, Clock, Send, BellOff, Bell } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -164,7 +165,7 @@ export default function WhatsAppChats() {
             <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
               <User className="h-5 w-5 text-green-700" />
             </div>
-            <div>
+            <div className="flex-1">
               <p className="font-medium text-foreground">
                 {selectedThread?.patient_name && selectedThread.patient_name !== 'Unknown'
                   ? selectedThread.patient_name
@@ -172,6 +173,7 @@ export default function WhatsAppChats() {
               </p>
               <p className="text-xs text-muted-foreground">{selectedThread?.phone || selectedPhone}</p>
             </div>
+            <ReminderToggle phone={selectedPhone!} />
           </div>
 
           {/* Messages area */}
@@ -290,5 +292,59 @@ export default function WhatsAppChats() {
         </>
       )}
     </PageContainer>
+  );
+}
+
+// Per-patient reminder toggle for chat header
+function ReminderToggle({ phone }: { phone: string }) {
+  const [paused, setPaused] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Check if this patient's upcoming appointments have reminders paused
+    const check = async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const { data } = await supabase
+        .from('appointments')
+        .select('reminders_paused')
+        .eq('phone', phone)
+        .gte('appointment_date', today)
+        .neq('status', 'cancelled')
+        .limit(1);
+      if (data && data.length > 0) {
+        setPaused((data[0] as any).reminders_paused ?? false);
+      }
+    };
+    check();
+  }, [phone]);
+
+  const toggle = async () => {
+    setLoading(true);
+    const newVal = !paused;
+    const today = new Date().toISOString().split('T')[0];
+    await supabase
+      .from('appointments')
+      .update({ reminders_paused: newVal })
+      .eq('phone', phone)
+      .gte('appointment_date', today)
+      .neq('status', 'cancelled');
+    setPaused(newVal);
+    setLoading(false);
+    toast(newVal ? 'Reminders paused for this patient' : 'Reminders resumed for this patient');
+  };
+
+  if (paused === null) return null;
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className={`text-xs gap-1 h-8 ${paused ? 'text-green-700 border-green-300' : 'text-destructive border-destructive/30'}`}
+      onClick={toggle}
+      disabled={loading}
+    >
+      {paused ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
+      {paused ? 'Start' : 'Stop'}
+    </Button>
   );
 }

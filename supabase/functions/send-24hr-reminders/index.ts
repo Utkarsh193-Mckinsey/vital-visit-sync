@@ -26,17 +26,16 @@ Deno.serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   try {
-    // Get tomorrow's date in YYYY-MM-DD
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().split("T")[0];
 
-    // Find appointments for tomorrow that haven't received 24hr reminder
     const { data: appointments, error: fetchErr } = await supabase
       .from("appointments")
       .select("*")
       .eq("appointment_date", tomorrowStr)
       .eq("reminder_24hr_sent", false)
+      .eq("reminders_paused", false)
       .neq("status", "cancelled");
 
     if (fetchErr) throw fetchErr;
@@ -65,7 +64,6 @@ Deno.serve(async (req) => {
         const watiText = await watiRes.text();
         console.log(`24hr reminder to ${watiPhone}:`, watiRes.status, watiText);
 
-        // Log outbound message
         await supabase.from("whatsapp_messages").insert({
           phone: watiPhone,
           patient_name: appt.patient_name,
@@ -74,7 +72,6 @@ Deno.serve(async (req) => {
           appointment_id: appt.id,
         });
 
-        // Mark as sent
         await supabase
           .from("appointments")
           .update({ reminder_24hr_sent: true, reminder_24hr_sent_at: new Date().toISOString() })
