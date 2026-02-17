@@ -221,58 +221,58 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
       </div>
 
       {/* Lower row: actions */}
-      <div className="flex items-center gap-1 flex-wrap">
+      <div className="flex items-center gap-1.5 flex-wrap">
         <Select value={apt.status} onValueChange={v => onUpdateStatus(apt.id, v)}>
-          <SelectTrigger className={`h-5 w-[90px] text-[8px] rounded-full border-0 px-1.5 [&>svg]:h-2.5 [&>svg]:w-2.5 ${statusColors[apt.status] || ''}`}>
+          <SelectTrigger className={`h-6 w-[95px] text-xs rounded-full border-0 px-2 [&>svg]:h-3 [&>svg]:w-3 ${statusColors[apt.status] || ''}`}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {STATUS_OPTIONS.map(s => (
-              <SelectItem key={s} value={s} className="capitalize text-[10px] py-1">{s.replace(/_/g, ' ')}</SelectItem>
+              <SelectItem key={s} value={s} className="capitalize text-xs">{s.replace(/_/g, ' ')}</SelectItem>
             ))}
           </SelectContent>
         </Select>
 
         <Select value={apt.confirmation_status} onValueChange={v => onUpdateConfirmation(apt.id, v)}>
-          <SelectTrigger className="h-5 w-[120px] text-[8px] rounded-full border px-1.5 [&>svg]:h-2.5 [&>svg]:w-2.5">
+          <SelectTrigger className="h-6 w-[140px] text-xs rounded-full border px-2 [&>svg]:h-3 [&>svg]:w-3">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {CONFIRMATION_OPTIONS.map(s => (
-              <SelectItem key={s} value={s} className="capitalize text-[10px] py-1">{s.replace(/_/g, ' ')}</SelectItem>
+              <SelectItem key={s} value={s} className="capitalize text-xs">{s.replace(/_/g, ' ')}</SelectItem>
             ))}
           </SelectContent>
         </Select>
 
-        <Button variant="outline" size="sm" className="text-[8px] h-5 px-1.5 rounded gap-0.5" onClick={handleCallPatient} disabled={calling}>
-          {calling ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <><PhoneCall className="h-2.5 w-2.5" /> Call</>}
+        <Button variant="outline" size="sm" className="text-xs h-6 px-2 rounded gap-1" onClick={handleCallPatient} disabled={calling}>
+          {calling ? <Loader2 className="h-3 w-3 animate-spin" /> : <><PhoneCall className="h-3 w-3" /> Call</>}
         </Button>
 
         {showReminderStatus && (
-          <Button variant="outline" size="sm" className="text-[8px] h-5 px-1.5 rounded gap-0.5" onClick={() => onUpdateConfirmation(apt.id, 'confirmed_call')}>
-            <CheckCircle className="h-2.5 w-2.5" /> Confirm
+          <Button variant="outline" size="sm" className="text-xs h-6 px-2 rounded gap-1" onClick={() => onUpdateConfirmation(apt.id, 'confirmed_call')}>
+            <CheckCircle className="h-3 w-3" /> Confirm
           </Button>
         )}
 
         {apt.status === 'upcoming' && (
-          <Button variant="outline" size="sm" className="text-[8px] h-5 px-1.5 rounded gap-0.5" onClick={handleRegisterNewPatient}>
-            <UserPlus className="h-2.5 w-2.5" /> Register
+          <Button variant="outline" size="sm" className="text-xs h-6 px-2 rounded gap-1" onClick={handleRegisterNewPatient}>
+            <UserPlus className="h-3 w-3" /> Register
           </Button>
         )}
 
         {apt.status !== 'no_show' && apt.status !== 'rescheduled' && apt.status !== 'completed' && apt.status !== 'cancelled' && (
           <>
-            <Button variant="outline" size="sm" className="text-[8px] h-5 px-1.5 rounded gap-0.5 text-orange-600 border-orange-300 hover:bg-orange-50" onClick={() => setShowRescheduleModal(true)}>
-              <CalendarClock className="h-2.5 w-2.5" /> Reschedule
+            <Button variant="outline" size="sm" className="text-xs h-6 px-2 rounded gap-1 text-orange-600 border-orange-300 hover:bg-orange-50" onClick={() => setShowRescheduleModal(true)}>
+              <CalendarClock className="h-3 w-3" /> Reschedule
             </Button>
-            <Button variant="outline" size="sm" className="text-[8px] h-5 px-1.5 rounded gap-0.5 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={handleNoShow}>
-              <XCircle className="h-2.5 w-2.5" /> No Show
+            <Button variant="outline" size="sm" className="text-xs h-6 px-2 rounded gap-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={handleNoShow}>
+              <XCircle className="h-3 w-3" /> No Show
             </Button>
           </>
         )}
 
-        <Button variant="ghost" size="icon" className="h-5 w-5 rounded" onClick={() => onEdit(apt)}>
-          <Edit className="h-2.5 w-2.5" />
+        <Button variant="ghost" size="icon" className="h-6 w-6 rounded" onClick={() => onEdit(apt)}>
+          <Edit className="h-3 w-3" />
         </Button>
       </div>
 
