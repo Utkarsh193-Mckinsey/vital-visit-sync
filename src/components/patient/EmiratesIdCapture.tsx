@@ -17,12 +17,13 @@ export interface ExtractedIdData {
 
 interface EmiratesIdCaptureProps {
   onDataExtracted: (data: ExtractedIdData, frontImage: string, backImage: string) => void;
-  onSkip: () => void;
+  onSkip?: () => void;
+  showSkip?: boolean;
 }
 
 type CaptureStep = 'intro' | 'front' | 'front_preview' | 'back' | 'back_preview' | 'processing';
 
-export default function EmiratesIdCapture({ onDataExtracted, onSkip }: EmiratesIdCaptureProps) {
+export default function EmiratesIdCapture({ onDataExtracted, onSkip, showSkip = true }: EmiratesIdCaptureProps) {
   const [step, setStep] = useState<CaptureStep>('intro');
   const [frontImage, setFrontImage] = useState<string>('');
   const [backImage, setBackImage] = useState<string>('');
@@ -140,13 +141,15 @@ export default function EmiratesIdCapture({ onDataExtracted, onSkip }: EmiratesI
           >
             Start Scanning
           </TabletButton>
-          <TabletButton
-            fullWidth
-            variant="ghost"
-            onClick={onSkip}
-          >
-            Skip — Enter Manually
-          </TabletButton>
+          {showSkip && onSkip && (
+            <TabletButton
+              fullWidth
+              variant="ghost"
+              onClick={onSkip}
+            >
+              Skip — Enter Manually
+            </TabletButton>
+          )}
         </div>
       </div>
     );

@@ -124,7 +124,7 @@ export async function generateEmiratesIdPDF(data: EmiratesIdPDFData): Promise<Bl
   return pdf.output('blob');
 }
 
-export function getEmiratesIdFileName(firstName: string, phone: string): string {
+export function getEmiratesIdFileName(name: string, phone: string): string {
   const cleanPhone = phone.replace(/\D/g, '');
-  return `${firstName} ${cleanPhone} Emirates ID.pdf`;
+  return `${name} ${cleanPhone} ID.pdf`;
 }
