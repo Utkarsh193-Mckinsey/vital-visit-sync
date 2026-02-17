@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CalendarPlus, Search, User, Phone, Package, Clock, CheckCircle, PhoneCall, XCircle } from 'lucide-react';
+import { WhatsAppLink } from '@/components/ui/whatsapp-link';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -224,6 +225,7 @@ export default function BookNextAppointment() {
                       <span className="font-semibold text-foreground">{visit.patient?.full_name}</span>
                       <span className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                         <Phone className="h-3 w-3" />{visit.patient?.phone_number}
+                        <WhatsAppLink phone={visit.patient?.phone_number} iconSize="h-3.5 w-3.5" />
                       </span>
                     </div>
                   </div>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { TabletCard, TabletCardContent } from '@/components/ui/tablet-card';
 import { CheckCircle, ChevronDown, ChevronUp, User, Stethoscope, Syringe, Package, FileText, Activity } from 'lucide-react';
 import type { Visit, Patient, ConsentForm, Treatment, Staff } from '@/types/database';
+import { WhatsAppLink } from '@/components/ui/whatsapp-link';
 
 interface VisitTreatmentDetail {
   id: string;
@@ -212,7 +213,7 @@ export function VisitDetailsCard({ visit }: VisitDetailsCardProps) {
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div className="bg-muted/50 rounded-md p-2">
                   <span className="text-muted-foreground text-xs">Phone</span>
-                  <p className="font-medium">{visit.patient.phone_number}</p>
+                  <p className="font-medium flex items-center gap-2">{visit.patient.phone_number} <WhatsAppLink phone={visit.patient.phone_number} /></p>
                 </div>
                 <div className="bg-muted/50 rounded-md p-2">
                   <span className="text-muted-foreground text-xs">Email</span>
