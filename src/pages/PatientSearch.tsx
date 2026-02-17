@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Search, UserPlus, Phone, LogOut, Settings, Users, CreditCard, X, UserCheck } from 'lucide-react';
 import EmiratesIdCapture, { ExtractedIdData } from '@/components/patient/EmiratesIdCapture';
 import type { Patient, Package, Visit } from '@/types/database';
+import { WhatsAppLink } from '@/components/ui/whatsapp-link';
 
 interface PatientWithPackages extends Patient {
   packages: Package[];
@@ -260,6 +261,7 @@ export default function PatientSearch() {
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Phone className="h-3 w-3" />
                           <span>{patient.phone_number}</span>
+                          <WhatsAppLink phone={patient.phone_number} iconSize="h-3.5 w-3.5" />
                         </div>
                         {patient.emirates_id && (
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">

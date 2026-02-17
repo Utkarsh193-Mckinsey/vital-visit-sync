@@ -9,6 +9,7 @@ import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Eraser, CheckCircle, Loader2, User, Phone, HeartPulse, AlertCircle, Download, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { WhatsAppLink } from '@/components/ui/whatsapp-link';
 import {
   Select,
   SelectContent,
@@ -230,7 +231,10 @@ export default function PatientReview() {
           <div className="grid gap-3 text-sm">
             <InfoRow label="Full Name" value={patient.full_name} />
             <InfoRow label="Date of Birth" value={patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString('en-AE', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'} />
-            <InfoRow label="Mobile" value={patient.phone_number} />
+            <div className="flex justify-between items-start">
+              <span className="text-muted-foreground">Mobile</span>
+              <span className="text-right font-medium flex items-center gap-2">{patient.phone_number} <WhatsAppLink phone={patient.phone_number} /></span>
+            </div>
             <InfoRow label="Nationality" value={patient.nationality || '—'} />
             <InfoRow label="Gender" value={patient.gender || '—'} />
             <InfoRow label="Country" value={patient.country_of_residence || '—'} />

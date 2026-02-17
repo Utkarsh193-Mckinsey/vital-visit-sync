@@ -24,6 +24,7 @@ import type { Patient, Package, Treatment, Visit } from '@/types/database';
 import AddPackageModal from '@/components/patient/AddPackageModal';
 import TreatmentSelectionModal from '@/components/patient/TreatmentSelectionModal';
 import PatientProgress from '@/components/patient/PatientProgress';
+import { WhatsAppLink } from '@/components/ui/whatsapp-link';
 
 interface PackageWithTreatment extends Package {
   treatment: Treatment;
@@ -254,7 +255,7 @@ export default function PatientDashboard() {
               <Phone className="h-5 w-5 text-muted-foreground" />
               <div>
                 <p className="text-sm text-muted-foreground">Phone</p>
-                <p className="font-medium">{patient.phone_number}</p>
+                <p className="font-medium flex items-center gap-2">{patient.phone_number} <WhatsAppLink phone={patient.phone_number} /></p>
               </div>
             </div>
             <div className="flex items-center gap-3">

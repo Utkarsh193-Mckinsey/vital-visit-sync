@@ -7,6 +7,7 @@ import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, UserCheck, Clock, Stethoscope, CheckCircle2, PackageCheck } from 'lucide-react';
 import { ConsultationModal } from '@/components/patient/ConsultationModal';
+import { WhatsAppLink } from '@/components/ui/whatsapp-link';
 
 export default function NewPatients() {
   const [pendingReview, setPendingReview] = useState<any[]>([]);
@@ -87,7 +88,7 @@ export default function NewPatients() {
                   <TabletCardContent className="flex items-center justify-between py-4">
                     <div>
                       <p className="font-medium text-foreground">{p.full_name}</p>
-                      <p className="text-sm text-muted-foreground">{p.phone_number}</p>
+                      <p className="text-sm text-muted-foreground flex items-center gap-2">{p.phone_number} <WhatsAppLink phone={p.phone_number} iconSize="h-3.5 w-3.5" /></p>
                       <div className="flex items-center gap-2 mt-1">
                         {p.nationality && <Badge variant="outline" className="text-xs">{p.nationality}</Badge>}
                         {p.gender && <Badge variant="outline" className="text-xs">{p.gender}</Badge>}
@@ -119,7 +120,7 @@ export default function NewPatients() {
                   <TabletCardContent className="flex items-center justify-between py-4">
                     <div>
                       <p className="font-medium text-foreground">{p.full_name}</p>
-                      <p className="text-sm text-muted-foreground">{p.phone_number}</p>
+                      <p className="text-sm text-muted-foreground flex items-center gap-2">{p.phone_number} <WhatsAppLink phone={p.phone_number} iconSize="h-3.5 w-3.5" /></p>
                       <div className="flex items-center gap-2 mt-1">
                         {p.nationality && <Badge variant="outline" className="text-xs">{p.nationality}</Badge>}
                         {p.gender && <Badge variant="outline" className="text-xs">{p.gender}</Badge>}
@@ -147,7 +148,7 @@ export default function NewPatients() {
                   <TabletCardContent className="flex items-center justify-between py-4">
                     <div>
                       <p className="font-medium text-foreground">{p.full_name}</p>
-                      <p className="text-sm text-muted-foreground">{p.phone_number}</p>
+                      <p className="text-sm text-muted-foreground flex items-center gap-2">{p.phone_number} <WhatsAppLink phone={p.phone_number} iconSize="h-3.5 w-3.5" /></p>
                       <div className="flex items-center gap-2 mt-1">
                         {p.treatment_interests && (p.treatment_interests as string[]).map((t: string) => (
                           <Badge key={t} variant="secondary" className="text-xs">{t}</Badge>
