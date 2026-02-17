@@ -311,9 +311,16 @@ export default function ConsentSigning() {
       setCurrentStep('complete');
       setAllConsentsSigned(true);
 
+      // Auto-download all consent PDFs
+      for (const consent of signedConsentsList) {
+        const firstName = getFirstName(patient.full_name);
+        const fileName = getConsentFileName(firstName, consent.treatmentName, consent.visitNumber);
+        downloadPDF(consent.pdfBlob, fileName);
+      }
+
       toast({
         title: 'All Consents Signed',
-        description: `Visit #${nextVisitNumber} has been created. You can now download consent forms.`,
+        description: `Visit #${nextVisitNumber} has been created. Consent forms are downloading.`,
       });
 
     } catch (error) {

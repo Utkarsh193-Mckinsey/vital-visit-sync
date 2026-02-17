@@ -94,9 +94,7 @@ export default function PatientRegistration() {
     setStep('form');
   };
 
-  const handleSkipIdCapture = () => {
-    setStep('form');
-  };
+  // No skip for new patient registration - ID capture is mandatory
 
   const handleChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -233,8 +231,7 @@ export default function PatientRegistration() {
             frontImage: frontIdImage,
             backImage: backIdImage || undefined,
           });
-          const firstName = getFirstName(formData.full_name);
-          const idFileName = getEmiratesIdFileName(firstName, formData.phone_number);
+          const idFileName = getEmiratesIdFileName(formData.full_name.trim(), formData.phone_number);
           downloadPDF(idPdfBlob, idFileName);
         } catch (err) {
           console.error('Error generating Emirates ID PDF:', err);
@@ -347,7 +344,7 @@ export default function PatientRegistration() {
             </TabletButton>
           }
         />
-        <EmiratesIdCapture onDataExtracted={handleIdDataExtracted} onSkip={handleSkipIdCapture} />
+        <EmiratesIdCapture onDataExtracted={handleIdDataExtracted} showSkip={false} />
       </PageContainer>
     );
   }
