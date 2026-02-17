@@ -183,7 +183,7 @@ export function AppSidebar() {
         .eq('current_status', 'completed')
         .gte('completed_date', today.toISOString())
         .lt('completed_date', tomorrow.toISOString()),
-      supabase.from('patients').select('id', { count: 'exact', head: true }).eq('doctor_reviewed', false),
+      supabase.from('patients').select('id', { count: 'exact', head: true }).or('doctor_reviewed.eq.false,consultation_status.eq.awaiting_consultation,consultation_status.eq.consulted'),
       supabase.from('pending_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
       supabase.from('appointments').select('id', { count: 'exact', head: true }).eq('status', 'no_show'),
       supabase.from('appointments').select('id', { count: 'exact', head: true }).eq('status', 'rescheduled'),

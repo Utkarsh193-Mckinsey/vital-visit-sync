@@ -196,6 +196,11 @@ export default function AddPackageModal({
         }
       }
 
+      // Mark patient as converted if they were in consultation flow
+      await supabase.from('patients').update({
+        consultation_status: 'converted',
+      } as any).eq('id', patientId).in('consultation_status', ['consulted', 'awaiting_consultation']);
+
       onSuccess();
     } catch (error) {
       console.error('Error adding package:', error);
