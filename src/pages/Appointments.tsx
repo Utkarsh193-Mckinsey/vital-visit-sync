@@ -322,8 +322,8 @@ function CollapsibleSection({ title, count, borderColor, badgeColor, open, onTog
         <TabletCard className={`p-2.5 cursor-pointer border-l-4 ${borderColor} hover:bg-muted/50 transition-colors`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-foreground text-sm">{title}</span>
-              <Badge className={`${badgeColor} text-[11px]`}>{count}</Badge>
+              <span className="font-medium text-foreground text-xs">{title}</span>
+              <Badge className={`${badgeColor} text-[10px] px-1.5 py-0`}>{count}</Badge>
             </div>
             {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
           </div>
