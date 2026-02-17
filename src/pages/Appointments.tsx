@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Plus, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Calendar, Plus, Search, ChevronDown, ChevronUp, BellOff, Bell } from 'lucide-react';
 import { format, addDays, isToday, isTomorrow, startOfWeek, endOfWeek, addWeeks } from 'date-fns';
 import { toast } from 'sonner';
 import { AddAppointmentModal } from '@/components/appointments/AddAppointmentModal';
@@ -36,6 +37,7 @@ export interface Appointment {
   confirmed_at: string | null;
   rescheduled_from: string | null;
   special_instructions: string | null;
+  reminders_paused: boolean;
   created_at: string;
   updated_at: string | null;
 }
@@ -175,15 +177,37 @@ export default function Appointments() {
     }
   };
 
+  const toggleAllReminders = async (pause: boolean) => {
+    const range = getDateRange(activeTab);
+    let query = supabase.from('appointments').update({ reminders_paused: pause }).neq('status', 'cancelled');
+    if (!('mode' in range)) {
+      query = query.gte('appointment_date', range.from).lte('appointment_date', range.to);
+    } else if (range.mode === 'upcoming') {
+      query = query.gte('appointment_date', format(new Date(), 'yyyy-MM-dd'));
+    }
+    const { error } = await query;
+    if (error) toast.error('Failed to update reminders');
+    else toast.success(pause ? 'Reminders paused' : 'Reminders resumed');
+    fetchAppointments();
+  };
+
   return (
     <PageContainer maxWidth="full">
       <PageHeader
         title="Appointments"
         subtitle={getTabLabel()}
         action={
-          <TabletButton onClick={() => { setEditingAppointment(null); setShowAddModal(true); }} leftIcon={<Plus className="h-5 w-5" />}>
-            New Appointment
-          </TabletButton>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="text-xs gap-1 h-8" onClick={() => toggleAllReminders(true)}>
+              <BellOff className="h-3.5 w-3.5" /> Stop Reminders
+            </Button>
+            <Button variant="outline" size="sm" className="text-xs gap-1 h-8 text-green-700 border-green-300 hover:bg-green-50" onClick={() => toggleAllReminders(false)}>
+              <Bell className="h-3.5 w-3.5" /> Start Reminders
+            </Button>
+            <TabletButton onClick={() => { setEditingAppointment(null); setShowAddModal(true); }} leftIcon={<Plus className="h-5 w-5" />}>
+              New Appointment
+            </TabletButton>
+          </div>
         }
       />
 

@@ -29,12 +29,12 @@ Deno.serve(async (req) => {
     const now = new Date();
     const todayStr = now.toISOString().split("T")[0];
 
-    // Get today's appointments that haven't received 2hr reminder
     const { data: appointments, error: fetchErr } = await supabase
       .from("appointments")
       .select("*")
       .eq("appointment_date", todayStr)
       .eq("reminder_2hr_sent", false)
+      .eq("reminders_paused", false)
       .neq("status", "cancelled");
 
     if (fetchErr) throw fetchErr;
@@ -43,14 +43,12 @@ Deno.serve(async (req) => {
 
     for (const appt of (appointments || [])) {
       try {
-        // Check if appointment is within 2 hours
         const [hours, minutes] = appt.appointment_time.split(":").map(Number);
         const apptTime = new Date(now);
         apptTime.setHours(hours, minutes, 0, 0);
         const diffMs = apptTime.getTime() - now.getTime();
         const diffHours = diffMs / (1000 * 60 * 60);
 
-        // Send if appointment is 0-2.5 hours away (to catch the window)
         if (diffHours < 0 || diffHours > 2.5) continue;
 
         let watiPhone = appt.phone.replace(/[\s\-\(\)\+]/g, "");
@@ -73,7 +71,6 @@ Deno.serve(async (req) => {
         const watiText = await watiRes.text();
         console.log(`2hr reminder to ${watiPhone}:`, watiRes.status, watiText);
 
-        // Log outbound message
         await supabase.from("whatsapp_messages").insert({
           phone: watiPhone,
           patient_name: appt.patient_name,
@@ -82,7 +79,6 @@ Deno.serve(async (req) => {
           appointment_id: appt.id,
         });
 
-        // Mark as sent
         await supabase
           .from("appointments")
           .update({ reminder_2hr_sent: true, reminder_2hr_sent_at: new Date().toISOString() })

@@ -93,6 +93,7 @@ export type Database = {
           reminder_24hr_sent_at: string | null
           reminder_2hr_sent: boolean
           reminder_2hr_sent_at: string | null
+          reminders_paused: boolean
           rescheduled_from: string | null
           service: string
           special_instructions: string | null
@@ -118,6 +119,7 @@ export type Database = {
           reminder_24hr_sent_at?: string | null
           reminder_2hr_sent?: boolean
           reminder_2hr_sent_at?: string | null
+          reminders_paused?: boolean
           rescheduled_from?: string | null
           service: string
           special_instructions?: string | null
@@ -143,6 +145,7 @@ export type Database = {
           reminder_24hr_sent_at?: string | null
           reminder_2hr_sent?: boolean
           reminder_2hr_sent_at?: string | null
+          reminders_paused?: boolean
           rescheduled_from?: string | null
           service?: string
           special_instructions?: string | null
