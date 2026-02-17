@@ -5,8 +5,9 @@ import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { TabletInput } from '@/components/ui/tablet-input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Search, User, ArrowLeft, Clock } from 'lucide-react';
+import { MessageSquare, Search, User, ArrowLeft, Clock, Send } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
 
 interface WaMsg {
   id: string;
@@ -43,6 +44,8 @@ export default function WhatsAppChats() {
   const phoneParam = searchParams.get('phone');
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [newMessage, setNewMessage] = useState('');
+  const [sending, setSending] = useState(false);
 
   const fetchChats = async () => {
     const { data: msgs } = await supabase
@@ -115,6 +118,33 @@ export default function WhatsAppChats() {
     !search || t.patient_name.toLowerCase().includes(search.toLowerCase()) || t.phone.includes(search)
   );
 
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !selectedPhone || sending) return;
+    setSending(true);
+    try {
+      // Normalize phone for WATI: needs 971 prefix without +
+      let watiPhone = selectedPhone.replace(/[\s\-\(\)\+]/g, '');
+      if (watiPhone.startsWith('0')) watiPhone = '971' + watiPhone.slice(1);
+      if (!watiPhone.startsWith('971') && watiPhone.length <= 10) watiPhone = '971' + watiPhone;
+
+      const { data, error } = await supabase.functions.invoke('send-whatsapp', {
+        body: {
+          phone: watiPhone,
+          message: newMessage.trim(),
+          patient_name: selectedThread?.patient_name || null,
+        },
+      });
+      if (error) throw error;
+      setNewMessage('');
+      toast.success('Message sent');
+      await fetchChats();
+    } catch (err: any) {
+      toast.error('Failed to send: ' + (err.message || 'Unknown error'));
+    } finally {
+      setSending(false);
+    }
+  };
+
   const selectedThread = threads.find(t => t.phone === selectedPhone);
 
   return (
@@ -175,6 +205,28 @@ export default function WhatsAppChats() {
               <div ref={messagesEndRef} />
             </div>
           </ScrollArea>
+
+          {/* Message input */}
+          <div className="p-3 border-t border-border bg-muted/30">
+            <div className="flex items-center gap-2 max-w-2xl mx-auto">
+              <input
+                type="text"
+                placeholder="Type a message..."
+                value={newMessage}
+                onChange={e => setNewMessage(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                className="flex-1 h-11 rounded-full border border-input bg-background px-4 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                disabled={sending}
+              />
+              <button
+                onClick={sendMessage}
+                disabled={!newMessage.trim() || sending}
+                className="h-11 w-11 rounded-full bg-green-600 text-white flex items-center justify-center hover:bg-green-700 transition-colors disabled:opacity-50"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
         </div>
       ) : (
         // Thread list view
