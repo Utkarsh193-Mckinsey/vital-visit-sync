@@ -615,10 +615,18 @@ export default function TreatmentAdmin() {
                     <Syringe className="h-4 w-4 text-primary" />
                     {treatment.treatmentName}
                     {!treatment.hasConsentSigned && (
-                      <span className="inline-flex items-center gap-1 text-xs text-warning bg-warning/10 px-2 py-0.5 rounded-full">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConsentWarning({ treatmentName: treatment.treatmentName, treatmentId: treatment.treatmentId, index });
+                          setShowConsentModal(true);
+                        }}
+                        className="inline-flex items-center gap-1 text-xs text-warning bg-warning/10 px-2 py-0.5 rounded-full hover:bg-warning/20 transition-colors cursor-pointer"
+                      >
                         <AlertTriangle className="h-3 w-3" />
-                        No consent
-                      </span>
+                        No consent — Sign now
+                      </button>
                     )}
                   </h5>
                   <span className="text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded">
