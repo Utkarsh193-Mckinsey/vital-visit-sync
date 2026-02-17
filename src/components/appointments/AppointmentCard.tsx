@@ -207,17 +207,14 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
           </span>
         )}
 
-        <a
-          href={`https://wa.me/${apt.phone.replace(/[\s\-\(\)]/g, '').replace(/^0/, '971').replace(/^00/, '').replace(/^\+/, '')}`}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
           className="inline-flex items-center gap-0.5 text-green-600 hover:text-green-700 ml-2 flex-shrink-0"
           title="Chat on WhatsApp"
-          onClick={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); navigate(`/whatsapp-chats?phone=${encodeURIComponent(apt.phone)}`); }}
         >
           <MessageCircle className="h-3 w-3 fill-current" />
           <span className="text-[10px]">W</span>
-        </a>
+        </button>
 
         {showReminderStatus && (
           <div className="flex items-center gap-0.5">
