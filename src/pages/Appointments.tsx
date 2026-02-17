@@ -197,15 +197,15 @@ export default function Appointments() {
         title="Appointments"
         subtitle={getTabLabel()}
         action={
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="text-xs gap-1 h-8" onClick={() => toggleAllReminders(true)}>
-              <BellOff className="h-3.5 w-3.5" /> Stop Reminders
+          <div className="flex items-center gap-1.5">
+            <Button variant="ghost" size="sm" className="text-[10px] gap-0.5 h-6 px-2 text-muted-foreground hover:text-destructive" onClick={() => toggleAllReminders(true)}>
+              <BellOff className="h-3 w-3" /> Stop
             </Button>
-            <Button variant="outline" size="sm" className="text-xs gap-1 h-8 text-green-700 border-green-300 hover:bg-green-50" onClick={() => toggleAllReminders(false)}>
-              <Bell className="h-3.5 w-3.5" /> Start Reminders
+            <Button variant="ghost" size="sm" className="text-[10px] gap-0.5 h-6 px-2 text-green-700 hover:text-green-800" onClick={() => toggleAllReminders(false)}>
+              <Bell className="h-3 w-3" /> Start
             </Button>
-            <TabletButton onClick={() => { setEditingAppointment(null); setShowAddModal(true); }} leftIcon={<Plus className="h-5 w-5" />}>
-              New Appointment
+            <TabletButton size="sm" onClick={() => { setEditingAppointment(null); setShowAddModal(true); }} leftIcon={<Plus className="h-4 w-4" />} className="h-7 text-xs px-3">
+              New
             </TabletButton>
           </div>
         }
