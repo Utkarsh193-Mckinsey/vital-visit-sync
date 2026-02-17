@@ -35,6 +35,7 @@ export interface Appointment {
   reminder_2hr_sent_at: string | null;
   confirmed_at: string | null;
   rescheduled_from: string | null;
+  special_instructions: string | null;
   created_at: string;
   updated_at: string | null;
 }

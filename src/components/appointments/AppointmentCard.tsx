@@ -4,7 +4,12 @@ import type { Appointment, AppointmentCommunication } from '@/pages/Appointments
 import { TabletCard } from '@/components/ui/tablet-card';
 import { Badge } from '@/components/ui/badge';
 import { TabletButton } from '@/components/ui/tablet-button';
-import { Phone, Clock, User, Edit, AlertTriangle, MessageSquare, PhoneCall, ChevronDown, ChevronUp, CheckCircle, Send, Loader2 } from 'lucide-react';
+import { Phone, Clock, User, Edit, AlertTriangle, MessageSquare, PhoneCall, ChevronDown, ChevronUp, CheckCircle, Send, Loader2, UserPlus, CalendarClock, XCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { TabletInput } from '@/components/ui/tablet-input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
@@ -62,6 +67,69 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
   const [comms, setComms] = useState<AppointmentCommunication[]>([]);
   const [commsLoaded, setCommsLoaded] = useState(false);
   const [calling, setCalling] = useState(false);
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [rescheduleReason, setRescheduleReason] = useState('');
+  const [rescheduling, setRescheduling] = useState(false);
+  const navigate = useNavigate();
+
+  const handleRegisterNewPatient = () => {
+    const params = new URLSearchParams({
+      name: apt.patient_name,
+      phone: apt.phone,
+      service: apt.service,
+      booked_by: apt.booked_by || '',
+      appointment_id: apt.id,
+    });
+    navigate(`/patient/register?${params.toString()}`);
+  };
+
+  const handleNoShow = async () => {
+    const { error } = await supabase.from('appointments').update({
+      status: 'no_show',
+      no_show_count: apt.no_show_count + 1,
+    }).eq('id', apt.id);
+    if (error) toast.error('Failed to mark no-show');
+    else toast.success(`${apt.patient_name} marked as No Show`);
+  };
+
+  const handleReschedule = async () => {
+    if (!rescheduleDate) {
+      toast.error('Please select a new date');
+      return;
+    }
+    setRescheduling(true);
+    try {
+      // Create new appointment with rescheduled_from reference
+      const { error: insertError } = await supabase.from('appointments').insert({
+        patient_name: apt.patient_name,
+        phone: apt.phone,
+        service: apt.service,
+        booked_by: apt.booked_by,
+        appointment_date: rescheduleDate,
+        appointment_time: apt.appointment_time,
+        is_new_patient: apt.is_new_patient,
+        rescheduled_from: apt.id,
+        special_instructions: rescheduleReason ? `Rescheduled: ${rescheduleReason}` : apt.special_instructions,
+      });
+      if (insertError) throw insertError;
+
+      // Update original to rescheduled
+      const { error: updateError } = await supabase.from('appointments').update({
+        status: 'rescheduled',
+      }).eq('id', apt.id);
+      if (updateError) throw updateError;
+
+      toast.success(`Rescheduled to ${rescheduleDate}`);
+      setShowRescheduleModal(false);
+      setRescheduleDate('');
+      setRescheduleReason('');
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to reschedule');
+    } finally {
+      setRescheduling(false);
+    }
+  };
 
   const loadComms = async () => {
     if (commsLoaded) return;
@@ -99,6 +167,7 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
   const confirm = confirmBadge[apt.confirmation_status] || confirmBadge.unconfirmed;
 
   return (
+    <>
     <TabletCard className="p-3">
       {/* Single row layout */}
       <div className="flex items-center gap-3 flex-wrap">
@@ -191,6 +260,23 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
             </TabletButton>
           )}
 
+          {apt.is_new_patient && apt.status === 'upcoming' && (
+            <TabletButton variant="outline" size="sm" className="text-xs h-8" onClick={handleRegisterNewPatient}>
+              <UserPlus className="h-3.5 w-3.5 mr-1" /> Register
+            </TabletButton>
+          )}
+
+          {apt.status !== 'no_show' && apt.status !== 'rescheduled' && apt.status !== 'completed' && apt.status !== 'cancelled' && (
+            <>
+              <TabletButton variant="outline" size="sm" className="text-xs h-8 text-orange-600 border-orange-300 hover:bg-orange-50" onClick={() => setShowRescheduleModal(true)}>
+                <CalendarClock className="h-3.5 w-3.5 mr-1" /> Reschedule
+              </TabletButton>
+              <TabletButton variant="outline" size="sm" className="text-xs h-8 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={handleNoShow}>
+                <XCircle className="h-3.5 w-3.5 mr-1" /> No Show
+              </TabletButton>
+            </>
+          )}
+
           <TabletButton variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(apt)}>
             <Edit className="h-4 w-4" />
           </TabletButton>
@@ -252,5 +338,31 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
         </CollapsibleContent>
       </Collapsible>
     </TabletCard>
+
+    {/* Reschedule Modal */}
+    <Dialog open={showRescheduleModal} onOpenChange={setShowRescheduleModal}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Reschedule — {apt.patient_name}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 mt-2">
+          <div>
+            <Label>New Date *</Label>
+            <TabletInput type="date" value={rescheduleDate} onChange={e => setRescheduleDate(e.target.value)} />
+          </div>
+          <div>
+            <Label>Reason / Remarks</Label>
+            <Textarea value={rescheduleReason} onChange={e => setRescheduleReason(e.target.value)} placeholder="e.g. Patient requested later date" rows={3} />
+          </div>
+          <div className="flex gap-3">
+            <TabletButton variant="outline" fullWidth onClick={() => setShowRescheduleModal(false)}>Cancel</TabletButton>
+            <TabletButton fullWidth onClick={handleReschedule} disabled={rescheduling}>
+              {rescheduling ? 'Saving...' : 'Confirm Reschedule'}
+            </TabletButton>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

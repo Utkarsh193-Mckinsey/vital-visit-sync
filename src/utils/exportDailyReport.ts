@@ -14,7 +14,7 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
     : format(today, 'yyyy-MM-dd');
 
   // Fetch all data in parallel
-  const [patientsRes, visitsRes, consumablesRes, packagesRes, paymentsRes, consultationsRes] = await Promise.all([
+  const [patientsRes, visitsRes, consumablesRes, packagesRes, paymentsRes, consultationsRes, appointmentsRes] = await Promise.all([
     // New registered patients in date range
     supabase
       .from('patients')
@@ -99,6 +99,14 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
       .gte('consultation_date', today.toISOString())
       .lt('consultation_date', tomorrow.toISOString())
       .order('consultation_date', { ascending: false }),
+
+    // Appointments for SDR Performance
+    supabase
+      .from('appointments')
+      .select('*')
+      .gte('appointment_date', fromDate ? format(fromDate, 'yyyy-MM-dd') : format(today, 'yyyy-MM-dd'))
+      .lte('appointment_date', toDate ? format(toDate, 'yyyy-MM-dd') : format(today, 'yyyy-MM-dd'))
+      .order('appointment_date', { ascending: true }),
   ]);
 
   if (patientsRes.error) throw patientsRes.error;
@@ -107,6 +115,7 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
   if (packagesRes.error) throw packagesRes.error;
   if (paymentsRes.error) throw paymentsRes.error;
   if (consultationsRes.error) throw consultationsRes.error;
+  if (appointmentsRes.error) throw appointmentsRes.error;
 
   // ===== Sheet 1: New Registered Patients =====
   const patientsData = (patientsRes.data || []).map((p: any) => ({
@@ -360,6 +369,79 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
     };
   });
 
+  // ===== Sheet 6: SDR Performance =====
+  // Group appointments by booked_by, show each patient and whether they took treatment
+  const appointments = appointmentsRes.data || [];
+  const sdrMap: Record<string, any[]> = {};
+  appointments.forEach((apt: any) => {
+    const bookedBy = apt.booked_by || 'Unknown';
+    if (!sdrMap[bookedBy]) sdrMap[bookedBy] = [];
+    sdrMap[bookedBy].push(apt);
+  });
+
+  // For each appointment, check if the patient bought a package
+  const aptPatientPhones = appointments.map((a: any) => a.phone).filter(Boolean);
+  let packagesByPhone: Record<string, any[]> = {};
+  if (aptPatientPhones.length > 0) {
+    const { data: patientsWithPkgs } = await supabase
+      .from('patients')
+      .select('phone_number, packages:packages(total_amount, treatment:treatments(treatment_name))')
+      .in('phone_number', aptPatientPhones);
+    (patientsWithPkgs || []).forEach((p: any) => {
+      if (p.packages && p.packages.length > 0) {
+        packagesByPhone[p.phone_number] = p.packages;
+      }
+    });
+  }
+
+  const sdrData: any[] = [];
+  Object.entries(sdrMap).forEach(([sdrName, apts]) => {
+    sdrData.push({
+      'Date': '',
+      'SDR Name': `▶ ${sdrName}`,
+      'Patient Name': '',
+      'Service': '',
+      'Status': '',
+      'Treatment Taken': '',
+      'Amount': '',
+      'Total Appointments': apts.length,
+    });
+
+    let showed = 0;
+    let converted = 0;
+    apts.forEach((apt: any) => {
+      const isNoShow = apt.status === 'no_show';
+      const isRescheduled = apt.status === 'rescheduled';
+      const pkgs = packagesByPhone[apt.phone] || [];
+      const hasTreatment = pkgs.length > 0;
+      if (!isNoShow) showed++;
+      if (hasTreatment) converted++;
+
+      sdrData.push({
+        'Date': apt.appointment_date,
+        'SDR Name': '',
+        'Patient Name': apt.patient_name,
+        'Service': apt.service,
+        'Status': isNoShow ? 'No Show' : isRescheduled ? 'Rescheduled' : apt.status === 'completed' ? 'Completed' : 'Attended',
+        'Treatment Taken': hasTreatment ? pkgs.map((p: any) => p.treatment?.treatment_name).filter(Boolean).join(', ') : 'No',
+        'Amount': hasTreatment ? pkgs.reduce((s: number, p: any) => s + (p.total_amount || 0), 0) : '-',
+        'Total Appointments': '',
+      });
+    });
+
+    sdrData.push({
+      'Date': '',
+      'SDR Name': '',
+      'Patient Name': `TOTAL: ${apts.length} booked, ${showed} showed, ${converted} converted`,
+      'Service': '',
+      'Status': '',
+      'Treatment Taken': '',
+      'Amount': '',
+      'Total Appointments': '',
+    });
+    sdrData.push({ 'Date': '', 'SDR Name': '', 'Patient Name': '', 'Service': '', 'Status': '', 'Treatment Taken': '', 'Amount': '', 'Total Appointments': '' });
+  });
+
   // Create workbook
   const wb = XLSX.utils.book_new();
 
@@ -378,8 +460,11 @@ export async function exportDailyReport(fromDate?: Date, toDate?: Date) {
   const ws5 = XLSX.utils.json_to_sheet(consultationsData.length > 0 ? consultationsData : [{ 'Info': 'No consultations recorded' }]);
   XLSX.utils.book_append_sheet(wb, ws5, 'Consultations');
 
+  const ws6 = XLSX.utils.json_to_sheet(sdrData.length > 0 ? sdrData : [{ 'Info': 'No appointments found' }]);
+  XLSX.utils.book_append_sheet(wb, ws6, 'SDR Performance');
+
   // Auto-width columns for each sheet
-  [ws1, ws2, ws3, ws4, ws5].forEach(ws => {
+  [ws1, ws2, ws3, ws4, ws5, ws6].forEach(ws => {
     const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
     const colWidths: number[] = [];
     for (let C = range.s.c; C <= range.e.c; C++) {
