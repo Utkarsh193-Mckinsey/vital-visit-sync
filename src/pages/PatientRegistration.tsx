@@ -8,7 +8,7 @@ import { TabletInput } from '@/components/ui/tablet-input';
 import { TabletCard, TabletCardContent, TabletCardHeader, TabletCardTitle } from '@/components/ui/tablet-card';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, UserPlus, Eraser, Download, Check, CreditCard } from 'lucide-react';
+import { ArrowLeft, UserPlus, Eraser, Download, Check, FileText } from 'lucide-react';
 import { generateRegistrationPDF, getRegistrationFileName } from '@/utils/generateRegistrationPDF';
 import { generateEmiratesIdPDF, getEmiratesIdFileName } from '@/utils/generateEmiratesIdPDF';
 import { downloadPDF, getFirstName } from '@/utils/pdfDownload';
@@ -384,8 +384,8 @@ export default function PatientRegistration() {
           <TabletCard className="mb-6">
             <TabletCardHeader>
               <div className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                <TabletCardTitle>Emirates ID Photos</TabletCardTitle>
+                <FileText className="h-5 w-5" />
+                <TabletCardTitle>Document Photos</TabletCardTitle>
               </div>
             </TabletCardHeader>
             <TabletCardContent>

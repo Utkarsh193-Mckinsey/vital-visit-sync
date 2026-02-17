@@ -383,12 +383,12 @@ export default function AddExistingPatient() {
           </TabletCardContent>
         </TabletCard>
 
-        {/* Scan Emirates ID */}
+        {/* Scan Document */}
         {showIdScan ? (
           <TabletCard className="mb-6">
             <TabletCardHeader>
               <div className="flex items-center justify-between">
-                <TabletCardTitle>Scan Emirates ID</TabletCardTitle>
+                <TabletCardTitle>Scan Document</TabletCardTitle>
                 <TabletButton type="button" variant="ghost" size="sm" onClick={() => setShowIdScan(false)}>
                   Cancel
                 </TabletButton>
@@ -411,7 +411,7 @@ export default function AddExistingPatient() {
             onClick={() => setShowIdScan(true)}
             leftIcon={<CreditCard />}
           >
-            Scan Emirates ID
+            Scan Document
           </TabletButton>
         )}
 
