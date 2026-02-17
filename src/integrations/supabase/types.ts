@@ -880,6 +880,7 @@ export type Database = {
           id: string
           is_locked: boolean
           lmp: string | null
+          next_appointment_status: string | null
           nurse_staff_id: string | null
           other_details: string | null
           patient_id: string
@@ -912,6 +913,7 @@ export type Database = {
           id?: string
           is_locked?: boolean
           lmp?: string | null
+          next_appointment_status?: string | null
           nurse_staff_id?: string | null
           other_details?: string | null
           patient_id: string
@@ -944,6 +946,7 @@ export type Database = {
           id?: string
           is_locked?: boolean
           lmp?: string | null
+          next_appointment_status?: string | null
           nurse_staff_id?: string | null
           other_details?: string | null
           patient_id?: string

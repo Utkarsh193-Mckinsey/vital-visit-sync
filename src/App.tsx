@@ -30,6 +30,7 @@ import NoShow from "./pages/NoShow";
 import Rescheduled from "./pages/Rescheduled";
 import PersonalAssistant from "./pages/PersonalAssistant";
 import WhatsAppChats from "./pages/WhatsAppChats";
+import BookNextAppointment from "./pages/BookNextAppointment";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -232,6 +233,12 @@ function AppRoutes() {
       <Route path="/rescheduled" element={
         <ProtectedRoute allowedRoles={['admin', 'reception']}>
           <Rescheduled />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/book-next" element={
+        <ProtectedRoute allowedRoles={['admin', 'reception']}>
+          <BookNextAppointment />
         </ProtectedRoute>
       } />
 

@@ -31,7 +31,8 @@ import {
   CalendarClock,
   LayoutDashboard,
   BarChart3,
-  MessageCircle
+  MessageCircle,
+  CalendarPlus
 } from 'lucide-react';
 import { TabletButton } from '@/components/ui/tablet-button';
 import cosmiqueLogo from '@/assets/cosmique-symbol.png';
@@ -43,7 +44,7 @@ interface NavItem {
   url: string;
   icon: React.ComponentType<{ className?: string }>;
   roles: StaffRole[];
-  countKey?: 'waiting' | 'inProgress' | 'completed' | 'newPatients' | 'pendingRequests' | 'noShows' | 'rescheduled';
+  countKey?: 'waiting' | 'inProgress' | 'completed' | 'newPatients' | 'pendingRequests' | 'noShows' | 'rescheduled' | 'bookNext';
 }
 
 const navigationItems: NavItem[] = [
@@ -85,6 +86,13 @@ const navigationItems: NavItem[] = [
     icon: CheckCircle,
     roles: ['admin', 'nurse', 'doctor'],
     countKey: 'completed'
+  },
+  { 
+    title: 'Book Next Appt', 
+    url: '/book-next', 
+    icon: CalendarPlus,
+    roles: ['admin', 'reception'],
+    countKey: 'bookNext' as const
   },
   { 
     title: 'New Patients', 
@@ -148,6 +156,7 @@ interface VisitCounts {
   pendingRequests: number;
   noShows: number;
   rescheduled: number;
+  bookNext: number;
 }
 
 export function AppSidebar() {
@@ -165,6 +174,7 @@ export function AppSidebar() {
     pendingRequests: 0,
     noShows: 0,
     rescheduled: 0,
+    bookNext: 0,
   });
 
   // Fetch visit counts
@@ -176,7 +186,7 @@ export function AppSidebar() {
     tomorrow.setDate(tomorrow.getDate() + 1);
     const todayStr = today.toISOString().split('T')[0];
 
-    const [waitingRes, inProgressRes, completedRes, newPatientsRes, pendingRes, noShowRes, rescheduledRes] = await Promise.all([
+    const [waitingRes, inProgressRes, completedRes, newPatientsRes, pendingRes, noShowRes, rescheduledRes, bookNextRes] = await Promise.all([
       supabase.from('visits').select('id', { count: 'exact', head: true }).eq('current_status', 'waiting'),
       supabase.from('visits').select('id', { count: 'exact', head: true }).eq('current_status', 'in_progress'),
       supabase.from('visits').select('id', { count: 'exact', head: true })
@@ -187,6 +197,11 @@ export function AppSidebar() {
       supabase.from('pending_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
       supabase.from('appointments').select('id', { count: 'exact', head: true }).eq('status', 'no_show'),
       supabase.from('appointments').select('id', { count: 'exact', head: true }).eq('status', 'rescheduled'),
+      supabase.from('visits').select('id', { count: 'exact', head: true })
+        .eq('current_status', 'completed')
+        .is('next_appointment_status', null)
+        .gte('completed_date', today.toISOString())
+        .lt('completed_date', tomorrow.toISOString()),
     ]);
 
     setCounts({
@@ -197,6 +212,7 @@ export function AppSidebar() {
       pendingRequests: pendingRes.count || 0,
       noShows: noShowRes.count || 0,
       rescheduled: rescheduledRes.count || 0,
+      bookNext: bookNextRes.count || 0,
     });
   };
 
