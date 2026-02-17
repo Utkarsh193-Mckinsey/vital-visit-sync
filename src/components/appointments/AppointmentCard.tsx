@@ -4,7 +4,7 @@ import type { Appointment, AppointmentCommunication } from '@/pages/Appointments
 import { TabletCard } from '@/components/ui/tablet-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Phone, Clock, User, Edit, AlertTriangle, MessageSquare, PhoneCall, ChevronDown, ChevronUp, CheckCircle, Send, Loader2, UserPlus, CalendarClock, XCircle } from 'lucide-react';
+import { Phone, Clock, User, Edit, AlertTriangle, MessageSquare, MessageCircle, PhoneCall, ChevronDown, ChevronUp, CheckCircle, Send, Loader2, UserPlus, CalendarClock, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { WhatsAppLink } from '@/components/ui/whatsapp-link';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -190,7 +190,7 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
               <Phone className="h-2 w-2" />{apt.phone}
             </span>
           </div>
-          <WhatsAppLink phone={apt.phone} iconSize="h-3.5 w-3.5" />
+          
           {apt.is_new_patient && <Badge variant="secondary" className="text-[8px] h-3.5 px-1">NEW</Badge>}
           {apt.no_show_count > 0 && (
             <Badge variant="destructive" className="text-[8px] h-3.5 px-1 flex items-center gap-0.5">
@@ -206,6 +206,18 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
             <span className="text-muted-foreground/70">by</span> {apt.booked_by}
           </span>
         )}
+
+        <a
+          href={`https://wa.me/${apt.phone.replace(/[\s\-\(\)]/g, '').replace(/^0/, '971').replace(/^00/, '').replace(/^\+/, '')}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-0.5 text-green-600 hover:text-green-700 ml-2 flex-shrink-0"
+          title="Chat on WhatsApp"
+          onClick={e => e.stopPropagation()}
+        >
+          <MessageCircle className="h-3 w-3 fill-current" />
+          <span className="text-[10px]">W</span>
+        </a>
 
         {showReminderStatus && (
           <div className="flex items-center gap-0.5">
