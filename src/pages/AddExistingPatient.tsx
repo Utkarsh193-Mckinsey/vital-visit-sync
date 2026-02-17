@@ -8,7 +8,10 @@ import { TabletCard, TabletCardContent, TabletCardHeader, TabletCardTitle } from
 import { TabletInput } from '@/components/ui/tablet-input';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Check, Eraser, Plus, Trash2, Gift, Package as PackageIcon } from 'lucide-react';
+import { ArrowLeft, Check, Eraser, Plus, Trash2, Gift, Package as PackageIcon, CreditCard } from 'lucide-react';
+import EmiratesIdCapture, { ExtractedIdData } from '@/components/patient/EmiratesIdCapture';
+import { generateEmiratesIdPDF, getEmiratesIdFileName } from '@/utils/generateEmiratesIdPDF';
+import { downloadPDF } from '@/utils/pdfDownload';
 import PatientInfoSection from '@/components/patient/registration/PatientInfoSection';
 import EmergencyContactSection from '@/components/patient/registration/EmergencyContactSection';
 import MedicalHistorySection from '@/components/patient/registration/MedicalHistorySection';
@@ -73,6 +76,7 @@ export default function AddExistingPatient() {
     file_number: '',
   });
 
+  const [showIdScan, setShowIdScan] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [treatments, setTreatments] = useState<Treatment[]>([]);
@@ -147,6 +151,28 @@ export default function AddExistingPatient() {
   const removePaymentSplit = (i: number) => { if (paymentSplits.length > 1) setPaymentSplits(prev => prev.filter((_, idx) => idx !== i)); };
   const updateSplit = (i: number, field: keyof PaymentSplit, val: string | number) => {
     setPaymentSplits(prev => prev.map((s, idx) => idx === i ? { ...s, [field]: val } : s));
+  };
+
+  const handleIdDataExtracted = (data: ExtractedIdData, frontImage: string, backImage: string) => {
+    setShowIdScan(false);
+    if (data.full_name) handleChange('full_name', data.full_name);
+    if (data.date_of_birth) handleChange('date_of_birth', data.date_of_birth);
+    if (data.emirates_id) handleChange('emirates_id', data.emirates_id);
+    if (data.nationality) handleChange('nationality', data.nationality);
+    if (data.gender) handleChange('gender', data.gender);
+
+    // Auto-download ID PDF
+    try {
+      const name = data.full_name || formData.full_name || 'Patient';
+      const phone = formData.phone_number || 'unknown';
+      generateEmiratesIdPDF({ patientName: name, patientPhone: phone, emiratesId: data.emirates_id, frontImage, backImage }).then(blob => {
+        downloadPDF(blob, getEmiratesIdFileName(name, phone));
+      });
+    } catch (err) {
+      console.error('ID PDF download error:', err);
+    }
+
+    toast({ title: 'ID Scanned', description: 'Details have been filled from Emirates ID.' });
   };
 
   const clearSignature = () => signatureRef.current?.clear();
@@ -356,6 +382,38 @@ export default function AddExistingPatient() {
             />
           </TabletCardContent>
         </TabletCard>
+
+        {/* Scan Emirates ID */}
+        {showIdScan ? (
+          <TabletCard className="mb-6">
+            <TabletCardHeader>
+              <div className="flex items-center justify-between">
+                <TabletCardTitle>Scan Emirates ID</TabletCardTitle>
+                <TabletButton type="button" variant="ghost" size="sm" onClick={() => setShowIdScan(false)}>
+                  Cancel
+                </TabletButton>
+              </div>
+            </TabletCardHeader>
+            <TabletCardContent>
+              <EmiratesIdCapture
+                onDataExtracted={handleIdDataExtracted}
+                onSkip={() => setShowIdScan(false)}
+                showSkip={false}
+              />
+            </TabletCardContent>
+          </TabletCard>
+        ) : (
+          <TabletButton
+            type="button"
+            variant="outline"
+            fullWidth
+            className="mb-6"
+            onClick={() => setShowIdScan(true)}
+            leftIcon={<CreditCard />}
+          >
+            Scan Emirates ID
+          </TabletButton>
+        )}
 
         {/* Patient Info */}
         <PatientInfoSection formData={formData} errors={errors} onChange={(f, v) => handleChange(f, v)} />
