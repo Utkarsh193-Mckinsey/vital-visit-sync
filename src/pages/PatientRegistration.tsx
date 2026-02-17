@@ -344,7 +344,7 @@ export default function PatientRegistration() {
             </TabletButton>
           }
         />
-        <EmiratesIdCapture onDataExtracted={handleIdDataExtracted} showSkip={false} />
+        <EmiratesIdCapture onDataExtracted={handleIdDataExtracted} showSkip={true} onSkip={() => setStep('form')} />
       </PageContainer>
     );
   }
