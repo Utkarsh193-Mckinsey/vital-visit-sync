@@ -17,6 +17,7 @@ import LanguageSelector from '@/components/patient/LanguageSelector';
 import PatientInfoSection from '@/components/patient/registration/PatientInfoSection';
 import EmergencyContactSection from '@/components/patient/registration/EmergencyContactSection';
 import MedicalHistorySection from '@/components/patient/registration/MedicalHistorySection';
+import { StaffDropdown } from '@/components/shared/StaffDropdown';
 
 type RegistrationStep = 'language' | 'id_capture' | 'form';
 
@@ -50,6 +51,7 @@ export default function PatientRegistration() {
     medical_other_details: '',
     file_number: '',
   });
+  const [registeredBy, setRegisteredBy] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registeredPatient, setRegisteredPatient] = useState<{ id: string; signatureDataUrl: string } | null>(null);
@@ -215,6 +217,7 @@ export default function PatientRegistration() {
         file_number: formData.file_number.trim() || null,
         language: language,
         status: 'active',
+        registered_by: registeredBy || null,
       } as any).select().single();
 
       if (error) throw error;
@@ -422,6 +425,16 @@ export default function PatientRegistration() {
           onChange={handleMedicalChange}
           onDetailsChange={handleMedicalDetailsChange}
         />
+
+        {/* Registered By */}
+        <TabletCard className="mb-6">
+          <TabletCardHeader>
+            <TabletCardTitle>Registered By</TabletCardTitle>
+          </TabletCardHeader>
+          <TabletCardContent>
+            <StaffDropdown value={registeredBy} onChange={setRegisteredBy} label="Registered By" />
+          </TabletCardContent>
+        </TabletCard>
 
         {/* Patient Signature */}
         <TabletCard className="mb-6">

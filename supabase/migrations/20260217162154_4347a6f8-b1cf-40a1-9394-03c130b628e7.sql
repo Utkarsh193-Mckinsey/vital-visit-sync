@@ -1,0 +1,1 @@
+ALTER TABLE public.patients ADD COLUMN registered_by text;

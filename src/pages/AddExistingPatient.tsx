@@ -15,6 +15,7 @@ import { downloadPDF } from '@/utils/pdfDownload';
 import PatientInfoSection from '@/components/patient/registration/PatientInfoSection';
 import EmergencyContactSection from '@/components/patient/registration/EmergencyContactSection';
 import MedicalHistorySection from '@/components/patient/registration/MedicalHistorySection';
+import { StaffDropdown } from '@/components/shared/StaffDropdown';
 import {
   Select,
   SelectContent,
@@ -76,6 +77,7 @@ export default function AddExistingPatient() {
     file_number: '',
   });
 
+  const [registeredBy, setRegisteredBy] = useState('');
   const [showIdScan, setShowIdScan] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -257,6 +259,7 @@ export default function AddExistingPatient() {
         file_number: formData.file_number.trim() || null,
         language: 'en',
         status: 'active',
+        registered_by: registeredBy || null,
       } as any).select().single();
 
       if (error) throw error;
@@ -427,6 +430,16 @@ export default function AddExistingPatient() {
           onChange={handleMedicalChange}
           onDetailsChange={handleMedicalDetailsChange}
         />
+
+        {/* Registered By */}
+        <TabletCard className="mb-6">
+          <TabletCardHeader>
+            <TabletCardTitle>Registered By</TabletCardTitle>
+          </TabletCardHeader>
+          <TabletCardContent>
+            <StaffDropdown value={registeredBy} onChange={setRegisteredBy} label="Registered By" />
+          </TabletCardContent>
+        </TabletCard>
 
         {/* Signature (optional) */}
         <TabletCard className="mb-6">

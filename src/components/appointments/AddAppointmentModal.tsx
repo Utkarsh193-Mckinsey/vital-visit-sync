@@ -6,7 +6,9 @@ import { TabletInput } from '@/components/ui/tablet-input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { StaffDropdown } from '@/components/shared/StaffDropdown';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 import type { Appointment } from '@/pages/Appointments';
 
 interface Props {
@@ -54,12 +56,24 @@ export function AddAppointmentModal({ open, onOpenChange, appointment, defaultDa
         });
       }
 
-      // Fetch treatments for service dropdown
       supabase.from('treatments').select('id, treatment_name').eq('status', 'active').then(({ data }) => {
         if (data) setTreatments(data);
       });
     }
   }, [open, appointment, defaultDate]);
+
+  const sendWhatsAppConfirmation = async (formData: typeof form) => {
+    try {
+      const dateFormatted = format(new Date(formData.appointment_date + 'T00:00:00'), 'EEEE, dd MMM yyyy');
+      const message = `Hi ${formData.patient_name},\n\nYour appointment at Cosmique Clinic has been booked.\n\nDate: ${dateFormatted}\nTime: ${formData.appointment_time}\nService: ${formData.service}\n\nFor any queries, please contact us at +971 58 590 8090.\n\nCosmique Aesthetics & Dermatology\nBeach Park Plaza, Al Mamzar, Dubai`;
+
+      await supabase.functions.invoke('send-whatsapp', {
+        body: { phone: formData.phone, message, patient_name: formData.patient_name },
+      });
+    } catch (err) {
+      console.error('WhatsApp send error:', err);
+    }
+  };
 
   const handleSave = async () => {
     if (!form.patient_name || !form.phone || !form.service) {
@@ -82,6 +96,9 @@ export function AddAppointmentModal({ open, onOpenChange, appointment, defaultDa
           .insert(form);
         if (error) throw error;
         toast.success('Appointment created');
+
+        // Send WhatsApp confirmation for new appointments
+        sendWhatsAppConfirmation(form);
       }
       onSaved();
       onOpenChange(false);
@@ -135,10 +152,7 @@ export function AddAppointmentModal({ open, onOpenChange, appointment, defaultDa
             </Select>
           </div>
 
-          <div>
-            <Label>Booked By</Label>
-            <TabletInput value={form.booked_by} onChange={e => setForm(f => ({ ...f, booked_by: e.target.value }))} placeholder="e.g. WhatsApp, Call, Walk-in" />
-          </div>
+          <StaffDropdown value={form.booked_by} onChange={v => setForm(f => ({ ...f, booked_by: v }))} label="Booked By" />
 
           <div className="flex items-center gap-3">
             <Switch checked={form.is_new_patient} onCheckedChange={v => setForm(f => ({ ...f, is_new_patient: v }))} />

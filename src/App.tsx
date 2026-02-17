@@ -31,6 +31,7 @@ import Rescheduled from "./pages/Rescheduled";
 import PersonalAssistant from "./pages/PersonalAssistant";
 import WhatsAppChats from "./pages/WhatsAppChats";
 import BookNextAppointment from "./pages/BookNextAppointment";
+import StaffReports from "./pages/StaffReports";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -263,6 +264,12 @@ function AppRoutes() {
       <Route path="/settings" element={
         <ProtectedRoute allowedRoles={['admin']}>
           <AdminSettings />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/staff-reports" element={
+        <ProtectedRoute allowedRoles={['admin']}>
+          <StaffReports />
         </ProtectedRoute>
       } />
 
