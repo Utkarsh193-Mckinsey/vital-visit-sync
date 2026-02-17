@@ -171,7 +171,7 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
     <>
     <TabletCard className="p-2.5">
       {/* Single row layout */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2 flex-nowrap w-full">
         {/* Time & Date */}
         <div className="flex items-center gap-1 min-w-[80px]">
           <Clock className="h-3 w-3 text-primary flex-shrink-0" />
