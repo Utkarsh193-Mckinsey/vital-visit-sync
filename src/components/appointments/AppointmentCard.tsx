@@ -168,44 +168,44 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
 
   return (
     <>
-    <TabletCard className="p-3">
+    <TabletCard className="p-2.5">
       {/* Single row layout */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-2.5 flex-wrap">
         {/* Time & Date */}
-        <div className="flex items-center gap-1.5 min-w-[100px]">
-          <Clock className="h-4 w-4 text-primary flex-shrink-0" />
+        <div className="flex items-center gap-1 min-w-[90px]">
+          <Clock className="h-3.5 w-3.5 text-primary flex-shrink-0" />
           <div>
-            <span className="font-bold text-foreground text-sm">{formatTime(apt.appointment_time)}</span>
-            <span className="text-xs text-muted-foreground ml-1">{apt.appointment_date}</span>
+            <span className="font-bold text-foreground text-xs">{formatTime(apt.appointment_time)}</span>
+            <span className="text-[11px] text-muted-foreground ml-1">{apt.appointment_date}</span>
           </div>
         </div>
 
         {/* Confirmation badge */}
-        <Badge className={`${confirm.className} text-xs flex-shrink-0`}>{confirm.label}</Badge>
+        <Badge className={`${confirm.className} text-[10px] flex-shrink-0`}>{confirm.label}</Badge>
 
         {/* Patient name + phone */}
-        <div className="flex items-center gap-2 min-w-[160px]">
-          <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+        <div className="flex items-center gap-1.5 min-w-[140px]">
+          <User className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
           <div className="min-w-0">
-            <span className="font-semibold text-foreground text-sm truncate block">{apt.patient_name}</span>
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Phone className="h-3 w-3" />{apt.phone}
+            <span className="font-semibold text-foreground text-xs truncate block">{apt.patient_name}</span>
+            <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+              <Phone className="h-2.5 w-2.5" />{apt.phone}
             </span>
           </div>
-          {apt.is_new_patient && <Badge variant="secondary" className="text-[10px] h-5">NEW</Badge>}
+          {apt.is_new_patient && <Badge variant="secondary" className="text-[10px] h-4">NEW</Badge>}
           {apt.no_show_count > 0 && (
-            <Badge variant="destructive" className="text-[10px] h-5 flex items-center gap-0.5">
+            <Badge variant="destructive" className="text-[10px] h-4 flex items-center gap-0.5">
               <AlertTriangle className="h-2.5 w-2.5" />{apt.no_show_count}x
             </Badge>
           )}
         </div>
 
         {/* Service */}
-        <span className="text-sm font-medium text-foreground min-w-[100px]">{apt.service}</span>
+        <span className="text-xs font-medium text-foreground min-w-[90px]">{apt.service}</span>
 
         {/* Booked by */}
         {apt.booked_by && (
-          <span className="text-xs text-muted-foreground min-w-[80px]">
+          <span className="text-[11px] text-muted-foreground min-w-[70px]">
             <span className="text-muted-foreground/70">by</span> {apt.booked_by}
           </span>
         )}
@@ -227,58 +227,58 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
         <div className="flex-1" />
 
         {/* Actions */}
-        <div className="flex items-center gap-1.5 flex-shrink-0">
+        <div className="flex items-center gap-1 flex-shrink-0">
           <Select value={apt.status} onValueChange={v => onUpdateStatus(apt.id, v)}>
-            <SelectTrigger className={`h-8 w-[120px] text-xs font-medium rounded-full border-0 ${statusColors[apt.status] || ''}`}>
+            <SelectTrigger className={`h-7 w-[110px] text-[11px] font-medium rounded-full border-0 ${statusColors[apt.status] || ''}`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {STATUS_OPTIONS.map(s => (
-                <SelectItem key={s} value={s} className="capitalize">{s.replace(/_/g, ' ')}</SelectItem>
+                <SelectItem key={s} value={s} className="capitalize text-xs">{s.replace(/_/g, ' ')}</SelectItem>
               ))}
             </SelectContent>
           </Select>
 
           <Select value={apt.confirmation_status} onValueChange={v => onUpdateConfirmation(apt.id, v)}>
-            <SelectTrigger className="h-8 w-[140px] text-xs font-medium rounded-full border">
+            <SelectTrigger className="h-7 w-[125px] text-[11px] font-medium rounded-full border">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {CONFIRMATION_OPTIONS.map(s => (
-                <SelectItem key={s} value={s} className="capitalize">{s.replace(/_/g, ' ')}</SelectItem>
+                <SelectItem key={s} value={s} className="capitalize text-xs">{s.replace(/_/g, ' ')}</SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          <TabletButton variant="outline" size="sm" className="text-xs h-8" onClick={handleCallPatient} disabled={calling}>
-            {calling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><PhoneCall className="h-3.5 w-3.5 mr-1" /> Call</>}
+          <TabletButton variant="outline" size="sm" className="text-[11px] h-7 px-2" onClick={handleCallPatient} disabled={calling}>
+            {calling ? <Loader2 className="h-3 w-3 animate-spin" /> : <><PhoneCall className="h-3 w-3 mr-0.5" /> Call</>}
           </TabletButton>
 
           {showReminderStatus && (
-            <TabletButton variant="outline" size="sm" className="text-xs h-8" onClick={() => onUpdateConfirmation(apt.id, 'confirmed_call')}>
-              <CheckCircle className="h-3.5 w-3.5 mr-1" /> Confirm
+            <TabletButton variant="outline" size="sm" className="text-[11px] h-7 px-2" onClick={() => onUpdateConfirmation(apt.id, 'confirmed_call')}>
+              <CheckCircle className="h-3 w-3 mr-0.5" /> Confirm
             </TabletButton>
           )}
 
           {apt.status === 'upcoming' && (
-            <TabletButton variant="outline" size="sm" className="text-xs h-8" onClick={handleRegisterNewPatient}>
-              <UserPlus className="h-3.5 w-3.5 mr-1" /> Register
+            <TabletButton variant="outline" size="sm" className="text-[11px] h-7 px-2" onClick={handleRegisterNewPatient}>
+              <UserPlus className="h-3 w-3 mr-0.5" /> Register
             </TabletButton>
           )}
 
           {apt.status !== 'no_show' && apt.status !== 'rescheduled' && apt.status !== 'completed' && apt.status !== 'cancelled' && (
             <>
-              <TabletButton variant="outline" size="sm" className="text-xs h-8 text-orange-600 border-orange-300 hover:bg-orange-50" onClick={() => setShowRescheduleModal(true)}>
-                <CalendarClock className="h-3.5 w-3.5 mr-1" /> Reschedule
+              <TabletButton variant="outline" size="sm" className="text-[11px] h-7 px-2 text-orange-600 border-orange-300 hover:bg-orange-50" onClick={() => setShowRescheduleModal(true)}>
+                <CalendarClock className="h-3 w-3 mr-0.5" /> Reschedule
               </TabletButton>
-              <TabletButton variant="outline" size="sm" className="text-xs h-8 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={handleNoShow}>
-                <XCircle className="h-3.5 w-3.5 mr-1" /> No Show
+              <TabletButton variant="outline" size="sm" className="text-[11px] h-7 px-2 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={handleNoShow}>
+                <XCircle className="h-3 w-3 mr-0.5" /> No Show
               </TabletButton>
             </>
           )}
 
-          <TabletButton variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(apt)}>
-            <Edit className="h-4 w-4" />
+          <TabletButton variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(apt)}>
+            <Edit className="h-3.5 w-3.5" />
           </TabletButton>
         </div>
       </div>
