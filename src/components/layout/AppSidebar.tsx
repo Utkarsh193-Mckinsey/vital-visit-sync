@@ -257,13 +257,13 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border">
-      <SidebarHeader className="p-4 border-b border-border">
+      <SidebarHeader className="h-14 flex items-center px-4 border-b border-border">
         <div className="flex items-center gap-3">
-          <img src={cosmiqueLogo} alt="Cosmique" className="h-10 w-10 object-contain" />
+          <img src={cosmiqueLogo} alt="Cosmique" className="h-8 w-8 object-contain" />
           {!collapsed && (
             <div className="flex flex-col">
-              <span className="font-semibold text-foreground">COSMIQUE</span>
-              <span className="text-xs text-muted-foreground">Aesthetics & Dermatology</span>
+              <span className="font-semibold text-foreground text-sm leading-tight">COSMIQUE</span>
+              <span className="text-xs text-muted-foreground leading-tight">Aesthetics & Dermatology</span>
             </div>
           )}
         </div>
