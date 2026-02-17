@@ -168,6 +168,17 @@ export default function BookNextAppointment() {
       const { error: visitError } = await supabase.from('visits').update({ next_appointment_status: 'booked' }).eq('id', bookingVisit.id);
       if (visitError) throw visitError;
 
+      // Send WhatsApp confirmation
+      try {
+        const dateFormatted = format(new Date(bookForm.date + 'T00:00:00'), 'EEEE, dd MMM yyyy');
+        const message = `Hi ${bookingVisit.patient.full_name},\n\nYour next appointment at Cosmique Clinic has been booked.\n\nDate: ${dateFormatted}\nTime: ${bookForm.time}\nService: ${bookForm.service}\n\nFor any queries, please contact us at +971 58 590 8090.\n\nCosmique Aesthetics & Dermatology\nBeach Park Plaza, Al Mamzar, Dubai`;
+        await supabase.functions.invoke('send-whatsapp', {
+          body: { phone: bookingVisit.patient.phone_number, message, patient_name: bookingVisit.patient.full_name },
+        });
+      } catch (whatsappErr) {
+        console.error('WhatsApp send error:', whatsappErr);
+      }
+
       toast.success(`Appointment booked for ${bookingVisit.patient.full_name}`);
       setBookingVisit(null);
       fetchVisits();

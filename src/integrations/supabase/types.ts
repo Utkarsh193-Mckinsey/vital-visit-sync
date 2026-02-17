@@ -410,6 +410,7 @@ export type Database = {
           medical_other_details: string | null
           nationality: string | null
           phone_number: string
+          registered_by: string | null
           registration_date: string
           registration_signature_url: string | null
           status: Database["public"]["Enums"]["patient_status"]
@@ -449,6 +450,7 @@ export type Database = {
           medical_other_details?: string | null
           nationality?: string | null
           phone_number: string
+          registered_by?: string | null
           registration_date?: string
           registration_signature_url?: string | null
           status?: Database["public"]["Enums"]["patient_status"]
@@ -488,6 +490,7 @@ export type Database = {
           medical_other_details?: string | null
           nationality?: string | null
           phone_number?: string
+          registered_by?: string | null
           registration_date?: string
           registration_signature_url?: string | null
           status?: Database["public"]["Enums"]["patient_status"]

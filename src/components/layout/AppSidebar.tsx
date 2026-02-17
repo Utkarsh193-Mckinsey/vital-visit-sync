@@ -32,7 +32,8 @@ import {
   LayoutDashboard,
   BarChart3,
   MessageCircle,
-  CalendarPlus
+  CalendarPlus,
+  ClipboardList
 } from 'lucide-react';
 import { TabletButton } from '@/components/ui/tablet-button';
 import cosmiqueLogo from '@/assets/cosmique-symbol.png';
@@ -138,6 +139,12 @@ const navigationItems: NavItem[] = [
     title: 'Analytics', 
     url: '/analytics', 
     icon: BarChart3,
+    roles: ['admin']
+  },
+  { 
+    title: 'Staff Reports', 
+    url: '/staff-reports', 
+    icon: ClipboardList,
     roles: ['admin']
   },
   { 
