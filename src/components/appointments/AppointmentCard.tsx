@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { TabletButton } from '@/components/ui/tablet-button';
 import { Phone, Clock, User, Edit, AlertTriangle, MessageSquare, PhoneCall, ChevronDown, ChevronUp, CheckCircle, Send, Loader2, UserPlus, CalendarClock, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { WhatsAppLink } from '@/components/ui/whatsapp-link';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { TabletInput } from '@/components/ui/tablet-input';
 import { Label } from '@/components/ui/label';
@@ -190,6 +191,7 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
             <span className="font-semibold text-foreground text-xs truncate block">{apt.patient_name}</span>
             <span className="text-[11px] text-muted-foreground flex items-center gap-1">
               <Phone className="h-2.5 w-2.5" />{apt.phone}
+              <WhatsAppLink phone={apt.phone} iconSize="h-3 w-3" />
             </span>
           </div>
           {apt.is_new_patient && <Badge variant="secondary" className="text-[10px] h-4">NEW</Badge>}
