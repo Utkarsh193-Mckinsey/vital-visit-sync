@@ -1,202 +1,126 @@
 
+# Staff Performance Reports + "Registered By" Tracking + Booking Confirmation Messages
 
-## 🏥 Patient Visit & Package Manager - Implementation Plan
-
-A tablet-optimized clinic management system for iPad-based workflow at Cosmique Aesthetic & Dermatology Clinic.
-
----
-
-### Phase 1: Foundation & Authentication
-
-**Backend Setup (Lovable Cloud)**
-- Enable Lovable Cloud for automatic Supabase provisioning
-- Create Storage bucket for signatures and PDFs
-
-**Database Schema**
-- Create all 9 tables with proper relationships:
-  - `staff` (linked to Supabase Auth users)
-  - `patients` (with phone as unique identifier)
-  - `treatments` (with common doses as JSONB)
-  - `consent_templates` (version-controlled)
-  - `packages` (session tracking)
-  - `visits` (workflow status tracking)
-  - `visit_treatments` (treatment documentation)
-  - `consent_forms` (signed consents)
-  - `vitals_config` (configurable vital parameters)
-
-**Seed Data**
-- 4 staff members with roles (admin, reception, nurse, doctor)
-- 4 treatments (Mounjaro, IV Drip, EMS, Botox)
-- Consent templates for each treatment
-- Default vitals configuration (Weight, BP, Heart Rate)
-
-**Authentication System**
-- Supabase Auth integration for secure login
-- Role-based access control using staff table
-- Role-based routing after login
-- Session management with auto-logout
+## Overview
+This plan covers four interconnected features:
+1. A new **Staff Performance Report** page accessible from the sidebar
+2. A **"Registered By"** field added to patient registration and appointment flows
+3. **Instant WhatsApp confirmation** when appointments are booked manually
+4. **WhatsApp confirmation for follow-up bookings** (next session appointments)
 
 ---
 
-### Phase 2: Reception Workflow
+## 1. Staff Performance Report Page
 
-**Login Screen**
-- Large, tablet-optimized input fields (56px height)
-- Email/password authentication
-- Auto-route based on staff role
+A new page at `/staff-reports` with two report tabs:
 
-**Patient Search Screen** (Reception/Admin)
-- Phone number search with large input
-- Quick "New Patient" registration button
-- Patient cards showing active packages
+### SDR / Reception Report
+- Number of appointments booked (grouped by staff name from `booked_by` field)
+- Total sales amount (sum of `total_amount` from packages where `created_by` matches staff)
+- Amount collected (sum of `amount_paid`)
+- New patients registered (count where `registered_by` matches staff -- new column)
+- Filterable by date range (default: current month)
 
-**Patient Registration** (Reception/Admin)
-- Multi-field form with validation
-- Signature capture using react-signature-canvas
-- Upload signature to cloud storage
-- Auto-navigate to Patient Dashboard
+### Doctor Report
+- Number of consultations done (count from `patients` where `consultation_done_by` matches)
+- Conversion rate: patients who got packages after consultation
+- Total package value from converted patients
+- Treatments administered (count from `visit_treatments` where `doctor_staff_id` matches)
+- Filterable by date range
 
-**Patient Dashboard**
-- Display all active packages as cards
-- Add New Package functionality
-- Start Visit / Sign Consent flow
-- View Visit History access
+### Sidebar Addition
+- New nav item "Staff Reports" with a `ClipboardList` icon, visible to `admin` role only, placed between Analytics and Settings
 
 ---
 
-### Phase 3: Consent & Visit Creation
+## 2. "Registered By" / "Booked By" Tracking
 
-**Add Package Modal**
-- Treatment selection dropdown
-- Session count with quick presets (4, 8, 12)
-- Payment status selection
-- Package creation with full session count
+### Database Change
+- Add `registered_by` column (text, nullable) to the `patients` table to track who registered each patient
 
-**Consent Form Signing**
-- Multi-treatment consent flow
-- Dynamic placeholder replacement ([PATIENT_NAME], [DATE])
-- Individual signature capture per treatment
-- Create Visit record with auto-incremented visit number
-- Store consent signatures in cloud storage
-- Set visit status to "waiting"
+### Patient Registration (`/patient/register`)
+- Before the signature section, add a **"Registered By"** dropdown
+- Options: all active staff with role `admin` or `reception` (SDR title), plus an "Other" option
+- If "Other" is selected, show a text input for a custom name
+- This value is saved to `patients.registered_by`
 
----
+### Add Existing Patient (`/patient/add-existing`)
+- Same "Registered By" dropdown added before the submit button
 
-### Phase 4: Clinical Workflow
-
-**Waiting Area Dashboard** (Nurse/Doctor/Admin)
-- Real-time patient queue (10-second polling)
-- Show waiting time, treatments, consent status
-- "Take Patient" action moves to in-progress
-- Auto-refresh for live updates
-
-**Vitals Entry Screen**
-- Dynamic form based on vitals_config
-- Weight, Blood Pressure, Heart Rate inputs
-- Previous visit comparison display
-- **Alert System:**
-  - 🔴 CRITICAL alerts block proceeding
-  - 🟡 WARNING alerts allow with flag
-- Save and continue to treatment
-
-**Treatment Documentation** (Doctor/Admin only)
-- Read-only vitals display
-- For each consented treatment:
-  - Treatment performed checkbox
-  - Dose selection (radio buttons from common_doses)
-  - Custom dose input option
-  - Session deduction preview
-- Doctor notes (large textarea)
-- Complete Visit action:
-  - Deduct sessions (FIFO from oldest package)
-  - Lock visit record
-  - Mark as completed
+### Appointment Modal (`AddAppointmentModal`)
+- Change the "Booked By" free-text field to a dropdown with staff names (admin + reception roles) plus "Other" with custom input
+- This ensures every appointment has a proper staff name attached
 
 ---
 
-### Phase 5: History & Documents
+## 3. Instant WhatsApp Confirmation on Manual Booking
 
-**Visit History Screen**
-- Chronological list of all visits
-- Role-filtered content (doctor notes hidden from reception/nurse)
-- Per-visit details: vitals, treatments, notes
+When a new appointment is created via the `AddAppointmentModal`:
+- After successful insert, call the `send-whatsapp` edge function with a formatted message:
 
-**PDF Generation**
-- Registration PDF (patient info + signature)
-- Consent PDF (per treatment, with signature)
-- Visit Summary PDF (vitals, treatments, notes)
-- Store in cloud storage, URLs saved to database
+```
+Hi [Patient Name],
 
----
+Your appointment at Cosmique Clinic has been booked.
 
-### Phase 6: Admin Settings
+Date: [Date]
+Time: [Time]
+Service: [Service]
 
-**Settings Dashboard** (Admin only)
-- Tab-based navigation
+For any queries, please contact us at +971XXXXXXXXX.
 
-**Consent Templates Tab**
-- List all templates (active/inactive)
-- Create/edit with rich text for consent_text
-- Version control (new versions auto-increment)
-
-**Treatments Tab**
-- Manage treatments with categories
-- Configure dosage units and common doses
-- Link consent templates
-
-**Vitals Tab**
-- Configure vital parameters
-- Set input types (single/dual for BP)
-- Define alert rules (critical/warning thresholds)
-
-**Staff Tab**
-- Manage staff accounts
-- Role assignment
-- Status toggle (active/inactive)
+Cosmique Aesthetics & Dermatology
+Beach Park Plaza, Al Mamzar, Dubai
+```
 
 ---
 
-### Design System (Tablet-Optimized)
+## 4. WhatsApp Confirmation for Follow-up Bookings
 
-**Colors**
-- Primary: #1E88E5 (Blue)
-- Success: #43A047 (Green)
-- Warning: #FB8C00 (Orange)
-- Critical: #E53935 (Red)
-- Background: #FAFAFA
+When a next-session appointment is booked via `BookNextAppointment`:
+- After successful insert, call `send-whatsapp` with:
 
-**Touch-First UI**
-- All inputs: 56px height minimum
-- All buttons: 56px height, rounded corners
-- Touch targets: 44px minimum
-- Card shadows with 12px radius
-- 16px spacing throughout
+```
+Hi [Patient Name],
 
-**Responsive Layout**
-- Optimized for 768px - 1024px (iPad)
-- Two-column on larger tablets
-- Single column on smaller screens
+Your next appointment at Cosmique Clinic has been booked.
 
----
+Date: [Date]
+Time: [Time]
+Service: [Service]
 
-### Key Technical Features
+For any queries, please contact us at +971XXXXXXXXX.
 
-1. **Auto-increment visit numbers** per patient (not global)
-2. **FIFO package deduction** (oldest active package first)
-3. **Visit locking** after completion (no edits)
-4. **Real-time waiting area** (10s polling)
-5. **Vitals alert system** with blocking capability
-6. **Version-controlled consent templates**
-7. **Role-based access** on every screen
-8. **Cloud storage** for signatures and PDFs
+Cosmique Aesthetics & Dermatology
+Beach Park Plaza, Al Mamzar, Dubai
+```
 
 ---
 
-### Security & Compliance
+## Technical Details
 
-- Row-Level Security (RLS) on all tables
-- Role stored in separate table (not user profile)
-- Staff actions logged with timestamps
-- Locked visits prevent tampering
-- Secure signature and document storage
+### Database Migration
+```sql
+ALTER TABLE patients ADD COLUMN registered_by text;
+```
 
+### Files to Create
+- `src/pages/StaffReports.tsx` -- new report page with SDR and Doctor tabs
+
+### Files to Modify
+- `src/components/layout/AppSidebar.tsx` -- add Staff Reports nav item
+- `src/App.tsx` -- add route for `/staff-reports`
+- `src/pages/PatientRegistration.tsx` -- add "Registered By" dropdown before signature
+- `src/pages/AddExistingPatient.tsx` -- add "Registered By" dropdown before submit
+- `src/components/appointments/AddAppointmentModal.tsx` -- change "Booked By" to staff dropdown + send WhatsApp on create
+- `src/pages/BookNextAppointment.tsx` -- send WhatsApp confirmation after booking
+
+### Staff Dropdown Logic
+- Fetch from `staff` table where `status = 'active'` and `role in ('admin', 'reception')`
+- Display `full_name` as options
+- Include an "Other" option that reveals a text input for custom names
+- For Doctor report, fetch staff where `role = 'doctor'`
+
+### Report Queries
+- SDR: `appointments` grouped by `booked_by`, `packages` joined by `created_by`, `patients` by `registered_by`
+- Doctor: `patients` by `consultation_done_by`, `visit_treatments` by `doctor_staff_id`, `packages` by patient conversion
