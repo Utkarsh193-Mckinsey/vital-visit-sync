@@ -26,7 +26,10 @@ Deno.serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   try {
-    const tomorrow = new Date();
+    // Clinic is in UAE (UTC+4)
+    const UAE_OFFSET_MS = 4 * 60 * 60 * 1000;
+    const nowUAE = new Date(new Date().getTime() + UAE_OFFSET_MS);
+    const tomorrow = new Date(nowUAE);
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().split("T")[0];
 
