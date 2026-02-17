@@ -61,7 +61,20 @@ Deno.serve(async (req) => {
         if (watiPhone.startsWith("0")) watiPhone = "971" + watiPhone.slice(1);
         if (!watiPhone.startsWith("971") && watiPhone.length <= 10) watiPhone = "971" + watiPhone;
 
-        const message = `Hi ${appt.patient_name}, just to confirm your appointment is scheduled for today at ${appt.appointment_time} for ${appt.service}.\n\nGreetings,\nCosmique Aesthetics`;
+        const timeFormatted = appt.appointment_time.slice(0, 5);
+        const message = `Hi *${appt.patient_name}* 👋
+
+Just a quick reminder — your appointment is *today* at *${timeFormatted}* for *${appt.service}*.
+
+We look forward to seeing you! 😊
+
+📍 Cosmique Aesthetics & Dermatology
+Beach Park Plaza, Shop No. 20
+
+📞 +971 50 429 6888
+
+_See you soon!_
+_Cosmique Aesthetics & Dermatology_`;
 
         const watiRes = await fetch(
           `${WATI_API_URL}/api/v1/sendSessionMessage/${watiPhone}?messageText=${encodeURIComponent(message)}`,
