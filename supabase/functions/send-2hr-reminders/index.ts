@@ -15,9 +15,8 @@ Deno.serve(async (req) => {
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const WATI_API_URL = Deno.env.get("WATI_API_URL");
   const WATI_API_KEY = Deno.env.get("WATI_API_KEY");
-  const TEMPLATE_NAME = Deno.env.get("WATI_TEMPLATE_REMINDER_2HR");
 
-  if (!WATI_API_URL || !WATI_API_KEY || !TEMPLATE_NAME) {
+  if (!WATI_API_URL || !WATI_API_KEY) {
     return new Response(
       JSON.stringify({ error: "WATI environment variables not configured" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -30,23 +29,73 @@ Deno.serve(async (req) => {
     const now = new Date();
     const todayStr = now.toISOString().split("T")[0];
 
-    // Get today's appointments that are unconfirmed and haven't received 2hr reminder
+    // Get today's appointments that haven't received 2hr reminder
     const { data: appointments, error: fetchErr } = await supabase
       .from("appointments")
       .select("*")
       .eq("appointment_date", todayStr)
       .eq("reminder_2hr_sent", false)
-      .in("confirmation_status", ["unconfirmed", "message_sent", "called_no_answer"])
       .neq("status", "cancelled");
 
     if (fetchErr) throw fetchErr;
 
     const results: { id: string; success: boolean; error?: string }[] = [];
 
-    // DISABLED: Patient messaging is currently turned off
-    // All reminders are paused - no messages sent to patients
-    console.log(`Found ${(appointments || []).length} appointments for 2hr reminders, but patient messaging is DISABLED`);
-    const results: { id: string; success: boolean; error?: string }[] = [];
+    for (const appt of (appointments || [])) {
+      try {
+        // Check if appointment is within 2 hours
+        const [hours, minutes] = appt.appointment_time.split(":").map(Number);
+        const apptTime = new Date(now);
+        apptTime.setHours(hours, minutes, 0, 0);
+        const diffMs = apptTime.getTime() - now.getTime();
+        const diffHours = diffMs / (1000 * 60 * 60);
+
+        // Send if appointment is 0-2.5 hours away (to catch the window)
+        if (diffHours < 0 || diffHours > 2.5) continue;
+
+        let watiPhone = appt.phone.replace(/[\s\-\(\)\+]/g, "");
+        if (watiPhone.startsWith("0")) watiPhone = "971" + watiPhone.slice(1);
+        if (!watiPhone.startsWith("971") && watiPhone.length <= 10) watiPhone = "971" + watiPhone;
+
+        const message = `Hi ${appt.patient_name}, just to confirm your appointment is scheduled for today at ${appt.appointment_time} for ${appt.service}.\n\nGreetings,\nCosmique Aesthetics`;
+
+        const watiRes = await fetch(
+          `${WATI_API_URL}/api/v1/sendSessionMessage/${watiPhone}?messageText=${encodeURIComponent(message)}`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${WATI_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        const watiText = await watiRes.text();
+        console.log(`2hr reminder to ${watiPhone}:`, watiRes.status, watiText);
+
+        // Log outbound message
+        await supabase.from("whatsapp_messages").insert({
+          phone: watiPhone,
+          patient_name: appt.patient_name,
+          direction: "outbound",
+          message_text: message,
+          appointment_id: appt.id,
+        });
+
+        // Mark as sent
+        await supabase
+          .from("appointments")
+          .update({ reminder_2hr_sent: true, reminder_2hr_sent_at: new Date().toISOString() })
+          .eq("id", appt.id);
+
+        results.push({ id: appt.id, success: true });
+      } catch (err: any) {
+        console.error(`Failed 2hr reminder for ${appt.id}:`, err);
+        results.push({ id: appt.id, success: false, error: err.message });
+      }
+    }
+
+    console.log(`Processed ${results.length} 2hr reminders`);
 
     return new Response(
       JSON.stringify({ processed: results.length, results }),
