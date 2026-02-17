@@ -260,7 +260,7 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
             </TabletButton>
           )}
 
-          {apt.is_new_patient && apt.status === 'upcoming' && (
+          {apt.status === 'upcoming' && (
             <TabletButton variant="outline" size="sm" className="text-xs h-8" onClick={handleRegisterNewPatient}>
               <UserPlus className="h-3.5 w-3.5 mr-1" /> Register
             </TabletButton>
