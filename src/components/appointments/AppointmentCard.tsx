@@ -169,10 +169,9 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
 
   return (
     <>
-    <TabletCard className="p-2.5">
-      {/* Single row layout */}
-      <div className="flex items-center gap-2 flex-nowrap w-full">
-        {/* Time & Date */}
+    <TabletCard className="p-2 space-y-1.5">
+      {/* Upper row: info */}
+      <div className="flex items-center gap-2 w-full">
         <div className="flex items-center gap-1 min-w-[80px]">
           <Clock className="h-3 w-3 text-primary flex-shrink-0" />
           <div>
@@ -181,10 +180,8 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
           </div>
         </div>
 
-        {/* Confirmation badge */}
         <Badge className={`${confirm.className} text-[8px] px-1.5 py-0 flex-shrink-0`}>{confirm.label}</Badge>
 
-        {/* Patient name + phone */}
         <div className="flex items-center gap-1 min-w-[120px]">
           <User className="h-3 w-3 text-muted-foreground flex-shrink-0" />
           <div className="min-w-0">
@@ -202,17 +199,14 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
           )}
         </div>
 
-        {/* Service */}
         <span className="text-[10px] text-foreground min-w-[70px]">{apt.service}</span>
 
-        {/* Booked by */}
         {apt.booked_by && (
           <span className="text-[9px] text-muted-foreground">
             <span className="text-muted-foreground/70">by</span> {apt.booked_by}
           </span>
         )}
 
-        {/* Reminder status */}
         {showReminderStatus && (
           <div className="flex items-center gap-0.5">
             {apt.reminder_24hr_sent && <Badge variant="outline" className="text-[8px] h-4 px-1">📱 24hr</Badge>}
@@ -224,65 +218,62 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
         {showSlotAvailable && (
           <Badge className="bg-blue-100 text-blue-800 text-[8px] h-4 px-1">🔓 Slot</Badge>
         )}
+      </div>
 
-        {/* Spacer */}
-        <div className="flex-1" />
+      {/* Lower row: actions */}
+      <div className="flex items-center gap-1 flex-wrap">
+        <Select value={apt.status} onValueChange={v => onUpdateStatus(apt.id, v)}>
+          <SelectTrigger className={`h-5 w-[80px] text-[8px] rounded-full border-0 px-1.5 [&>svg]:h-2.5 [&>svg]:w-2.5 ${statusColors[apt.status] || ''}`}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_OPTIONS.map(s => (
+              <SelectItem key={s} value={s} className="capitalize text-[10px] py-1">{s.replace(/_/g, ' ')}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-        {/* Actions */}
-        <div className="flex items-center gap-0.5 flex-shrink-0">
-          <Select value={apt.status} onValueChange={v => onUpdateStatus(apt.id, v)}>
-            <SelectTrigger className={`h-5 w-[75px] text-[8px] rounded-full border-0 px-1.5 [&>svg]:h-2.5 [&>svg]:w-2.5 ${statusColors[apt.status] || ''}`}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {STATUS_OPTIONS.map(s => (
-                <SelectItem key={s} value={s} className="capitalize text-[10px] py-1">{s.replace(/_/g, ' ')}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <Select value={apt.confirmation_status} onValueChange={v => onUpdateConfirmation(apt.id, v)}>
+          <SelectTrigger className="h-5 w-[105px] text-[8px] rounded-full border px-1.5 [&>svg]:h-2.5 [&>svg]:w-2.5">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {CONFIRMATION_OPTIONS.map(s => (
+              <SelectItem key={s} value={s} className="capitalize text-[10px] py-1">{s.replace(/_/g, ' ')}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-          <Select value={apt.confirmation_status} onValueChange={v => onUpdateConfirmation(apt.id, v)}>
-            <SelectTrigger className="h-5 w-[95px] text-[8px] rounded-full border px-1.5 [&>svg]:h-2.5 [&>svg]:w-2.5">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {CONFIRMATION_OPTIONS.map(s => (
-                <SelectItem key={s} value={s} className="capitalize text-[10px] py-1">{s.replace(/_/g, ' ')}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <Button variant="outline" size="sm" className="text-[8px] h-5 px-1.5 rounded gap-0.5" onClick={handleCallPatient} disabled={calling}>
+          {calling ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <><PhoneCall className="h-2.5 w-2.5" /> Call</>}
+        </Button>
 
-          <Button variant="outline" size="sm" className="text-[8px] h-5 px-1.5 rounded gap-0.5" onClick={handleCallPatient} disabled={calling}>
-            {calling ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <><PhoneCall className="h-2.5 w-2.5" /> Call</>}
+        {showReminderStatus && (
+          <Button variant="outline" size="sm" className="text-[8px] h-5 px-1.5 rounded gap-0.5" onClick={() => onUpdateConfirmation(apt.id, 'confirmed_call')}>
+            <CheckCircle className="h-2.5 w-2.5" /> Confirm
           </Button>
+        )}
 
-          {showReminderStatus && (
-            <Button variant="outline" size="sm" className="text-[8px] h-5 px-1.5 rounded gap-0.5" onClick={() => onUpdateConfirmation(apt.id, 'confirmed_call')}>
-              <CheckCircle className="h-2.5 w-2.5" /> Confirm
-            </Button>
-          )}
-
-          {apt.status === 'upcoming' && (
-            <Button variant="outline" size="sm" className="text-[8px] h-5 px-1.5 rounded gap-0.5" onClick={handleRegisterNewPatient}>
-              <UserPlus className="h-2.5 w-2.5" /> Register
-            </Button>
-          )}
-
-          {apt.status !== 'no_show' && apt.status !== 'rescheduled' && apt.status !== 'completed' && apt.status !== 'cancelled' && (
-            <>
-              <Button variant="outline" size="sm" className="text-[8px] h-5 px-1.5 rounded gap-0.5 text-orange-600 border-orange-300 hover:bg-orange-50" onClick={() => setShowRescheduleModal(true)}>
-                <CalendarClock className="h-2.5 w-2.5" /> Reschedule
-              </Button>
-              <Button variant="outline" size="sm" className="text-[8px] h-5 px-1.5 rounded gap-0.5 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={handleNoShow}>
-                <XCircle className="h-2.5 w-2.5" /> No Show
-              </Button>
-            </>
-          )}
-
-          <Button variant="ghost" size="icon" className="h-5 w-5 rounded" onClick={() => onEdit(apt)}>
-            <Edit className="h-2.5 w-2.5" />
+        {apt.status === 'upcoming' && (
+          <Button variant="outline" size="sm" className="text-[8px] h-5 px-1.5 rounded gap-0.5" onClick={handleRegisterNewPatient}>
+            <UserPlus className="h-2.5 w-2.5" /> Register
           </Button>
-        </div>
+        )}
+
+        {apt.status !== 'no_show' && apt.status !== 'rescheduled' && apt.status !== 'completed' && apt.status !== 'cancelled' && (
+          <>
+            <Button variant="outline" size="sm" className="text-[8px] h-5 px-1.5 rounded gap-0.5 text-orange-600 border-orange-300 hover:bg-orange-50" onClick={() => setShowRescheduleModal(true)}>
+              <CalendarClock className="h-2.5 w-2.5" /> Reschedule
+            </Button>
+            <Button variant="outline" size="sm" className="text-[8px] h-5 px-1.5 rounded gap-0.5 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={handleNoShow}>
+              <XCircle className="h-2.5 w-2.5" /> No Show
+            </Button>
+          </>
+        )}
+
+        <Button variant="ghost" size="icon" className="h-5 w-5 rounded" onClick={() => onEdit(apt)}>
+          <Edit className="h-2.5 w-2.5" />
+        </Button>
       </div>
 
       {/* Expandable Communication Log */}
