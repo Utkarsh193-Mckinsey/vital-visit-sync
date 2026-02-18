@@ -128,6 +128,17 @@ export default function PatientDashboard() {
   };
 
   const handleStartVisit = () => {
+    // Check if patient already has an active (waiting or in_progress) visit
+    const activeVisit = activeVisits.find(v => v.current_status === 'waiting' || v.current_status === 'in_progress');
+    if (activeVisit) {
+      toast({
+        title: 'Active Visit Exists',
+        description: `Visit #${activeVisit.visit_number} is still ${activeVisit.current_status === 'waiting' ? 'waiting' : 'in progress'}. Please complete it before starting a new visit.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (packages.length === 0) {
       toast({
         title: 'No Active Packages',
