@@ -207,6 +207,25 @@ export default function ConsentSigning() {
     setIsSigning(true);
 
     try {
+      // Check for existing active visit first
+      const { data: existingActiveVisit } = await supabase
+        .from('visits')
+        .select('id, visit_number, current_status')
+        .eq('patient_id', patientId!)
+        .in('current_status', ['waiting', 'in_progress'])
+        .limit(1)
+        .maybeSingle();
+
+      if (existingActiveVisit) {
+        toast({
+          title: 'Active Visit Exists',
+          description: `Visit #${existingActiveVisit.visit_number} is still ${existingActiveVisit.current_status === 'waiting' ? 'waiting' : 'in progress'}. Please complete it first.`,
+          variant: 'destructive',
+        });
+        setIsSigning(false);
+        return;
+      }
+
       // Get photo/video signature
       const canvas = signatureRef.current.getCanvas();
       const photoVideoSignatureDataUrl = canvas.toDataURL('image/png');
