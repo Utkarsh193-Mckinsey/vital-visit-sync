@@ -220,6 +220,47 @@ export default function WhatsAppChats() {
     setTemplateModalOpen(true);
   };
 
+  const fetchWatiTemplates = async () => {
+    setLoadingTemplates(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-wati-templates', {
+        body: { action: 'list' },
+      });
+      if (error) throw error;
+      setWatiTemplates(data?.messageTemplates || []);
+      setListTemplatesOpen(true);
+    } catch (err: any) {
+      toast.error('Failed to fetch templates: ' + (err.message || 'Unknown error'));
+    } finally {
+      setLoadingTemplates(false);
+    }
+  };
+
+  const handleCreateTemplate = async () => {
+    if (!newTemplate.name || !newTemplate.body) {
+      toast.error('Please fill in template name and body');
+      return;
+    }
+    setCreatingTemplate(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-wati-templates', {
+        body: { action: 'create', template: newTemplate },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success('Template submitted for approval!');
+        setCreateTemplateOpen(false);
+        setNewTemplate({ name: '', body: '', category: 'UTILITY', language: 'en' });
+      } else {
+        toast.error('Failed: ' + JSON.stringify(data?.data || 'Unknown error'));
+      }
+    } catch (err: any) {
+      toast.error('Error: ' + (err.message || 'Unknown'));
+    } finally {
+      setCreatingTemplate(false);
+    }
+  };
+
   const selectedThread = threads.find(t => t.phone === selectedPhone);
 
   return (
