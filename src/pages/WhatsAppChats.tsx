@@ -218,7 +218,7 @@ export default function WhatsAppChats() {
   return (
     <PageContainer maxWidth="full">
       {selectedPhone && (selectedThread || phoneParam) ? (
-        // Full-screen chat view (like WhatsApp)
+        <>
         <div className="flex flex-col h-[calc(100vh-64px)] -mb-6">
           {/* Chat header */}
           <div className="flex items-center gap-3 p-3 border-b border-border bg-muted/30 shrink-0">
