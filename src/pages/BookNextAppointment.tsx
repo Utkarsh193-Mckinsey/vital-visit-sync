@@ -310,7 +310,15 @@ export default function BookNextAppointment() {
                       </>
                     )}
                     {visit.next_appointment_status === 'booked' && (
-                      <Badge className="bg-green-100 text-green-800 text-xs"><CheckCircle className="h-3 w-3 mr-1" /> Booked</Badge>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge className="bg-green-100 text-green-800 text-xs"><CheckCircle className="h-3 w-3 mr-1" /> Booked</Badge>
+                        {visit.bookedAppointment && (
+                          <Badge variant="outline" className="text-xs">
+                            <CalendarPlus className="h-3 w-3 mr-1" />
+                            {format(new Date(visit.bookedAppointment.appointment_date + 'T00:00:00'), 'EEE, dd MMM')} at {visit.bookedAppointment.appointment_time} — {visit.bookedAppointment.service}
+                          </Badge>
+                        )}
+                      </div>
                     )}
                     {visit.next_appointment_status === 'will_call_later' && (
                       <>
