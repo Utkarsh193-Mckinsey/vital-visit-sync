@@ -5,7 +5,7 @@ import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletCard, TabletCardContent } from '@/components/ui/tablet-card';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, UserCheck, Clock, Stethoscope, CheckCircle2, PackageCheck, Plus } from 'lucide-react';
+import { Loader2, UserCheck, Clock, Stethoscope, Plus } from 'lucide-react';
 import { ConsultationModal } from '@/components/patient/ConsultationModal';
 import { WhatsAppLink } from '@/components/ui/whatsapp-link';
 
