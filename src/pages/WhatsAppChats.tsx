@@ -465,6 +465,96 @@ export default function WhatsAppChats() {
           </ScrollArea>
         </>
       )}
+
+      {/* Create Template Modal */}
+      <Dialog open={createTemplateOpen} onOpenChange={setCreateTemplateOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create WATI Template</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div>
+              <Label>Template Name *</Label>
+              <TabletInput
+                value={newTemplate.name}
+                onChange={e => setNewTemplate(prev => ({ ...prev, name: e.target.value.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') }))}
+                placeholder="e.g. appointment_reminder_24hr"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Lowercase, underscores only (no spaces)</p>
+            </div>
+            <div>
+              <Label>Category *</Label>
+              <Select value={newTemplate.category} onValueChange={v => setNewTemplate(prev => ({ ...prev, category: v }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="UTILITY">Utility</SelectItem>
+                  <SelectItem value="MARKETING">Marketing</SelectItem>
+                  <SelectItem value="AUTHENTICATION">Authentication</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Language</Label>
+              <Select value={newTemplate.language} onValueChange={v => setNewTemplate(prev => ({ ...prev, language: v }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="ar">Arabic</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Message Body *</Label>
+              <Textarea
+                value={newTemplate.body}
+                onChange={e => setNewTemplate(prev => ({ ...prev, body: e.target.value }))}
+                placeholder={"Hi {{1}}, your appointment for {{2}} is at {{3}}.\n\nUse {{1}}, {{2}}, etc. for variables."}
+                rows={6}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Use {'{{1}}'}, {'{{2}}'}, etc. for dynamic parameters</p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" className="w-full" onClick={() => setCreateTemplateOpen(false)}>Cancel</Button>
+              <Button className="w-full" onClick={handleCreateTemplate} disabled={creatingTemplate}>
+                {creatingTemplate ? <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Submitting...</> : 'Submit for Approval'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* List Templates Modal */}
+      <Dialog open={listTemplatesOpen} onOpenChange={setListTemplatesOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>WATI Templates ({watiTemplates.length})</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh]">
+            <div className="space-y-3">
+              {watiTemplates.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No templates found</p>
+              ) : (
+                watiTemplates.map((t: any, i: number) => (
+                  <div key={t.id || i} className="border border-border rounded-lg p-3 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm">{t.elementName || t.name}</span>
+                      <Badge variant={t.status === 'APPROVED' ? 'default' : 'secondary'} className="text-xs">
+                        {t.status || 'Unknown'}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{t.category}</p>
+                    <p className="text-sm whitespace-pre-wrap bg-muted/50 p-2 rounded text-foreground">{t.body || t.bodyOriginal || '(no body)'}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 }
