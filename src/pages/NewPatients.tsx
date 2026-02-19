@@ -50,7 +50,7 @@ export default function NewPatients() {
     );
   }
 
-  const totalCount = pendingReview.length + awaitingConsultation.length + consulted.length;
+  const totalCount = pendingReview.length + awaitingConsultation.length;
 
   return (
     <PageContainer maxWidth="full">
