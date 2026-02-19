@@ -282,6 +282,13 @@ export default function WhatsAppChats() {
           {/* Message input - pinned to bottom */}
           <div className="p-2 border-t border-border bg-muted/30 shrink-0">
             <div className="flex items-center gap-2 max-w-2xl mx-auto">
+              <button
+                onClick={openTemplateModal}
+                title="Send Template Message"
+                className="h-11 w-11 rounded-full border border-input bg-background flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              >
+                <FileText className="h-4 w-4" />
+              </button>
               <input
                 type="text"
                 placeholder="Type a message..."
@@ -301,6 +308,46 @@ export default function WhatsAppChats() {
             </div>
           </div>
         </div>
+
+        {/* Template Message Modal */}
+        <Dialog open={templateModalOpen} onOpenChange={setTemplateModalOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Send Template Message</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-2">
+              <div>
+                <Label>Template</Label>
+                <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TEMPLATES.map(t => (
+                      <SelectItem key={t.name} value={t.name}>{t.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {TEMPLATES.find(t => t.name === selectedTemplate)?.params.map(p => (
+                <div key={p.name}>
+                  <Label>{p.label}</Label>
+                  <TabletInput
+                    value={templateParams[p.name] || ''}
+                    onChange={e => setTemplateParams(prev => ({ ...prev, [p.name]: e.target.value }))}
+                    placeholder={p.label}
+                  />
+                </div>
+              ))}
+              <div className="flex gap-3">
+                <Button variant="outline" className="w-full" onClick={() => setTemplateModalOpen(false)}>Cancel</Button>
+                <Button className="w-full" onClick={sendTemplateMessage} disabled={sendingTemplate}>
+                  {sendingTemplate ? <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Sending...</> : 'Send Template'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       ) : (
         // Thread list view
         <>
