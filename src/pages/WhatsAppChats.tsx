@@ -166,21 +166,54 @@ export default function WhatsAppChats() {
     }
   };
 
-  const selectedThread = threads.find(t => t.phone === selectedPhone);
+  const sendTemplateMessage = async () => {
+    if (!selectedPhone || sendingTemplate) return;
+    setSendingTemplate(true);
+    try {
+      let watiPhone = selectedPhone.replace(/[\s\-\(\)\+]/g, '');
+      if (watiPhone.startsWith('0')) watiPhone = '971' + watiPhone.slice(1);
+      if (!watiPhone.startsWith('971') && watiPhone.length <= 10) watiPhone = '971' + watiPhone;
 
-  return (
-    <PageContainer maxWidth="full">
-      {selectedPhone && (selectedThread || phoneParam) ? (
-        // Full-screen chat view (like WhatsApp)
-        <div className="flex flex-col h-[calc(100vh-64px)] -mb-6">
-          {/* Chat header */}
-          <div className="flex items-center gap-3 p-3 border-b border-border bg-muted/30 shrink-0">
-            <button
-              className="p-2 rounded-lg hover:bg-muted transition-colors"
-              onClick={() => setSelectedPhone(null)}
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
+      const template = TEMPLATES.find(t => t.name === selectedTemplate);
+      if (!template) throw new Error('Template not found');
+
+      const parameters = template.params.map(p => ({
+        name: p.key,
+        value: templateParams[p.name] || '',
+      }));
+
+      const { error } = await supabase.functions.invoke('send-whatsapp', {
+        body: {
+          phone: watiPhone,
+          template_name: selectedTemplate,
+          parameters,
+          patient_name: selectedThread?.patient_name || nameParam || null,
+        },
+      });
+      if (error) throw error;
+      toast.success('Template message sent');
+      setTemplateModalOpen(false);
+      setTemplateParams({});
+      await fetchChats();
+    } catch (err: any) {
+      toast.error('Failed: ' + (err.message || 'Unknown error'));
+    } finally {
+      setSendingTemplate(false);
+    }
+  };
+
+  const openTemplateModal = () => {
+    // Pre-fill params from context
+    const thread = selectedThread;
+    setTemplateParams({
+      patient_name: thread?.patient_name || nameParam || '',
+      service: '',
+      time: '',
+    });
+    setTemplateModalOpen(true);
+  };
+
+  const selectedThread = threads.find(t => t.phone === selectedPhone);
             <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
               <User className="h-5 w-5 text-green-700" />
             </div>
