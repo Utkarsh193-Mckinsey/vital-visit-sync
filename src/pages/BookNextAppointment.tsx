@@ -376,7 +376,7 @@ export default function BookNextAppointment() {
       <Dialog open={!!bookingVisit} onOpenChange={open => { if (!open) setBookingVisit(null); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Book Next Appointment — {bookingVisit?.patient?.full_name}</DialogTitle>
+            <DialogTitle>{isRescheduling ? 'Reschedule' : 'Book Next'} Appointment — {bookingVisit?.patient?.full_name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-2">
             <div className="grid grid-cols-2 gap-3">
