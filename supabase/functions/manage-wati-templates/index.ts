@@ -60,6 +60,11 @@ Deno.serve(async (req) => {
             language: template.language || "en",
             body: template.body,
             allowCategoryChange: true,
+            ...(template.bodyExamples ? { bodyExamples: template.bodyExamples } : {}),
+            ...(template.header !== undefined ? { header: template.header } : {}),
+            ...(template.footer !== undefined ? { footer: template.footer } : {}),
+            ...(template.buttons ? { buttons: template.buttons } : {}),
+            ...(template.parameterFormat ? { parameterFormat: template.parameterFormat } : {}),
           }),
         }
       );
