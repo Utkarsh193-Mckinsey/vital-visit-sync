@@ -168,10 +168,20 @@ export default function BookNextAppointment() {
     }
   };
 
-  const openBookModal = (visit: CompletedVisit) => {
+  const openBookModal = (visit: CompletedVisit, reschedule = false) => {
     setBookingVisit(visit);
-    const activeTreatment = visit.activePackages[0]?.treatment?.treatment_name || '';
-    setBookForm({ date: '', time: '10:00', service: activeTreatment, notes: '' });
+    setIsRescheduling(reschedule);
+    if (reschedule && visit.bookedAppointment) {
+      setBookForm({
+        date: visit.bookedAppointment.appointment_date,
+        time: visit.bookedAppointment.appointment_time,
+        service: visit.bookedAppointment.service,
+        notes: '',
+      });
+    } else {
+      const activeTreatment = visit.activePackages[0]?.treatment?.treatment_name || '';
+      setBookForm({ date: '', time: '10:00', service: activeTreatment, notes: '' });
+    }
   };
 
   const handleBookAppointment = async () => {
@@ -181,24 +191,42 @@ export default function BookNextAppointment() {
     }
     setSaving(true);
     try {
-      const { error: aptError } = await supabase.from('appointments').insert({
-        patient_name: bookingVisit.patient.full_name,
-        phone: bookingVisit.patient.phone_number,
-        appointment_date: bookForm.date,
-        appointment_time: bookForm.time,
-        service: bookForm.service,
-        booked_by: 'Follow-up',
-        special_instructions: bookForm.notes || null,
-      });
-      if (aptError) throw aptError;
+      if (isRescheduling && bookingVisit.bookedAppointment) {
+        // Update the existing follow-up appointment
+        const { error: aptError } = await supabase
+          .from('appointments')
+          .update({
+            appointment_date: bookForm.date,
+            appointment_time: bookForm.time,
+            service: bookForm.service,
+            special_instructions: bookForm.notes || null,
+          })
+          .eq('phone', bookingVisit.patient.phone_number)
+          .eq('booked_by', 'Follow-up')
+          .eq('appointment_date', bookingVisit.bookedAppointment.appointment_date)
+          .eq('appointment_time', bookingVisit.bookedAppointment.appointment_time);
+        if (aptError) throw aptError;
+      } else {
+        const { error: aptError } = await supabase.from('appointments').insert({
+          patient_name: bookingVisit.patient.full_name,
+          phone: bookingVisit.patient.phone_number,
+          appointment_date: bookForm.date,
+          appointment_time: bookForm.time,
+          service: bookForm.service,
+          booked_by: 'Follow-up',
+          special_instructions: bookForm.notes || null,
+        });
+        if (aptError) throw aptError;
 
-      const { error: visitError } = await supabase.from('visits').update({ next_appointment_status: 'booked' }).eq('id', bookingVisit.id);
-      if (visitError) throw visitError;
+        const { error: visitError } = await supabase.from('visits').update({ next_appointment_status: 'booked' }).eq('id', bookingVisit.id);
+        if (visitError) throw visitError;
+      }
 
       // Send WhatsApp confirmation
       try {
         const dateFormatted = format(new Date(bookForm.date + 'T00:00:00'), 'EEEE, dd MMM yyyy');
-        const message = `Hi ${bookingVisit.patient.full_name},\n\nYour next appointment at Cosmique Clinic has been booked.\n\nDate: ${dateFormatted}\nTime: ${bookForm.time}\nService: ${bookForm.service}\n\nFor any queries, please contact us at +971 58 590 8090.\n\nCosmique Aesthetics & Dermatology\nBeach Park Plaza, Al Mamzar, Dubai`;
+        const action = isRescheduling ? 'rescheduled' : 'booked';
+        const message = `Hi ${bookingVisit.patient.full_name},\n\nYour next appointment at Cosmique Clinic has been ${action}.\n\nDate: ${dateFormatted}\nTime: ${bookForm.time}\nService: ${bookForm.service}\n\nFor any queries, please contact us at +971 58 590 8090.\n\nCosmique Aesthetics & Dermatology\nBeach Park Plaza, Al Mamzar, Dubai`;
         await supabase.functions.invoke('send-whatsapp', {
           body: { phone: bookingVisit.patient.phone_number, message, patient_name: bookingVisit.patient.full_name },
         });
@@ -206,11 +234,12 @@ export default function BookNextAppointment() {
         console.error('WhatsApp send error:', whatsappErr);
       }
 
-      toast.success(`Appointment booked for ${bookingVisit.patient.full_name}`);
+      toast.success(isRescheduling ? `Appointment rescheduled for ${bookingVisit.patient.full_name}` : `Appointment booked for ${bookingVisit.patient.full_name}`);
       setBookingVisit(null);
+      setIsRescheduling(false);
       fetchVisits();
     } catch (e: any) {
-      toast.error(e.message || 'Failed to book');
+      toast.error(e.message || 'Failed to save');
     } finally {
       setSaving(false);
     }
