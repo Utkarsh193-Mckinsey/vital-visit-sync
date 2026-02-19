@@ -63,18 +63,12 @@ export default function WhatsAppChats() {
   const [watiTemplates, setWatiTemplates] = useState<any[]>([]);
   const [newTemplate, setNewTemplate] = useState({ name: '', body: '', category: 'UTILITY', language: 'en' });
 
-  // Available WATI templates
-  const TEMPLATES = [
-    {
-      name: 'appointment_reminder_24hr',
-      label: 'Appointment Reminder (24hr)',
-      params: [
-        { name: 'patient_name', label: 'Patient Name', key: '1' },
-        { name: 'service', label: 'Service', key: '2' },
-        { name: 'time', label: 'Time', key: '3' },
-      ],
-    },
-  ];
+  // Extract {{n}} placeholders from template body
+  const extractParams = (body: string) => {
+    const matches = body.match(/\{\{(\d+)\}\}/g) || [];
+    const unique = [...new Set(matches.map(m => m.replace(/\{\{|\}\}/g, '')))].sort((a, b) => Number(a) - Number(b));
+    return unique.map(n => ({ name: `param_${n}`, label: `Parameter ${n}`, key: n }));
+  };
   const fetchChats = async () => {
     const { data: msgs } = await supabase
       .from('whatsapp_messages')
