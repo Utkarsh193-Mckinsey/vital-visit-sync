@@ -98,20 +98,21 @@ export default function VitalsEntry() {
       const visitData = data as unknown as VisitWithPatient;
       setVisit(visitData);
       
-      // Pre-fill existing vitals if any
+      // Pre-fill existing vitals if any, otherwise use standard normal defaults
+      // Leave temp, height, weight, BPS, BPD empty (must be entered manually)
       setVitals({
         temperature: visitData.temperature?.toString() || '',
-        heart_rate: visitData.heart_rate?.toString() || '',
+        heart_rate: visitData.heart_rate?.toString() || '78',
         blood_pressure_systolic: visitData.blood_pressure_systolic?.toString() || '',
         blood_pressure_diastolic: visitData.blood_pressure_diastolic?.toString() || '',
         height_cm: visitData.height_cm?.toString() || '',
         weight_kg: visitData.weight_kg?.toString() || '',
-        respiratory_rate: visitData.respiratory_rate?.toString() || '',
-        spo2: visitData.spo2?.toString() || '',
+        respiratory_rate: visitData.respiratory_rate?.toString() || '16',
+        spo2: visitData.spo2?.toString() || '98',
         hip_cm: visitData.hip_cm?.toString() || '',
         waist_cm: visitData.waist_cm?.toString() || '',
         head_circumference_cm: visitData.head_circumference_cm?.toString() || '',
-        sugar: visitData.sugar?.toString() || '',
+        sugar: visitData.sugar?.toString() || '100',
         urinalysis: visitData.urinalysis || '',
         other_details: visitData.other_details || '',
         lmp: visitData.lmp || '',
