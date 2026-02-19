@@ -348,6 +348,9 @@ export default function BookNextAppointment() {
                             {format(new Date(visit.bookedAppointment.appointment_date + 'T00:00:00'), 'EEE, dd MMM')} at {visit.bookedAppointment.appointment_time} — {visit.bookedAppointment.service}
                           </Badge>
                         )}
+                        <TabletButton variant="outline" size="sm" className="text-xs h-8" onClick={() => openBookModal(visit, true)}>
+                          <RefreshCw className="h-3.5 w-3.5 mr-1" /> Reschedule
+                        </TabletButton>
                       </div>
                     )}
                     {visit.next_appointment_status === 'will_call_later' && (
