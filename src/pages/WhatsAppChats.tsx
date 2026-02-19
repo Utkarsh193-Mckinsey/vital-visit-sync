@@ -214,6 +214,20 @@ export default function WhatsAppChats() {
   };
 
   const selectedThread = threads.find(t => t.phone === selectedPhone);
+
+  return (
+    <PageContainer maxWidth="full">
+      {selectedPhone && (selectedThread || phoneParam) ? (
+        // Full-screen chat view (like WhatsApp)
+        <div className="flex flex-col h-[calc(100vh-64px)] -mb-6">
+          {/* Chat header */}
+          <div className="flex items-center gap-3 p-3 border-b border-border bg-muted/30 shrink-0">
+            <button
+              className="p-2 rounded-lg hover:bg-muted transition-colors"
+              onClick={() => setSelectedPhone(null)}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
             <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
               <User className="h-5 w-5 text-green-700" />
             </div>
