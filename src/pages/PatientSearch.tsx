@@ -53,6 +53,7 @@ export default function PatientSearch() {
         )
       `)
       .eq('status', 'active')
+      .or('consultation_status.eq.consulted,consultation_status.eq.converted,consultation_status.is.null')
       .order('registration_date', { ascending: false });
 
     if (!error && data) {
