@@ -232,7 +232,7 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
       {/* Lower row: actions */}
       <div className="flex items-center gap-1 flex-wrap">
         <Select value={apt.status} onValueChange={v => onUpdateStatus(apt.id, v)}>
-          <SelectTrigger className={`h-5 min-h-0 w-auto max-w-[80px] text-[9px] rounded-full border py-0 px-1.5 gap-0.5 [&>svg]:h-2 [&>svg]:w-2 [&>span]:truncate ${statusColors[apt.status] || ''}`}>
+          <SelectTrigger className={`!h-5 min-h-0 w-auto max-w-[80px] text-[9px] leading-none rounded-full border !py-0 px-1.5 gap-0.5 [&>svg]:h-2 [&>svg]:w-2 [&>span]:truncate ${statusColors[apt.status] || ''}`}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="min-w-[80px]">
@@ -243,7 +243,7 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
         </Select>
 
         <Select value={apt.confirmation_status} onValueChange={v => onUpdateConfirmation(apt.id, v)}>
-          <SelectTrigger className="h-5 min-h-0 w-auto max-w-[100px] text-[9px] rounded-full border py-0 px-1.5 gap-0.5 [&>svg]:h-2 [&>svg]:w-2 [&>span]:truncate">
+          <SelectTrigger className="!h-5 min-h-0 w-auto max-w-[100px] text-[9px] leading-none rounded-full border !py-0 px-1.5 gap-0.5 [&>svg]:h-2 [&>svg]:w-2 [&>span]:truncate">
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="min-w-[100px]">
