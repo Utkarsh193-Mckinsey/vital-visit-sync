@@ -400,10 +400,22 @@ export default function WhatsAppChats() {
       ) : (
         // Thread list view
         <>
-          <PageHeader
-            title="WhatsApp Chats"
-            subtitle={`${threads.length} conversations`}
-          />
+          <div className="flex items-center justify-between mb-3">
+            <PageHeader
+              title="WhatsApp Chats"
+              subtitle={`${threads.length} conversations`}
+            />
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={fetchWatiTemplates} disabled={loadingTemplates} className="gap-1">
+                {loadingTemplates ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <List className="h-3.5 w-3.5" />}
+                Templates
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setCreateTemplateOpen(true)} className="gap-1">
+                <Plus className="h-3.5 w-3.5" />
+                New Template
+              </Button>
+            </div>
+          </div>
           <div className="mb-3 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <TabletInput
