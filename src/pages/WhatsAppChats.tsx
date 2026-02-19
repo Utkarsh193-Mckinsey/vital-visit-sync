@@ -6,12 +6,13 @@ import { TabletInput } from '@/components/ui/tablet-input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Search, User, ArrowLeft, Clock, Send, BellOff, Bell, FileText, Loader2 } from 'lucide-react';
+import { MessageSquare, Search, User, ArrowLeft, Clock, Send, BellOff, Bell, FileText, Loader2, Plus, List, Eye } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 interface WaMsg {
   id: string;
@@ -55,6 +56,12 @@ export default function WhatsAppChats() {
   const [selectedTemplate, setSelectedTemplate] = useState('appointment_reminder_24hr');
   const [templateParams, setTemplateParams] = useState<Record<string, string>>({});
   const [sendingTemplate, setSendingTemplate] = useState(false);
+  const [createTemplateOpen, setCreateTemplateOpen] = useState(false);
+  const [listTemplatesOpen, setListTemplatesOpen] = useState(false);
+  const [creatingTemplate, setCreatingTemplate] = useState(false);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [watiTemplates, setWatiTemplates] = useState<any[]>([]);
+  const [newTemplate, setNewTemplate] = useState({ name: '', body: '', category: 'UTILITY', language: 'en' });
 
   // Available WATI templates
   const TEMPLATES = [
@@ -213,6 +220,47 @@ export default function WhatsAppChats() {
     setTemplateModalOpen(true);
   };
 
+  const fetchWatiTemplates = async () => {
+    setLoadingTemplates(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-wati-templates', {
+        body: { action: 'list' },
+      });
+      if (error) throw error;
+      setWatiTemplates(data?.messageTemplates || []);
+      setListTemplatesOpen(true);
+    } catch (err: any) {
+      toast.error('Failed to fetch templates: ' + (err.message || 'Unknown error'));
+    } finally {
+      setLoadingTemplates(false);
+    }
+  };
+
+  const handleCreateTemplate = async () => {
+    if (!newTemplate.name || !newTemplate.body) {
+      toast.error('Please fill in template name and body');
+      return;
+    }
+    setCreatingTemplate(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-wati-templates', {
+        body: { action: 'create', template: newTemplate },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success('Template submitted for approval!');
+        setCreateTemplateOpen(false);
+        setNewTemplate({ name: '', body: '', category: 'UTILITY', language: 'en' });
+      } else {
+        toast.error('Failed: ' + JSON.stringify(data?.data || 'Unknown error'));
+      }
+    } catch (err: any) {
+      toast.error('Error: ' + (err.message || 'Unknown'));
+    } finally {
+      setCreatingTemplate(false);
+    }
+  };
+
   const selectedThread = threads.find(t => t.phone === selectedPhone);
 
   return (
@@ -352,10 +400,22 @@ export default function WhatsAppChats() {
       ) : (
         // Thread list view
         <>
-          <PageHeader
-            title="WhatsApp Chats"
-            subtitle={`${threads.length} conversations`}
-          />
+          <div className="flex items-center justify-between mb-3">
+            <PageHeader
+              title="WhatsApp Chats"
+              subtitle={`${threads.length} conversations`}
+            />
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={fetchWatiTemplates} disabled={loadingTemplates} className="gap-1">
+                {loadingTemplates ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <List className="h-3.5 w-3.5" />}
+                Templates
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setCreateTemplateOpen(true)} className="gap-1">
+                <Plus className="h-3.5 w-3.5" />
+                New Template
+              </Button>
+            </div>
+          </div>
           <div className="mb-3 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <TabletInput
@@ -405,6 +465,96 @@ export default function WhatsAppChats() {
           </ScrollArea>
         </>
       )}
+
+      {/* Create Template Modal */}
+      <Dialog open={createTemplateOpen} onOpenChange={setCreateTemplateOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create WATI Template</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div>
+              <Label>Template Name *</Label>
+              <TabletInput
+                value={newTemplate.name}
+                onChange={e => setNewTemplate(prev => ({ ...prev, name: e.target.value.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') }))}
+                placeholder="e.g. appointment_reminder_24hr"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Lowercase, underscores only (no spaces)</p>
+            </div>
+            <div>
+              <Label>Category *</Label>
+              <Select value={newTemplate.category} onValueChange={v => setNewTemplate(prev => ({ ...prev, category: v }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="UTILITY">Utility</SelectItem>
+                  <SelectItem value="MARKETING">Marketing</SelectItem>
+                  <SelectItem value="AUTHENTICATION">Authentication</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Language</Label>
+              <Select value={newTemplate.language} onValueChange={v => setNewTemplate(prev => ({ ...prev, language: v }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="ar">Arabic</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Message Body *</Label>
+              <Textarea
+                value={newTemplate.body}
+                onChange={e => setNewTemplate(prev => ({ ...prev, body: e.target.value }))}
+                placeholder={"Hi {{1}}, your appointment for {{2}} is at {{3}}.\n\nUse {{1}}, {{2}}, etc. for variables."}
+                rows={6}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Use {'{{1}}'}, {'{{2}}'}, etc. for dynamic parameters</p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" className="w-full" onClick={() => setCreateTemplateOpen(false)}>Cancel</Button>
+              <Button className="w-full" onClick={handleCreateTemplate} disabled={creatingTemplate}>
+                {creatingTemplate ? <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Submitting...</> : 'Submit for Approval'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* List Templates Modal */}
+      <Dialog open={listTemplatesOpen} onOpenChange={setListTemplatesOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>WATI Templates ({watiTemplates.length})</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh]">
+            <div className="space-y-3">
+              {watiTemplates.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No templates found</p>
+              ) : (
+                watiTemplates.map((t: any, i: number) => (
+                  <div key={t.id || i} className="border border-border rounded-lg p-3 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm">{t.elementName || t.name}</span>
+                      <Badge variant={t.status === 'APPROVED' ? 'default' : 'secondary'} className="text-xs">
+                        {t.status || 'Unknown'}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{t.category}</p>
+                    <p className="text-sm whitespace-pre-wrap bg-muted/50 p-2 rounded text-foreground">{t.body || t.bodyOriginal || '(no body)'}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 }
