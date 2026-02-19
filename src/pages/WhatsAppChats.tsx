@@ -6,9 +6,12 @@ import { TabletInput } from '@/components/ui/tablet-input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Search, User, ArrowLeft, Clock, Send, BellOff, Bell } from 'lucide-react';
+import { MessageSquare, Search, User, ArrowLeft, Clock, Send, BellOff, Bell, FileText, Loader2 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface WaMsg {
   id: string;
@@ -48,7 +51,23 @@ export default function WhatsAppChats() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState('appointment_reminder_24hr');
+  const [templateParams, setTemplateParams] = useState<Record<string, string>>({});
+  const [sendingTemplate, setSendingTemplate] = useState(false);
 
+  // Available WATI templates
+  const TEMPLATES = [
+    {
+      name: 'appointment_reminder_24hr',
+      label: 'Appointment Reminder (24hr)',
+      params: [
+        { name: 'patient_name', label: 'Patient Name', key: '1' },
+        { name: 'service', label: 'Service', key: '2' },
+        { name: 'time', label: 'Time', key: '3' },
+      ],
+    },
+  ];
   const fetchChats = async () => {
     const { data: msgs } = await supabase
       .from('whatsapp_messages')
@@ -147,12 +166,59 @@ export default function WhatsAppChats() {
     }
   };
 
+  const sendTemplateMessage = async () => {
+    if (!selectedPhone || sendingTemplate) return;
+    setSendingTemplate(true);
+    try {
+      let watiPhone = selectedPhone.replace(/[\s\-\(\)\+]/g, '');
+      if (watiPhone.startsWith('0')) watiPhone = '971' + watiPhone.slice(1);
+      if (!watiPhone.startsWith('971') && watiPhone.length <= 10) watiPhone = '971' + watiPhone;
+
+      const template = TEMPLATES.find(t => t.name === selectedTemplate);
+      if (!template) throw new Error('Template not found');
+
+      const parameters = template.params.map(p => ({
+        name: p.key,
+        value: templateParams[p.name] || '',
+      }));
+
+      const { error } = await supabase.functions.invoke('send-whatsapp', {
+        body: {
+          phone: watiPhone,
+          template_name: selectedTemplate,
+          parameters,
+          patient_name: selectedThread?.patient_name || nameParam || null,
+        },
+      });
+      if (error) throw error;
+      toast.success('Template message sent');
+      setTemplateModalOpen(false);
+      setTemplateParams({});
+      await fetchChats();
+    } catch (err: any) {
+      toast.error('Failed: ' + (err.message || 'Unknown error'));
+    } finally {
+      setSendingTemplate(false);
+    }
+  };
+
+  const openTemplateModal = () => {
+    // Pre-fill params from context
+    const thread = selectedThread;
+    setTemplateParams({
+      patient_name: thread?.patient_name || nameParam || '',
+      service: '',
+      time: '',
+    });
+    setTemplateModalOpen(true);
+  };
+
   const selectedThread = threads.find(t => t.phone === selectedPhone);
 
   return (
     <PageContainer maxWidth="full">
       {selectedPhone && (selectedThread || phoneParam) ? (
-        // Full-screen chat view (like WhatsApp)
+        <>
         <div className="flex flex-col h-[calc(100vh-64px)] -mb-6">
           {/* Chat header */}
           <div className="flex items-center gap-3 p-3 border-b border-border bg-muted/30 shrink-0">
@@ -216,6 +282,13 @@ export default function WhatsAppChats() {
           {/* Message input - pinned to bottom */}
           <div className="p-2 border-t border-border bg-muted/30 shrink-0">
             <div className="flex items-center gap-2 max-w-2xl mx-auto">
+              <button
+                onClick={openTemplateModal}
+                title="Send Template Message"
+                className="h-11 w-11 rounded-full border border-input bg-background flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              >
+                <FileText className="h-4 w-4" />
+              </button>
               <input
                 type="text"
                 placeholder="Type a message..."
@@ -235,6 +308,47 @@ export default function WhatsAppChats() {
             </div>
           </div>
         </div>
+
+        {/* Template Message Modal */}
+        <Dialog open={templateModalOpen} onOpenChange={setTemplateModalOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Send Template Message</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-2">
+              <div>
+                <Label>Template</Label>
+                <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TEMPLATES.map(t => (
+                      <SelectItem key={t.name} value={t.name}>{t.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {TEMPLATES.find(t => t.name === selectedTemplate)?.params.map(p => (
+                <div key={p.name}>
+                  <Label>{p.label}</Label>
+                  <TabletInput
+                    value={templateParams[p.name] || ''}
+                    onChange={e => setTemplateParams(prev => ({ ...prev, [p.name]: e.target.value }))}
+                    placeholder={p.label}
+                  />
+                </div>
+              ))}
+              <div className="flex gap-3">
+                <Button variant="outline" className="w-full" onClick={() => setTemplateModalOpen(false)}>Cancel</Button>
+                <Button className="w-full" onClick={sendTemplateMessage} disabled={sendingTemplate}>
+                  {sendingTemplate ? <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Sending...</> : 'Send Template'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+        </>
       ) : (
         // Thread list view
         <>
