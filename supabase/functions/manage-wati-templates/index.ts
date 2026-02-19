@@ -53,19 +53,20 @@ Deno.serve(async (req) => {
             Authorization: `Bearer ${WATI_API_KEY}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
+          const payload: Record<string, unknown> = {
             type: "template",
             category: template.category,
             elementName: template.name,
             language: template.language || "en",
             body: template.body,
             allowCategoryChange: true,
-            ...(template.bodyExamples ? { bodyExamples: template.bodyExamples } : {}),
-            ...(template.header !== undefined ? { header: template.header } : {}),
-            ...(template.footer !== undefined ? { footer: template.footer } : {}),
-            ...(template.buttons ? { buttons: template.buttons } : {}),
-            ...(template.parameterFormat ? { parameterFormat: template.parameterFormat } : {}),
-          }),
+          };
+          // Forward any additional fields (customParams, bodyExamples, header, footer, buttons, etc.)
+          const extraKeys = ["customParams", "bodyExamples", "parameterFormat", "header", "footer", "buttons", "buttonsType", "subCategory", "creationMethod"];
+          for (const key of extraKeys) {
+            if (template[key] !== undefined) payload[key] = template[key];
+          }
+          body: JSON.stringify(payload),
         }
       );
 
