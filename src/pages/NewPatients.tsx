@@ -32,18 +32,10 @@ export default function NewPatients() {
         .eq('doctor_reviewed', true)
         .eq('consultation_status', 'awaiting_consultation')
         .order('doctor_reviewed_date', { ascending: false }),
-      // Consultation done (not yet converted)
-      supabase
-        .from('patients')
-        .select('*, consultation_doctor:staff!patients_consultation_done_by_fkey(full_name)')
-        .eq('doctor_reviewed', true)
-        .eq('consultation_status', 'consulted')
-        .order('consultation_date', { ascending: false }),
     ]);
 
     if (pendingRes.data) setPendingReview(pendingRes.data);
     if (awaitingRes.data) setAwaitingConsultation(awaitingRes.data);
-    if (consultedRes.data) setConsulted(consultedRes.data);
     setLoading(false);
   }, []);
 
