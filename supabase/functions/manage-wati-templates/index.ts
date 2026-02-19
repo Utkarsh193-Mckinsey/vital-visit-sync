@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             type: "template",
             category: template.category,
-            name: template.name,
+            elementName: template.name,
             language: template.language || "en",
             body: template.body,
             allowCategoryChange: true,
