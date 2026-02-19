@@ -407,9 +407,9 @@ export default function BookNextAppointment() {
               <Textarea value={bookForm.notes} onChange={e => setBookForm(f => ({ ...f, notes: e.target.value }))} placeholder="Any special notes..." rows={2} />
             </div>
             <div className="flex gap-3 pt-2">
-              <TabletButton variant="outline" fullWidth onClick={() => setBookingVisit(null)}>Cancel</TabletButton>
+              <TabletButton variant="outline" fullWidth onClick={() => { setBookingVisit(null); setIsRescheduling(false); }}>Cancel</TabletButton>
               <TabletButton fullWidth onClick={handleBookAppointment} disabled={saving}>
-                {saving ? 'Booking...' : 'Confirm Booking'}
+                {saving ? 'Saving...' : isRescheduling ? 'Confirm Reschedule' : 'Confirm Booking'}
               </TabletButton>
             </div>
           </div>
