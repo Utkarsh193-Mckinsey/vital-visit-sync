@@ -5,40 +5,82 @@ import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletCard, TabletCardContent } from '@/components/ui/tablet-card';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, UserCheck, Clock, Stethoscope, Plus } from 'lucide-react';
+import { Loader2, UserCheck, Clock, Stethoscope, Plus, CheckCircle2, XCircle, PackageCheck } from 'lucide-react';
 import { ConsultationModal } from '@/components/patient/ConsultationModal';
 import { WhatsAppLink } from '@/components/ui/whatsapp-link';
+import { useToast } from '@/hooks/use-toast';
 
 export default function NewPatients() {
   const [pendingReview, setPendingReview] = useState<any[]>([]);
   const [awaitingConsultation, setAwaitingConsultation] = useState<any[]>([]);
+  const [consulted, setConsulted] = useState<any[]>([]);
+  const [notConverted, setNotConverted] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [consultationPatient, setConsultationPatient] = useState<any>(null);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const fetchAll = useCallback(async () => {
-    const [pendingRes, awaitingRes] = await Promise.all([
-      // Not yet reviewed by doctor
+    const [pendingRes, awaitingRes, consultedRes, notConvertedRes] = await Promise.all([
       supabase
         .from('patients')
         .select('*')
         .eq('doctor_reviewed', false)
         .order('registration_date', { ascending: false }),
-      // Doctor signed but awaiting consultation
       supabase
         .from('patients')
         .select('*, consultation_doctor:staff!patients_consultation_done_by_fkey(full_name)')
         .eq('doctor_reviewed', true)
         .eq('consultation_status', 'awaiting_consultation')
         .order('doctor_reviewed_date', { ascending: false }),
+      supabase
+        .from('patients')
+        .select('*, consultation_doctor:staff!patients_consultation_done_by_fkey(full_name)')
+        .eq('doctor_reviewed', true)
+        .eq('consultation_status', 'consulted')
+        .order('consultation_date', { ascending: false }),
+      supabase
+        .from('patients')
+        .select('*, consultation_doctor:staff!patients_consultation_done_by_fkey(full_name)')
+        .eq('doctor_reviewed', true)
+        .eq('consultation_status', 'not_converted')
+        .order('consultation_date', { ascending: false }),
     ]);
 
     if (pendingRes.data) setPendingReview(pendingRes.data);
     if (awaitingRes.data) setAwaitingConsultation(awaitingRes.data);
+    if (consultedRes.data) setConsulted(consultedRes.data);
+    if (notConvertedRes.data) setNotConverted(notConvertedRes.data);
     setLoading(false);
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const handleMarkConverted = async (patientId: string) => {
+    const { error } = await supabase.from('patients').update({
+      consultation_status: 'converted',
+    } as any).eq('id', patientId);
+
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to update status.', variant: 'destructive' });
+    } else {
+      toast({ title: 'Patient Converted', description: 'Patient moved to All Patients list.' });
+      fetchAll();
+    }
+  };
+
+  const handleMarkNotConverted = async (patientId: string) => {
+    const { error } = await supabase.from('patients').update({
+      consultation_status: 'not_converted',
+    } as any).eq('id', patientId);
+
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to update status.', variant: 'destructive' });
+    } else {
+      toast({ title: 'Marked Not Converted', description: 'Patient moved to Not Converted section.' });
+      fetchAll();
+    }
+  };
 
   if (loading) {
     return (
@@ -50,7 +92,7 @@ export default function NewPatients() {
     );
   }
 
-  const totalCount = pendingReview.length + awaitingConsultation.length;
+  const totalCount = pendingReview.length + awaitingConsultation.length + consulted.length + notConverted.length;
 
   return (
     <PageContainer maxWidth="full">
@@ -125,6 +167,94 @@ export default function NewPatients() {
                     <div className="flex items-center gap-2">
                       <Stethoscope className="h-4 w-4 text-primary" />
                       <span className="text-sm text-primary font-medium">Awaiting Consultation</span>
+                    </div>
+                  </TabletCardContent>
+                </TabletCard>
+              ))}
+            </Section>
+          )}
+
+          {/* Section 3: Consulted — Converted or Not? */}
+          {consulted.length > 0 && (
+            <Section
+              title="Consulted — Awaiting Conversion"
+              icon={<CheckCircle2 className="h-5 w-5 text-success" />}
+              count={consulted.length}
+            >
+              {consulted.map((p) => (
+                <TabletCard key={p.id}>
+                  <TabletCardContent className="flex items-center justify-between py-4">
+                    <div>
+                      <p className="font-medium text-foreground">{p.full_name}</p>
+                      <p className="text-sm text-muted-foreground flex items-center gap-2">{p.phone_number} <WhatsAppLink phone={p.phone_number} iconSize="h-3.5 w-3.5" /></p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {p.treatment_interests && (p.treatment_interests as string[]).map((t: string) => (
+                          <Badge key={t} variant="secondary" className="text-xs">{t}</Badge>
+                        ))}
+                      </div>
+                      {(p as any).consultation_doctor?.full_name && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          By Dr. {(p as any).consultation_doctor.full_name}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <TabletButton
+                        size="sm"
+                        variant="default"
+                        onClick={() => handleMarkConverted(p.id)}
+                        leftIcon={<PackageCheck className="h-4 w-4" />}
+                      >
+                        Converted
+                      </TabletButton>
+                      <TabletButton
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleMarkNotConverted(p.id)}
+                        leftIcon={<XCircle className="h-4 w-4" />}
+                      >
+                        Not Converted
+                      </TabletButton>
+                    </div>
+                  </TabletCardContent>
+                </TabletCard>
+              ))}
+            </Section>
+          )}
+
+          {/* Section 4: Not Converted */}
+          {notConverted.length > 0 && (
+            <Section
+              title="Not Converted"
+              icon={<XCircle className="h-5 w-5 text-destructive" />}
+              count={notConverted.length}
+            >
+              {notConverted.map((p) => (
+                <TabletCard key={p.id}>
+                  <TabletCardContent className="flex items-center justify-between py-4">
+                    <div>
+                      <p className="font-medium text-foreground">{p.full_name}</p>
+                      <p className="text-sm text-muted-foreground flex items-center gap-2">{p.phone_number} <WhatsAppLink phone={p.phone_number} iconSize="h-3.5 w-3.5" /></p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {p.treatment_interests && (p.treatment_interests as string[]).map((t: string) => (
+                          <Badge key={t} variant="secondary" className="text-xs">{t}</Badge>
+                        ))}
+                      </div>
+                      {(p as any).consultation_doctor?.full_name && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          By Dr. {(p as any).consultation_doctor.full_name}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <TabletButton
+                        size="sm"
+                        variant="default"
+                        onClick={() => handleMarkConverted(p.id)}
+                        leftIcon={<PackageCheck className="h-4 w-4" />}
+                      >
+                        Convert Now
+                      </TabletButton>
                     </div>
                   </TabletCardContent>
                 </TabletCard>
