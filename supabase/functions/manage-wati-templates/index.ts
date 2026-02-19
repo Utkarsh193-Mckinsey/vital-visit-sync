@@ -45,6 +45,19 @@ Deno.serve(async (req) => {
         );
       }
 
+      const payload: Record<string, unknown> = {
+        type: "template",
+        category: template.category,
+        elementName: template.name,
+        language: template.language || "en",
+        body: template.body,
+        allowCategoryChange: true,
+      };
+      const extraKeys = ["customParams", "bodyExamples", "parameterFormat", "header", "footer", "buttons", "buttonsType", "subCategory", "creationMethod"];
+      for (const key of extraKeys) {
+        if (template[key] !== undefined) payload[key] = template[key];
+      }
+
       const res = await fetch(
         `${WATI_API_URL}/api/v1/whatsApp/templates`,
         {
@@ -53,19 +66,6 @@ Deno.serve(async (req) => {
             Authorization: `Bearer ${WATI_API_KEY}`,
             "Content-Type": "application/json",
           },
-          const payload: Record<string, unknown> = {
-            type: "template",
-            category: template.category,
-            elementName: template.name,
-            language: template.language || "en",
-            body: template.body,
-            allowCategoryChange: true,
-          };
-          // Forward any additional fields (customParams, bodyExamples, header, footer, buttons, etc.)
-          const extraKeys = ["customParams", "bodyExamples", "parameterFormat", "header", "footer", "buttons", "buttonsType", "subCategory", "creationMethod"];
-          for (const key of extraKeys) {
-            if (template[key] !== undefined) payload[key] = template[key];
-          }
           body: JSON.stringify(payload),
         }
       );
