@@ -253,30 +253,30 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
           </SelectContent>
         </Select>
 
-        <Button variant="outline" size="sm" className="text-xs h-6 px-2 rounded gap-1" onClick={handleCallPatient} disabled={calling}>
-          {calling ? <Loader2 className="h-3 w-3 animate-spin" /> : <><PhoneCall className="h-3 w-3" /> Call</>}
-        </Button>
+        <Badge variant="outline" className="text-[10px] cursor-pointer hover:bg-accent" onClick={handleCallPatient}>
+          {calling ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <><PhoneCall className="h-3 w-3 mr-1" /> Call</>}
+        </Badge>
 
         {showReminderStatus && (
-          <Button variant="outline" size="sm" className="text-xs h-6 px-2 rounded gap-1" onClick={() => onUpdateConfirmation(apt.id, 'confirmed_call')}>
-            <CheckCircle className="h-3 w-3" /> Confirm
-          </Button>
+          <Badge variant="outline" className="text-[10px] cursor-pointer hover:bg-accent" onClick={() => onUpdateConfirmation(apt.id, 'confirmed_call')}>
+            <CheckCircle className="h-3 w-3 mr-1" /> Confirm
+          </Badge>
         )}
 
         {apt.status === 'upcoming' && (
-          <Button variant="outline" size="sm" className="text-xs h-6 px-2 rounded gap-1" onClick={handleRegisterNewPatient}>
-            <UserPlus className="h-3 w-3" /> Register
-          </Button>
+          <Badge variant="outline" className="text-[10px] cursor-pointer hover:bg-accent" onClick={handleRegisterNewPatient}>
+            <UserPlus className="h-3 w-3 mr-1" /> Register
+          </Badge>
         )}
 
         {apt.status !== 'no_show' && apt.status !== 'rescheduled' && apt.status !== 'completed' && apt.status !== 'cancelled' && (
           <>
-            <Button variant="outline" size="sm" className="text-xs h-6 px-2 rounded gap-1 text-orange-600 border-orange-300 hover:bg-orange-50" onClick={() => setShowRescheduleModal(true)}>
-              <CalendarClock className="h-3 w-3" /> Reschedule
-            </Button>
-            <Button variant="outline" size="sm" className="text-xs h-6 px-2 rounded gap-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={handleNoShow}>
-              <XCircle className="h-3 w-3" /> No Show
-            </Button>
+            <Badge variant="outline" className="text-[10px] cursor-pointer hover:bg-accent text-orange-600 border-orange-300" onClick={() => setShowRescheduleModal(true)}>
+              <CalendarClock className="h-3 w-3 mr-1" /> Reschedule
+            </Badge>
+            <Badge variant="outline" className="text-[10px] cursor-pointer hover:bg-accent text-destructive border-destructive/30" onClick={handleNoShow}>
+              <XCircle className="h-3 w-3 mr-1" /> No Show
+            </Badge>
           </>
         )}
 
