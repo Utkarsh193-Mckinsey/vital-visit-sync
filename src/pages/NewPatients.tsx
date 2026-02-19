@@ -17,7 +17,7 @@ export default function NewPatients() {
   const navigate = useNavigate();
 
   const fetchAll = useCallback(async () => {
-    const [pendingRes, awaitingRes, consultedRes] = await Promise.all([
+    const [pendingRes, awaitingRes] = await Promise.all([
       // Not yet reviewed by doctor
       supabase
         .from('patients')
