@@ -348,6 +348,7 @@ export default function WhatsAppChats() {
             </div>
           </DialogContent>
         </Dialog>
+        </>
       ) : (
         // Thread list view
         <>
