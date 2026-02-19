@@ -12,7 +12,6 @@ import { WhatsAppLink } from '@/components/ui/whatsapp-link';
 export default function NewPatients() {
   const [pendingReview, setPendingReview] = useState<any[]>([]);
   const [awaitingConsultation, setAwaitingConsultation] = useState<any[]>([]);
-  const [consulted, setConsulted] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [consultationPatient, setConsultationPatient] = useState<any>(null);
   const navigate = useNavigate();
