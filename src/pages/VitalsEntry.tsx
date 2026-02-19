@@ -98,25 +98,80 @@ export default function VitalsEntry() {
       const visitData = data as unknown as VisitWithPatient;
       setVisit(visitData);
       
-      // Pre-fill existing vitals if any, otherwise use standard normal defaults
-      // Leave temp, height, weight, BPS, BPD empty (must be entered manually)
-      setVitals({
-        temperature: visitData.temperature?.toString() || '',
-        heart_rate: visitData.heart_rate?.toString() || '78',
-        blood_pressure_systolic: visitData.blood_pressure_systolic?.toString() || '',
-        blood_pressure_diastolic: visitData.blood_pressure_diastolic?.toString() || '',
-        height_cm: visitData.height_cm?.toString() || '',
-        weight_kg: visitData.weight_kg?.toString() || '',
-        respiratory_rate: visitData.respiratory_rate?.toString() || '16',
-        spo2: visitData.spo2?.toString() || '98',
-        hip_cm: visitData.hip_cm?.toString() || '',
-        waist_cm: visitData.waist_cm?.toString() || '',
-        head_circumference_cm: visitData.head_circumference_cm?.toString() || '',
-        sugar: visitData.sugar?.toString() || '100',
-        urinalysis: visitData.urinalysis || '',
-        other_details: visitData.other_details || '',
-        lmp: visitData.lmp || '',
-      });
+      // Check if this visit already has vitals saved
+      const hasExistingVitals = visitData.temperature != null || visitData.heart_rate != null;
+      
+      if (hasExistingVitals) {
+        // Pre-fill from this visit's saved vitals
+        setVitals({
+          temperature: visitData.temperature?.toString() || '',
+          heart_rate: visitData.heart_rate?.toString() || '',
+          blood_pressure_systolic: visitData.blood_pressure_systolic?.toString() || '',
+          blood_pressure_diastolic: visitData.blood_pressure_diastolic?.toString() || '',
+          height_cm: visitData.height_cm?.toString() || '',
+          weight_kg: visitData.weight_kg?.toString() || '',
+          respiratory_rate: visitData.respiratory_rate?.toString() || '',
+          spo2: visitData.spo2?.toString() || '',
+          hip_cm: visitData.hip_cm?.toString() || '',
+          waist_cm: visitData.waist_cm?.toString() || '',
+          head_circumference_cm: visitData.head_circumference_cm?.toString() || '',
+          sugar: visitData.sugar?.toString() || '',
+          urinalysis: visitData.urinalysis || '',
+          other_details: visitData.other_details || '',
+          lmp: visitData.lmp || '',
+        });
+      } else {
+        // Try to fetch the patient's last completed visit vitals
+        const { data: prevVisit } = await supabase
+          .from('visits')
+          .select('*')
+          .eq('patient_id', visitData.patient_id)
+          .eq('vitals_completed', true)
+          .neq('id', visitId!)
+          .order('visit_date', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (prevVisit) {
+          // Pre-fill ALL fields from previous visit
+          setVitals({
+            temperature: prevVisit.temperature?.toString() || '',
+            heart_rate: prevVisit.heart_rate?.toString() || '78',
+            blood_pressure_systolic: prevVisit.blood_pressure_systolic?.toString() || '',
+            blood_pressure_diastolic: prevVisit.blood_pressure_diastolic?.toString() || '',
+            height_cm: prevVisit.height_cm?.toString() || '',
+            weight_kg: prevVisit.weight_kg?.toString() || '',
+            respiratory_rate: prevVisit.respiratory_rate?.toString() || '16',
+            spo2: prevVisit.spo2?.toString() || '98',
+            hip_cm: prevVisit.hip_cm?.toString() || '',
+            waist_cm: prevVisit.waist_cm?.toString() || '',
+            head_circumference_cm: prevVisit.head_circumference_cm?.toString() || '',
+            sugar: prevVisit.sugar?.toString() || '100',
+            urinalysis: prevVisit.urinalysis || '',
+            other_details: prevVisit.other_details || '',
+            lmp: prevVisit.lmp || '',
+          });
+        } else {
+          // First visit ever — use standard defaults, leave temp/height/weight/BP empty
+          setVitals({
+            temperature: '',
+            heart_rate: '78',
+            blood_pressure_systolic: '',
+            blood_pressure_diastolic: '',
+            height_cm: '',
+            weight_kg: '',
+            respiratory_rate: '16',
+            spo2: '98',
+            hip_cm: '',
+            waist_cm: '',
+            head_circumference_cm: '',
+            sugar: '100',
+            urinalysis: '',
+            other_details: '',
+            lmp: '',
+          });
+        }
+      }
       
       setIsLoading(false);
     };
