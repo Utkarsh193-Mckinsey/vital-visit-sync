@@ -30,6 +30,11 @@ interface CompletedVisit {
     sessions_remaining: number;
     treatment: { treatment_name: string };
   }[];
+  bookedAppointment?: {
+    appointment_date: string;
+    appointment_time: string;
+    service: string;
+  } | null;
 }
 
 type TabFilter = 'pending' | 'will_call' | 'handled';
