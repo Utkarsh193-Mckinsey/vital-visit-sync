@@ -167,6 +167,9 @@ export default function WhatsAppChats() {
     }
   };
 
+  const currentWatiTemplate = watiTemplates.find(t => (t.elementName || t.name) === selectedTemplate);
+  const currentTemplateParams = currentWatiTemplate ? extractParams(currentWatiTemplate.body || currentWatiTemplate.bodyOriginal || '') : [];
+
   const sendTemplateMessage = async () => {
     if (!selectedPhone || sendingTemplate) return;
     setSendingTemplate(true);
