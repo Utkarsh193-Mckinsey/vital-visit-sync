@@ -30,6 +30,11 @@ interface CompletedVisit {
     sessions_remaining: number;
     treatment: { treatment_name: string };
   }[];
+  bookedAppointment?: {
+    appointment_date: string;
+    appointment_time: string;
+    service: string;
+  } | null;
 }
 
 type TabFilter = 'pending' | 'will_call' | 'handled';
@@ -85,10 +90,31 @@ export default function BookNextAppointment() {
       });
     }
 
+    // For handled/booked visits, fetch the booked appointment
+    const bookedVisitIds = (data || []).filter((v: any) => v.next_appointment_status === 'booked').map((v: any) => v.patient_id);
+    let bookedAppointmentsMap: Record<string, any> = {};
+    if (bookedVisitIds.length > 0) {
+      const { data: bookedApts } = await supabase
+        .from('appointments')
+        .select('patient_name, phone, appointment_date, appointment_time, service')
+        .eq('booked_by', 'Follow-up')
+        .in('phone', (data || []).filter((v: any) => v.next_appointment_status === 'booked').map((v: any) => v.patient?.phone_number))
+        .order('created_at', { ascending: false });
+
+      // Map by phone to the latest appointment
+      (bookedApts || []).forEach((apt: any) => {
+        if (!bookedAppointmentsMap[apt.phone]) {
+          bookedAppointmentsMap[apt.phone] = apt;
+        }
+      });
+    }
+
     (data || []).forEach((v: any) => {
+      const bookedApt = v.next_appointment_status === 'booked' ? bookedAppointmentsMap[v.patient?.phone_number] || null : null;
       visitsWithPackages.push({
         ...v,
         activePackages: packagesMap[v.patient_id] || [],
+        bookedAppointment: bookedApt,
       });
     });
 
@@ -284,7 +310,15 @@ export default function BookNextAppointment() {
                       </>
                     )}
                     {visit.next_appointment_status === 'booked' && (
-                      <Badge className="bg-green-100 text-green-800 text-xs"><CheckCircle className="h-3 w-3 mr-1" /> Booked</Badge>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge className="bg-green-100 text-green-800 text-xs"><CheckCircle className="h-3 w-3 mr-1" /> Booked</Badge>
+                        {visit.bookedAppointment && (
+                          <Badge variant="outline" className="text-xs">
+                            <CalendarPlus className="h-3 w-3 mr-1" />
+                            {format(new Date(visit.bookedAppointment.appointment_date + 'T00:00:00'), 'EEE, dd MMM')} at {visit.bookedAppointment.appointment_time} — {visit.bookedAppointment.service}
+                          </Badge>
+                        )}
+                      </div>
                     )}
                     {visit.next_appointment_status === 'will_call_later' && (
                       <>
