@@ -235,9 +235,9 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
           <SelectTrigger className={`h-[22px] w-[80px] text-[9px] rounded-full border px-1.5 [&>svg]:h-2 [&>svg]:w-2 ${statusColors[apt.status] || ''}`}>
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="min-w-[80px]">
             {STATUS_OPTIONS.map(s => (
-              <SelectItem key={s} value={s} className="capitalize text-xs">{s.replace(/_/g, ' ')}</SelectItem>
+              <SelectItem key={s} value={s} className="capitalize text-[10px] py-1 px-2">{s.replace(/_/g, ' ')}</SelectItem>
             ))}
           </SelectContent>
         </Select>
