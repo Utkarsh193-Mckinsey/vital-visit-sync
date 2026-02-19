@@ -350,7 +350,7 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
         <div className="space-y-4 mt-2">
           <div>
             <Label>New Date *</Label>
-            <TabletInput type="date" value={rescheduleDate} onChange={e => setRescheduleDate(e.target.value)} />
+            <TabletInput type="date" value={rescheduleDate} min={format(new Date(), 'yyyy-MM-dd')} onChange={e => setRescheduleDate(e.target.value)} />
           </div>
           <div>
             <Label>Reason / Remarks</Label>
