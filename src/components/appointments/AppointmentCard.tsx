@@ -253,34 +253,34 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
           </SelectContent>
         </Select>
 
-        <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-[22px] cursor-pointer hover:bg-accent" onClick={handleCallPatient}>
+        <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-5 cursor-pointer hover:bg-accent" onClick={handleCallPatient}>
           {calling ? <Loader2 className="h-2.5 w-2.5 animate-spin mr-0.5" /> : <><PhoneCall className="h-2.5 w-2.5 mr-0.5" /> Call</>}
         </Badge>
 
         {showReminderStatus && (
-          <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-[22px] cursor-pointer hover:bg-accent" onClick={() => onUpdateConfirmation(apt.id, 'confirmed_call')}>
+          <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-5 cursor-pointer hover:bg-accent" onClick={() => onUpdateConfirmation(apt.id, 'confirmed_call')}>
             <CheckCircle className="h-2.5 w-2.5 mr-0.5" /> Confirm
           </Badge>
         )}
 
         {apt.status === 'upcoming' && (
-          <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-[22px] cursor-pointer hover:bg-accent" onClick={handleRegisterNewPatient}>
+          <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-5 cursor-pointer hover:bg-accent" onClick={handleRegisterNewPatient}>
             <UserPlus className="h-2.5 w-2.5 mr-0.5" /> Register
           </Badge>
         )}
 
         {apt.status !== 'no_show' && apt.status !== 'rescheduled' && apt.status !== 'completed' && apt.status !== 'cancelled' && (
           <>
-            <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-[22px] cursor-pointer hover:bg-accent text-orange-600 border-orange-300" onClick={() => setShowRescheduleModal(true)}>
+            <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-5 cursor-pointer hover:bg-accent text-orange-600 border-orange-300" onClick={() => setShowRescheduleModal(true)}>
               <CalendarClock className="h-2.5 w-2.5 mr-0.5" /> Reschedule
             </Badge>
-            <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-[22px] cursor-pointer hover:bg-accent text-destructive border-destructive/30" onClick={handleNoShow}>
+            <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-5 cursor-pointer hover:bg-accent text-destructive border-destructive/30" onClick={handleNoShow}>
               <XCircle className="h-2.5 w-2.5 mr-0.5" /> No Show
             </Badge>
           </>
         )}
 
-        <Badge variant="outline" className="text-[9px] py-0 px-1 h-[22px] cursor-pointer hover:bg-accent" onClick={() => onEdit(apt)}>
+        <Badge variant="outline" className="text-[9px] py-0 px-1 h-5 cursor-pointer hover:bg-accent" onClick={() => onEdit(apt)}>
           <Edit className="h-2.5 w-2.5" />
         </Badge>
       </div>
