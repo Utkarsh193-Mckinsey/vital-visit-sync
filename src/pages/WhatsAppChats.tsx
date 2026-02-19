@@ -203,15 +203,30 @@ export default function WhatsAppChats() {
     }
   };
 
-  const openTemplateModal = () => {
-    // Pre-fill params from context
-    const thread = selectedThread;
-    setTemplateParams({
-      patient_name: thread?.patient_name || nameParam || '',
-      service: '',
-      time: '',
-    });
+  const openTemplateModal = async () => {
+    setTemplateParams({});
     setTemplateModalOpen(true);
+    // Fetch WATI templates if not loaded yet
+    if (watiTemplates.length === 0) {
+      setLoadingTemplates(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('manage-wati-templates', {
+          body: { action: 'list' },
+        });
+        if (error) throw error;
+        const templates = data?.messageTemplates || [];
+        setWatiTemplates(templates);
+        if (templates.length > 0) setSelectedTemplate(templates[0].elementName || templates[0].name);
+      } catch (err: any) {
+        toast.error('Failed to fetch templates: ' + (err.message || 'Unknown error'));
+      } finally {
+        setLoadingTemplates(false);
+      }
+    } else {
+      if (!selectedTemplate && watiTemplates.length > 0) {
+        setSelectedTemplate(watiTemplates[0].elementName || watiTemplates[0].name);
+      }
+    }
   };
 
   const fetchWatiTemplates = async () => {
