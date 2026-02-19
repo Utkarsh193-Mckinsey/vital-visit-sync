@@ -132,40 +132,7 @@ export default function NewPatients() {
             </Section>
           )}
 
-          {/* Section 3: Consulted (waiting for conversion) */}
-          {consulted.length > 0 && (
-            <Section
-              title="Consulted"
-              icon={<CheckCircle2 className="h-5 w-5 text-emerald-500" />}
-              count={consulted.length}
-            >
-              {consulted.map((p) => (
-                <TabletCard key={p.id}>
-                  <TabletCardContent className="flex items-center justify-between py-4">
-                    <div>
-                      <p className="font-medium text-foreground">{p.full_name}</p>
-                      <p className="text-sm text-muted-foreground flex items-center gap-2">{p.phone_number} <WhatsAppLink phone={p.phone_number} iconSize="h-3.5 w-3.5" /></p>
-                      <div className="flex items-center gap-2 mt-1">
-                        {p.treatment_interests && (p.treatment_interests as string[]).map((t: string) => (
-                          <Badge key={t} variant="secondary" className="text-xs">{t}</Badge>
-                        ))}
-                      </div>
-                      {(p as any).consultation_doctor?.full_name && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          By Dr. {(p as any).consultation_doctor.full_name}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <PackageCheck className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground font-medium">Awaiting Package</span>
-                    </div>
-                  </TabletCardContent>
-                </TabletCard>
-              ))}
-            </Section>
-          )}
-        </div>
+
       )}
 
       {consultationPatient && (
