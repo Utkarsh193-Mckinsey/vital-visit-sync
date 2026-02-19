@@ -230,9 +230,9 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
       </div>
 
       {/* Lower row: actions */}
-      <div className="flex items-center gap-1.5 flex-wrap">
+      <div className="flex items-center gap-1 flex-wrap">
         <Select value={apt.status} onValueChange={v => onUpdateStatus(apt.id, v)}>
-          <SelectTrigger className={`h-5 w-[85px] text-[10px] rounded-full border px-1.5 [&>svg]:h-2.5 [&>svg]:w-2.5 ${statusColors[apt.status] || ''}`}>
+          <SelectTrigger className={`h-[22px] w-[80px] text-[9px] rounded-full border px-1.5 [&>svg]:h-2 [&>svg]:w-2 ${statusColors[apt.status] || ''}`}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -243,7 +243,7 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
         </Select>
 
         <Select value={apt.confirmation_status} onValueChange={v => onUpdateConfirmation(apt.id, v)}>
-          <SelectTrigger className="h-5 w-[110px] text-[10px] rounded-full border px-1.5 [&>svg]:h-2.5 [&>svg]:w-2.5">
+          <SelectTrigger className="h-[22px] w-[100px] text-[9px] rounded-full border px-1.5 [&>svg]:h-2 [&>svg]:w-2">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -253,36 +253,36 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
           </SelectContent>
         </Select>
 
-        <Badge variant="outline" className="text-[10px] cursor-pointer hover:bg-accent" onClick={handleCallPatient}>
-          {calling ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <><PhoneCall className="h-3 w-3 mr-1" /> Call</>}
+        <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-[22px] cursor-pointer hover:bg-accent" onClick={handleCallPatient}>
+          {calling ? <Loader2 className="h-2.5 w-2.5 animate-spin mr-0.5" /> : <><PhoneCall className="h-2.5 w-2.5 mr-0.5" /> Call</>}
         </Badge>
 
         {showReminderStatus && (
-          <Badge variant="outline" className="text-[10px] cursor-pointer hover:bg-accent" onClick={() => onUpdateConfirmation(apt.id, 'confirmed_call')}>
-            <CheckCircle className="h-3 w-3 mr-1" /> Confirm
+          <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-[22px] cursor-pointer hover:bg-accent" onClick={() => onUpdateConfirmation(apt.id, 'confirmed_call')}>
+            <CheckCircle className="h-2.5 w-2.5 mr-0.5" /> Confirm
           </Badge>
         )}
 
         {apt.status === 'upcoming' && (
-          <Badge variant="outline" className="text-[10px] cursor-pointer hover:bg-accent" onClick={handleRegisterNewPatient}>
-            <UserPlus className="h-3 w-3 mr-1" /> Register
+          <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-[22px] cursor-pointer hover:bg-accent" onClick={handleRegisterNewPatient}>
+            <UserPlus className="h-2.5 w-2.5 mr-0.5" /> Register
           </Badge>
         )}
 
         {apt.status !== 'no_show' && apt.status !== 'rescheduled' && apt.status !== 'completed' && apt.status !== 'cancelled' && (
           <>
-            <Badge variant="outline" className="text-[10px] cursor-pointer hover:bg-accent text-orange-600 border-orange-300" onClick={() => setShowRescheduleModal(true)}>
-              <CalendarClock className="h-3 w-3 mr-1" /> Reschedule
+            <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-[22px] cursor-pointer hover:bg-accent text-orange-600 border-orange-300" onClick={() => setShowRescheduleModal(true)}>
+              <CalendarClock className="h-2.5 w-2.5 mr-0.5" /> Reschedule
             </Badge>
-            <Badge variant="outline" className="text-[10px] cursor-pointer hover:bg-accent text-destructive border-destructive/30" onClick={handleNoShow}>
-              <XCircle className="h-3 w-3 mr-1" /> No Show
+            <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-[22px] cursor-pointer hover:bg-accent text-destructive border-destructive/30" onClick={handleNoShow}>
+              <XCircle className="h-2.5 w-2.5 mr-0.5" /> No Show
             </Badge>
           </>
         )}
 
-        <Button variant="ghost" size="icon" className="h-6 w-6 rounded" onClick={() => onEdit(apt)}>
-          <Edit className="h-3 w-3" />
-        </Button>
+        <Badge variant="outline" className="text-[9px] py-0 px-1 h-[22px] cursor-pointer hover:bg-accent" onClick={() => onEdit(apt)}>
+          <Edit className="h-2.5 w-2.5" />
+        </Badge>
       </div>
 
       {/* Expandable Communication Log */}
