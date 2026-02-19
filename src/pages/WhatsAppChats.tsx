@@ -56,6 +56,12 @@ export default function WhatsAppChats() {
   const [selectedTemplate, setSelectedTemplate] = useState('appointment_reminder_24hr');
   const [templateParams, setTemplateParams] = useState<Record<string, string>>({});
   const [sendingTemplate, setSendingTemplate] = useState(false);
+  const [createTemplateOpen, setCreateTemplateOpen] = useState(false);
+  const [listTemplatesOpen, setListTemplatesOpen] = useState(false);
+  const [creatingTemplate, setCreatingTemplate] = useState(false);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [watiTemplates, setWatiTemplates] = useState<any[]>([]);
+  const [newTemplate, setNewTemplate] = useState({ name: '', body: '', category: 'UTILITY', language: 'en' });
 
   // Available WATI templates
   const TEMPLATES = [
