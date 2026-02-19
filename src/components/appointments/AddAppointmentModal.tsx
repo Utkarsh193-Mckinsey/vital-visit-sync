@@ -130,7 +130,7 @@ export function AddAppointmentModal({ open, onOpenChange, appointment, defaultDa
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Date *</Label>
-              <TabletInput type="date" value={form.appointment_date} onChange={e => setForm(f => ({ ...f, appointment_date: e.target.value }))} />
+              <TabletInput type="date" value={form.appointment_date} min={format(new Date(), 'yyyy-MM-dd')} onChange={e => setForm(f => ({ ...f, appointment_date: e.target.value }))} />
             </div>
             <div>
               <Label>Time *</Label>
