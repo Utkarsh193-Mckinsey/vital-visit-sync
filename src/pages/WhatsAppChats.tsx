@@ -6,7 +6,7 @@ import { TabletInput } from '@/components/ui/tablet-input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Search, User, ArrowLeft, Clock, Send, BellOff, Bell, FileText, Loader2, Plus, List, Eye } from 'lucide-react';
+import { MessageSquare, Search, User, ArrowLeft, Clock, Send, BellOff, Bell, FileText, Loader2, Plus, List } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -32,6 +32,16 @@ interface ConversationThread {
   messages: WaMsg[];
 }
 
+interface WatiTemplate {
+  id?: string;
+  elementName?: string;
+  name?: string;
+  body?: string;
+  bodyOriginal?: string;
+  category?: string;
+  status?: string;
+}
+
 // Normalize UAE phone: strip +, spaces, dashes, leading 00971/971/0 → bare digits
 const normalizePhone = (phone: string) => {
   let p = phone.replace(/[\s\-\(\)\+]/g, '');
@@ -39,6 +49,13 @@ const normalizePhone = (phone: string) => {
   else if (p.startsWith('971') && p.length > 9) p = p.slice(3);
   if (p.startsWith('0')) p = p.slice(1);
   return p;
+};
+
+// Extract {{n}} placeholders from template body and return param descriptors
+const extractParams = (body: string) => {
+  const matches = body.match(/\{\{(\d+)\}\}/g) || [];
+  const unique = [...new Set(matches.map(m => m.replace(/\{\{|\}\}/g, '')))].sort((a, b) => Number(a) - Number(b));
+  return unique.map(n => ({ name: `param_${n}`, label: `Parameter {{${n}}}`, key: n }));
 };
 
 export default function WhatsAppChats() {
@@ -53,22 +70,16 @@ export default function WhatsAppChats() {
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState('appointment_reminder_24hr');
+  const [selectedTemplate, setSelectedTemplate] = useState('');
   const [templateParams, setTemplateParams] = useState<Record<string, string>>({});
   const [sendingTemplate, setSendingTemplate] = useState(false);
   const [createTemplateOpen, setCreateTemplateOpen] = useState(false);
   const [listTemplatesOpen, setListTemplatesOpen] = useState(false);
   const [creatingTemplate, setCreatingTemplate] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
-  const [watiTemplates, setWatiTemplates] = useState<any[]>([]);
+  const [watiTemplates, setWatiTemplates] = useState<WatiTemplate[]>([]);
   const [newTemplate, setNewTemplate] = useState({ name: '', body: '', category: 'UTILITY', language: 'en' });
 
-  // Extract {{n}} placeholders from template body
-  const extractParams = (body: string) => {
-    const matches = body.match(/\{\{(\d+)\}\}/g) || [];
-    const unique = [...new Set(matches.map(m => m.replace(/\{\{|\}\}/g, '')))].sort((a, b) => Number(a) - Number(b));
-    return unique.map(n => ({ name: `param_${n}`, label: `Parameter ${n}`, key: n }));
-  };
   const fetchChats = async () => {
     const { data: msgs } = await supabase
       .from('whatsapp_messages')
@@ -126,7 +137,6 @@ export default function WhatsAppChats() {
       if (match) {
         setSelectedPhone(match.phone);
       } else {
-        // No matching thread — set the raw param so we show an empty chat
         setSelectedPhone(phoneParam);
       }
     }
@@ -140,16 +150,41 @@ export default function WhatsAppChats() {
     !search || t.patient_name.toLowerCase().includes(search.toLowerCase()) || t.phone.includes(search)
   );
 
+  const selectedThread = threads.find(t => t.phone === selectedPhone);
+
+  // Derive current template and its params from watiTemplates
+  const currentWatiTemplate = watiTemplates.find(t => (t.elementName || t.name) === selectedTemplate);
+  const currentTemplateParams = currentWatiTemplate
+    ? extractParams(currentWatiTemplate.body || currentWatiTemplate.bodyOriginal || '')
+    : [];
+
+  const fetchWatiTemplates = async () => {
+    setLoadingTemplates(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-wati-templates', {
+        body: { action: 'list' },
+      });
+      if (error) throw error;
+      const templates: WatiTemplate[] = data?.messageTemplates || [];
+      setWatiTemplates(templates);
+      return templates;
+    } catch (err: any) {
+      toast.error('Failed to fetch templates: ' + (err.message || 'Unknown error'));
+      return [];
+    } finally {
+      setLoadingTemplates(false);
+    }
+  };
+
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedPhone || sending) return;
     setSending(true);
     try {
-      // Normalize phone for WATI: needs 971 prefix without +
       let watiPhone = selectedPhone.replace(/[\s\-\(\)\+]/g, '');
       if (watiPhone.startsWith('0')) watiPhone = '971' + watiPhone.slice(1);
       if (!watiPhone.startsWith('971') && watiPhone.length <= 10) watiPhone = '971' + watiPhone;
 
-      const { data, error } = await supabase.functions.invoke('send-whatsapp', {
+      const { error } = await supabase.functions.invoke('send-whatsapp', {
         body: {
           phone: watiPhone,
           message: newMessage.trim(),
@@ -167,9 +202,6 @@ export default function WhatsAppChats() {
     }
   };
 
-  const currentWatiTemplate = watiTemplates.find(t => (t.elementName || t.name) === selectedTemplate);
-  const currentTemplateParams = currentWatiTemplate ? extractParams(currentWatiTemplate.body || currentWatiTemplate.bodyOriginal || '') : [];
-
   const sendTemplateMessage = async () => {
     if (!selectedPhone || sendingTemplate) return;
     setSendingTemplate(true);
@@ -178,10 +210,9 @@ export default function WhatsAppChats() {
       if (watiPhone.startsWith('0')) watiPhone = '971' + watiPhone.slice(1);
       if (!watiPhone.startsWith('971') && watiPhone.length <= 10) watiPhone = '971' + watiPhone;
 
-      const template = TEMPLATES.find(t => t.name === selectedTemplate);
-      if (!template) throw new Error('Template not found');
+      if (!currentWatiTemplate) throw new Error('Please select a template');
 
-      const parameters = template.params.map(p => ({
+      const parameters = currentTemplateParams.map(p => ({
         name: p.key,
         value: templateParams[p.name] || '',
       }));
@@ -209,42 +240,10 @@ export default function WhatsAppChats() {
   const openTemplateModal = async () => {
     setTemplateParams({});
     setTemplateModalOpen(true);
-    // Fetch WATI templates if not loaded yet
-    if (watiTemplates.length === 0) {
-      setLoadingTemplates(true);
-      try {
-        const { data, error } = await supabase.functions.invoke('manage-wati-templates', {
-          body: { action: 'list' },
-        });
-        if (error) throw error;
-        const templates = data?.messageTemplates || [];
-        setWatiTemplates(templates);
-        if (templates.length > 0) setSelectedTemplate(templates[0].elementName || templates[0].name);
-      } catch (err: any) {
-        toast.error('Failed to fetch templates: ' + (err.message || 'Unknown error'));
-      } finally {
-        setLoadingTemplates(false);
-      }
-    } else {
-      if (!selectedTemplate && watiTemplates.length > 0) {
-        setSelectedTemplate(watiTemplates[0].elementName || watiTemplates[0].name);
-      }
-    }
-  };
-
-  const fetchWatiTemplates = async () => {
-    setLoadingTemplates(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('manage-wati-templates', {
-        body: { action: 'list' },
-      });
-      if (error) throw error;
-      setWatiTemplates(data?.messageTemplates || []);
-      setListTemplatesOpen(true);
-    } catch (err: any) {
-      toast.error('Failed to fetch templates: ' + (err.message || 'Unknown error'));
-    } finally {
-      setLoadingTemplates(false);
+    // Fetch WATI templates from API every time modal opens
+    const templates = await fetchWatiTemplates();
+    if (templates.length > 0 && !selectedTemplate) {
+      setSelectedTemplate(templates[0].elementName || templates[0].name || '');
     }
   };
 
@@ -272,8 +271,6 @@ export default function WhatsAppChats() {
       setCreatingTemplate(false);
     }
   };
-
-  const selectedThread = threads.find(t => t.phone === selectedPhone);
 
   return (
     <PageContainer maxWidth="full">
@@ -347,7 +344,7 @@ export default function WhatsAppChats() {
                 title="Send Template Message"
                 className="h-11 w-11 rounded-full border border-input bg-background flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
               >
-                <FileText className="h-4 w-4" />
+                {loadingTemplates ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
               </button>
               <input
                 type="text"
@@ -376,35 +373,66 @@ export default function WhatsAppChats() {
               <DialogTitle>Send Template Message</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 mt-2">
-              <div>
-                <Label>Template</Label>
-                <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TEMPLATES.map(t => (
-                      <SelectItem key={t.name} value={t.name}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {TEMPLATES.find(t => t.name === selectedTemplate)?.params.map(p => (
-                <div key={p.name}>
-                  <Label>{p.label}</Label>
-                  <TabletInput
-                    value={templateParams[p.name] || ''}
-                    onChange={e => setTemplateParams(prev => ({ ...prev, [p.name]: e.target.value }))}
-                    placeholder={p.label}
-                  />
+              {loadingTemplates ? (
+                <div className="flex justify-center py-6">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
-              ))}
-              <div className="flex gap-3">
-                <Button variant="outline" className="w-full" onClick={() => setTemplateModalOpen(false)}>Cancel</Button>
-                <Button className="w-full" onClick={sendTemplateMessage} disabled={sendingTemplate}>
-                  {sendingTemplate ? <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Sending...</> : 'Send Template'}
-                </Button>
-              </div>
+              ) : (
+                <>
+                  <div>
+                    <Label>Template</Label>
+                    <Select value={selectedTemplate} onValueChange={val => { setSelectedTemplate(val); setTemplateParams({}); }}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a template..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {watiTemplates.map((t, i) => {
+                          const tName = t.elementName || t.name || '';
+                          const label = tName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                          return (
+                            <SelectItem key={t.id || i} value={tName}>
+                              <div className="flex items-center gap-2">
+                                <span>{label}</span>
+                                {t.status && (
+                                  <Badge variant={t.status === 'APPROVED' ? 'default' : 'secondary'} className="text-[10px] h-4 px-1">
+                                    {t.status}
+                                  </Badge>
+                                )}
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Show template body preview */}
+                  {currentWatiTemplate && (
+                    <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground whitespace-pre-wrap">
+                      {currentWatiTemplate.body || currentWatiTemplate.bodyOriginal || '(no body)'}
+                    </div>
+                  )}
+
+                  {/* Dynamic parameter fields */}
+                  {currentTemplateParams.map(p => (
+                    <div key={p.name}>
+                      <Label>{p.label}</Label>
+                      <TabletInput
+                        value={templateParams[p.name] || ''}
+                        onChange={e => setTemplateParams(prev => ({ ...prev, [p.name]: e.target.value }))}
+                        placeholder={`Value for ${p.label}`}
+                      />
+                    </div>
+                  ))}
+
+                  <div className="flex gap-3">
+                    <Button variant="outline" className="w-full" onClick={() => setTemplateModalOpen(false)}>Cancel</Button>
+                    <Button className="w-full" onClick={sendTemplateMessage} disabled={sendingTemplate || !selectedTemplate}>
+                      {sendingTemplate ? <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Sending...</> : 'Send Template'}
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           </DialogContent>
         </Dialog>
@@ -417,7 +445,7 @@ export default function WhatsAppChats() {
             subtitle={`${threads.length} conversations`}
           />
           <div className="flex gap-2 mb-3">
-            <Button variant="outline" size="sm" onClick={fetchWatiTemplates} disabled={loadingTemplates} className="gap-1">
+            <Button variant="outline" size="sm" onClick={async () => { const t = await fetchWatiTemplates(); setWatiTemplates(t); setListTemplatesOpen(true); }} disabled={loadingTemplates} className="gap-1">
               {loadingTemplates ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <List className="h-3.5 w-3.5" />}
               Templates
             </Button>
@@ -548,7 +576,7 @@ export default function WhatsAppChats() {
               {watiTemplates.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">No templates found</p>
               ) : (
-                watiTemplates.map((t: any, i: number) => (
+                watiTemplates.map((t, i) => (
                   <div key={t.id || i} className="border border-border rounded-lg p-3 space-y-1">
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-sm">{t.elementName || t.name}</span>
@@ -575,7 +603,6 @@ function ReminderToggle({ phone }: { phone: string }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Check if this patient's upcoming appointments have reminders paused
     const check = async () => {
       const today = new Date().toISOString().split('T')[0];
       const { data } = await supabase
