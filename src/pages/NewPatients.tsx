@@ -131,8 +131,7 @@ export default function NewPatients() {
               ))}
             </Section>
           )}
-
-
+        </div>
       )}
 
       {consultationPatient && (
