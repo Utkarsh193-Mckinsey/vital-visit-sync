@@ -349,7 +349,7 @@ export default function BookNextAppointment() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Date *</Label>
-                <TabletInput type="date" value={bookForm.date} onChange={e => setBookForm(f => ({ ...f, date: e.target.value }))} />
+                <TabletInput type="date" value={bookForm.date} min={format(new Date(), 'yyyy-MM-dd')} onChange={e => setBookForm(f => ({ ...f, date: e.target.value }))} />
               </div>
               <div>
                 <Label>Time *</Label>
