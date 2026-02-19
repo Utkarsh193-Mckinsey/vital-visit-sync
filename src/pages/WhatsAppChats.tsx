@@ -51,7 +51,23 @@ export default function WhatsAppChats() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState('appointment_reminder_24hr');
+  const [templateParams, setTemplateParams] = useState<Record<string, string>>({});
+  const [sendingTemplate, setSendingTemplate] = useState(false);
 
+  // Available WATI templates
+  const TEMPLATES = [
+    {
+      name: 'appointment_reminder_24hr',
+      label: 'Appointment Reminder (24hr)',
+      params: [
+        { name: 'patient_name', label: 'Patient Name', key: '1' },
+        { name: 'service', label: 'Service', key: '2' },
+        { name: 'time', label: 'Time', key: '3' },
+      ],
+    },
+  ];
   const fetchChats = async () => {
     const { data: msgs } = await supabase
       .from('whatsapp_messages')
