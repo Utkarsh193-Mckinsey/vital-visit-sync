@@ -243,7 +243,7 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
         </Select>
 
         <Select value={apt.confirmation_status} onValueChange={v => onUpdateConfirmation(apt.id, v)}>
-          <SelectTrigger className="h-5 min-h-0 w-auto text-[8px] leading-none rounded-full border py-0 px-1.5 gap-0.5 [&_svg]:h-2 [&_svg]:w-2">
+          <SelectTrigger className="h-5 min-h-0 w-auto text-[6px] leading-none rounded-full border py-0 px-1.5 gap-0.5 [&_svg]:h-2 [&_svg]:w-2">
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="min-w-[100px]">
