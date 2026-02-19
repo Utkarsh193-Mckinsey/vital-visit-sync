@@ -17,10 +17,10 @@ Deno.serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   try {
-    const { phone, message, patient_name } = await req.json();
+    const { phone, message, patient_name, template_name, parameters, broadcast_name } = await req.json();
 
-    if (!phone || !message) {
-      return new Response(JSON.stringify({ error: "Missing phone or message" }), {
+    if (!phone) {
+      return new Response(JSON.stringify({ error: "Missing phone" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -35,16 +35,46 @@ Deno.serve(async (req) => {
     }
 
     const cleanPhone = phone.replace(/^\+/, "");
-    const watiRes = await fetch(
-      `${WATI_API_URL}/api/v1/sendSessionMessage/${cleanPhone}?messageText=${encodeURIComponent(message)}`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${WATI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
+    let watiRes;
+    let logMessage = message || "";
+
+    if (template_name) {
+      // Send template message (works outside 24hr window)
+      watiRes = await fetch(
+        `${WATI_API_URL}/api/v1/sendTemplateMessage/${cleanPhone}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${WATI_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            template_name,
+            broadcast_name: broadcast_name || "cosmique_reminder",
+            parameters: parameters || [],
+          }),
+        }
+      );
+      logMessage = `[Template: ${template_name}] ${(parameters || []).map((p: any) => `${p.name}=${p.value}`).join(", ")}`;
+    } else {
+      if (!message) {
+        return new Response(JSON.stringify({ error: "Missing message" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
-    );
+      // Send session message (only works within 24hr window)
+      watiRes = await fetch(
+        `${WATI_API_URL}/api/v1/sendSessionMessage/${cleanPhone}?messageText=${encodeURIComponent(message)}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${WATI_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
 
     const watiText = await watiRes.text();
     console.log("WATI send response:", watiRes.status, watiText);
@@ -54,10 +84,10 @@ Deno.serve(async (req) => {
       phone: cleanPhone,
       patient_name: patient_name || null,
       direction: "outbound",
-      message_text: message,
+      message_text: logMessage,
     });
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ success: true, wati_response: watiText }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
