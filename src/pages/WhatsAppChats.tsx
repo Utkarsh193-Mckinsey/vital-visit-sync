@@ -249,6 +249,26 @@ export default function WhatsAppChats() {
     }
   };
 
+  const handleDeleteTemplate = async (elementName: string) => {
+    if (!confirm(`Delete template "${elementName}"? This cannot be undone.`)) return;
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-wati-templates', {
+        body: { action: 'delete', template: { elementName } },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success('Template deleted');
+        const updated = watiTemplates.filter(t => (t.elementName || t.name) !== elementName);
+        setWatiTemplates(updated);
+        if (selectedTemplate === elementName) setSelectedTemplate('');
+      } else {
+        toast.error('Failed to delete: ' + JSON.stringify(data?.data || 'Unknown'));
+      }
+    } catch (err: any) {
+      toast.error('Error: ' + (err.message || 'Unknown'));
+    }
+  };
+
   const handleCreateTemplate = async () => {
     if (!newTemplate.name || !newTemplate.body) {
       toast.error('Please fill in template name and body');
