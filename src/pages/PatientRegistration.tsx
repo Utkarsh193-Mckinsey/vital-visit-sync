@@ -68,6 +68,7 @@ export default function PatientRegistration() {
     const name = searchParams.get('name');
     const phone = searchParams.get('phone');
     if (name || phone) {
+      setFromAppointment(true);
       setFormData(prev => ({
         ...prev,
         full_name: name || prev.full_name,
