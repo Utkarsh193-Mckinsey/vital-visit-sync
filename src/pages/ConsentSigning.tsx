@@ -100,8 +100,8 @@ export default function ConsentSigning() {
       if (patientError) throw patientError;
       setPatient(patientData as Patient);
 
-      // Fetch selected packages with treatments and their consent templates
-      let query = supabase
+      // Fetch ALL active packages with remaining sessions + consent templates
+      const { data: packagesData, error: packagesError } = await supabase
         .from('packages')
         .select(`
           *,
@@ -112,22 +112,27 @@ export default function ConsentSigning() {
         `)
         .eq('patient_id', patientId)
         .eq('status', 'active')
+        .gt('sessions_remaining', 0)
         .order('purchase_date', { ascending: true });
 
-      // Filter by selected package IDs if provided
-      if (selectedPackageIds.length > 0) {
-        query = query.in('id', selectedPackageIds);
-      }
-
-      const { data: packagesData, error: packagesError } = await query;
-
       if (packagesError) throw packagesError;
-      
-      // Filter packages that have consent templates
-      const packagesWithConsent = (packagesData as unknown as PackageWithTreatment[])
+
+      const pkgsWithConsent = (packagesData as unknown as PackageWithTreatment[])
         .filter(pkg => pkg.treatment?.consent_template_id);
-      
-      setPackages(packagesWithConsent);
+
+      setAllPackages(pkgsWithConsent);
+
+      if (urlPackageIds.length > 0) {
+        // Coming from patient dashboard with pre-selected packages — skip selection step
+        const filtered = pkgsWithConsent.filter(p => urlPackageIds.includes(p.id));
+        setPackages(filtered);
+        setChosenPackageIds(new Set(urlPackageIds));
+        setCurrentStep('treatment');
+      } else {
+        // Show selection step — pre-select all by default
+        setChosenPackageIds(new Set(pkgsWithConsent.map(p => p.id)));
+        setCurrentStep('select_treatments');
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -139,6 +144,23 @@ export default function ConsentSigning() {
       setIsLoading(false);
     }
   };
+
+  const handleConfirmTreatmentSelection = () => {
+    const selected = allPackages.filter(p => chosenPackageIds.has(p.id));
+    setPackages(selected);
+    setCurrentPackageIndex(0);
+    setCurrentStep('treatment');
+  };
+
+  const toggleChosenPackage = (id: string) => {
+    setChosenPackageIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
 
   const clearSignature = () => {
     signatureRef.current?.clear();
