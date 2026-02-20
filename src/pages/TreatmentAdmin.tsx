@@ -348,6 +348,15 @@ export default function TreatmentAdmin() {
       const nurseId = selectedNurseId && selectedNurseId !== '__none__' ? selectedNurseId : null;
 
       // First update visit (without locking) so RLS allows subsequent updates
+      // Update matching appointment to completed
+      const today = new Date().toISOString().split('T')[0];
+      await supabase
+        .from('appointments')
+        .update({ status: 'completed' })
+        .eq('phone', visit.patient.phone_number)
+        .eq('appointment_date', today)
+        .eq('status', 'arrived');
+
       const { error: visitUpdateError } = await supabase
         .from('visits')
         .update({
