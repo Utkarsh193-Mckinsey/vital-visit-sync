@@ -317,10 +317,12 @@ export default function PatientRegistration() {
             <TabletButton fullWidth variant="outline" onClick={handleDownloadRegistration} disabled={isDownloading} leftIcon={<Download />}>
               {isDownloading ? 'Generating PDF...' : 'Download Registration Form'}
             </TabletButton>
-            <TabletButton fullWidth onClick={handleStartNewVisit} leftIcon={<UserPlus />}>
-              Start New Visit
-            </TabletButton>
-            <TabletButton fullWidth variant="outline" onClick={handleContinueToPatient}>
+            {!fromAppointment && (
+              <TabletButton fullWidth onClick={handleStartNewVisit} leftIcon={<UserPlus />}>
+                Start New Visit
+              </TabletButton>
+            )}
+            <TabletButton fullWidth variant={fromAppointment ? 'default' : 'outline'} onClick={handleContinueToPatient}>
               Continue to Doctor Review
             </TabletButton>
           </div>
