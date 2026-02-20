@@ -139,17 +139,13 @@ export default function Appointments() {
     a.status === 'arrived'
   ), [filtered]);
 
-  const completedAppts = useMemo(() => filtered.filter(a =>
-    a.status === 'completed'
-  ), [filtered]);
-
   const confirmed = useMemo(() => filtered.filter(a =>
-    a.status !== 'arrived' && a.status !== 'completed' &&
+    a.status !== 'arrived' &&
     ['confirmed_whatsapp', 'confirmed_call', 'double_confirmed'].includes(a.confirmation_status) && a.status !== 'cancelled'
   ), [filtered]);
 
   const unconfirmed = useMemo(() => filtered.filter(a =>
-    a.status !== 'arrived' && a.status !== 'completed' &&
+    a.status !== 'arrived' &&
     !['confirmed_whatsapp', 'confirmed_call', 'double_confirmed', 'cancelled'].includes(a.confirmation_status) && a.status !== 'cancelled'
   ), [filtered]);
 
@@ -162,7 +158,6 @@ export default function Appointments() {
   const confirmedCount = confirmed.length;
   const unconfirmedCount = unconfirmed.length;
   const arrivedCount = arrived.length;
-  const completedApptCount = completedAppts.length;
   const cancelledCount = cancelled.length;
   const confirmPct = total > 0 ? Math.round((confirmedCount / total) * 100) : 0;
 
