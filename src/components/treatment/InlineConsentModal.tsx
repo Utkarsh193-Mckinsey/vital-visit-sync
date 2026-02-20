@@ -559,11 +559,44 @@ export function InlineConsentModal({
               </TabletButton>
             </div>
           </div>
+        ) : currentStep === 'physical_only' ? (
+          // Physical Consent Only Step
+          <div className="flex-1 flex flex-col items-center justify-center gap-6 py-8">
+            <div className="h-20 w-20 rounded-full bg-warning/10 flex items-center justify-center">
+              <ClipboardCheck className="h-12 w-12 text-warning" />
+            </div>
+            <div className="text-center space-y-2">
+              <h3 className="text-xl font-semibold">No Digital Consent Form</h3>
+              <p className="text-muted-foreground max-w-sm">
+                <strong>{treatmentName}</strong> does not have a digital consent form configured.
+                Please sign the <strong>physical consent form</strong> and confirm below.
+              </p>
+              <div className="mt-4 p-4 rounded-lg border bg-warning/5 border-warning/20 text-sm text-warning">
+                ⚠️ Patient must sign the physical consent form before treatment proceeds.
+              </div>
+            </div>
+            <div className="flex gap-4 w-full max-w-sm">
+              <TabletButton
+                variant="outline"
+                className="flex-1"
+                onClick={onClose}
+              >
+                Cancel
+              </TabletButton>
+              <TabletButton
+                className="flex-1"
+                onClick={handlePhysicalConsentSigned}
+                leftIcon={<ClipboardCheck className="h-4 w-4" />}
+              >
+                Physical Consent Signed
+              </TabletButton>
+            </div>
+          </div>
         ) : currentStep === 'complete' ? (
           // Complete Step - Download PDF
           <div className="flex-1 flex flex-col items-center justify-center gap-6 py-8">
-            <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center">
-              <CheckCircle className="h-12 w-12 text-green-600" />
+            <div className="h-20 w-20 rounded-full bg-success/10 flex items-center justify-center">
+              <CheckCircle className="h-12 w-12 text-success" />
             </div>
             <div className="text-center">
               <h3 className="text-xl font-semibold mb-2">All Consents Signed!</h3>
