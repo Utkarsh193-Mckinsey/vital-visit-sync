@@ -94,31 +94,8 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
         return;
       }
 
-      // Get latest visit number
-      const { data: existingVisits } = await supabase
-        .from('visits')
-        .select('visit_number')
-        .eq('patient_id', patient.id)
-        .order('visit_number', { ascending: false })
-        .limit(1);
-
-      const nextVisitNumber = existingVisits && existingVisits.length > 0
-        ? existingVisits[0].visit_number + 1
-        : 1;
-
-      const { error: visitError } = await supabase
-        .from('visits')
-        .insert({
-          patient_id: patient.id,
-          visit_number: nextVisitNumber,
-          current_status: 'waiting',
-          visit_date: new Date().toISOString().split('T')[0],
-        });
-
-      if (visitError) throw visitError;
-
-      toast.success(`Visit started for ${patient.full_name}. Added to waiting area.`);
-      navigate('/waiting');
+      // Navigate to consent signing page — it handles treatment selection, consent, and creates the visit
+      navigate(`/patient/${patient.id}/consent`);
     } catch (e: any) {
       toast.error(e.message || 'Failed to start visit');
     } finally {
