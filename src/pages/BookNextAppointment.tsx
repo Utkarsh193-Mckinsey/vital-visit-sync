@@ -189,10 +189,11 @@ export default function BookNextAppointment() {
   };
 
   const handleBookAppointment = async () => {
-    if (!bookingVisit || !bookForm.date || !bookForm.service) {
-      toast.error('Please fill date and service');
+    if (!bookingVisit || !bookForm.date || bookForm.services.length === 0) {
+      toast.error('Please fill date and at least one service');
       return;
     }
+    const serviceStr = bookForm.services.join(', ');
     setSaving(true);
     try {
       if (isRescheduling && bookingVisit.bookedAppointment) {
@@ -202,7 +203,7 @@ export default function BookNextAppointment() {
           .update({
             appointment_date: bookForm.date,
             appointment_time: bookForm.time,
-            service: bookForm.service,
+            service: serviceStr,
             special_instructions: bookForm.notes || null,
           })
           .eq('phone', bookingVisit.patient.phone_number)
@@ -216,7 +217,7 @@ export default function BookNextAppointment() {
           phone: bookingVisit.patient.phone_number,
           appointment_date: bookForm.date,
           appointment_time: bookForm.time,
-          service: bookForm.service,
+          service: serviceStr,
           booked_by: 'Follow-up',
           special_instructions: bookForm.notes || null,
         });
@@ -230,7 +231,7 @@ export default function BookNextAppointment() {
       try {
         const dateFormatted = format(new Date(bookForm.date + 'T00:00:00'), 'EEEE, dd MMM yyyy');
         const action = isRescheduling ? 'rescheduled' : 'booked';
-        const message = `Hi ${bookingVisit.patient.full_name},\n\nYour next appointment at Cosmique Clinic has been ${action}.\n\nDate: ${dateFormatted}\nTime: ${bookForm.time}\nService: ${bookForm.service}\n\nFor any queries, please contact us at +971 58 590 8090.\n\nCosmique Aesthetics & Dermatology\nBeach Park Plaza, Al Mamzar, Dubai`;
+        const message = `Hi ${bookingVisit.patient.full_name},\n\nYour next appointment at Cosmique Clinic has been ${action}.\n\nDate: ${dateFormatted}\nTime: ${bookForm.time}\nService: ${serviceStr}\n\nFor any queries, please contact us at +971 58 590 8090.\n\nCosmique Aesthetics & Dermatology\nBeach Park Plaza, Al Mamzar, Dubai`;
         await supabase.functions.invoke('send-whatsapp', {
           body: { phone: bookingVisit.patient.phone_number, message, patient_name: bookingVisit.patient.full_name },
         });
