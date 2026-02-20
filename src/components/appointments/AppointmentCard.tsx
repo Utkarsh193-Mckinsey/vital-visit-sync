@@ -263,60 +263,6 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
         </Badge>
       </div>
 
-      {/* Expandable Communication Log */}
-      <Collapsible open={logOpen} onOpenChange={setLogOpen}>
-        <CollapsibleTrigger asChild>
-          <button className="flex items-center gap-1 mt-3 text-xs text-primary hover:underline">
-            <MessageSquare className="h-3.5 w-3.5" />
-            Communication Log
-            {logOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-          </button>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="mt-2 border-t border-border pt-2 space-y-2">
-            {comms.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-2">No communication logs yet</p>
-            ) : (
-              comms.map(c => (
-                <div key={c.id} className="flex items-start gap-2 text-xs">
-                  <span className="mt-0.5">
-                    {c.channel === 'whatsapp' ? '📱' : '📞'}
-                  </span>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium capitalize">{c.channel === 'vapi_call' ? 'Voice Call' : c.channel}</span>
-                      <span className="text-muted-foreground">{c.direction}</span>
-                      {c.call_status && (
-                        <Badge variant="outline" className={`text-[10px] ${
-                          c.call_status === 'answered' ? 'border-green-500 text-green-700' :
-                          c.call_status === 'no_answer' ? 'border-orange-500 text-orange-700' :
-                          c.call_status === 'voicemail' ? 'border-yellow-500 text-yellow-700' :
-                          c.call_status === 'initiated' ? 'border-blue-500 text-blue-700' :
-                          ''
-                        }`}>
-                          {c.call_status === 'initiated' ? '🔄 Calling...' : c.call_status.replace(/_/g, ' ')}
-                        </Badge>
-                      )}
-                      {c.call_duration_seconds && c.call_duration_seconds > 0 && (
-                        <span className="text-muted-foreground">⏱ {formatDuration(c.call_duration_seconds)}</span>
-                      )}
-                      <span className="text-muted-foreground ml-auto">{format(new Date(c.created_at), 'MMM d, h:mm a')}</span>
-                    </div>
-                    {c.message_sent && <p className="text-muted-foreground">Sent: {c.message_sent}</p>}
-                    {c.patient_reply && <p className="text-foreground">Reply: {c.patient_reply}</p>}
-                    {c.call_summary && <p className="text-foreground italic">Summary: {c.call_summary}</p>}
-                    {c.ai_parsed_intent && (
-                      <Badge variant="outline" className="text-[10px] mt-1">
-                        AI: {c.ai_parsed_intent} ({c.ai_confidence})
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
     </TabletCard>
 
     {/* Reschedule Modal */}
