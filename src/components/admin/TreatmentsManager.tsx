@@ -264,15 +264,19 @@ export default function TreatmentsManager() {
 
               <div className="space-y-2">
                 <label className="block text-sm font-medium">Dosage Unit *</label>
-                <SelectWithAdd
+                <Select
                   value={formData.dosage_unit}
                   onValueChange={(value) => setFormData({ ...formData, dosage_unit: value as DosageUnit })}
-                  options={dosageUnits}
-                  onAddOption={(opt) => setDosageUnits(prev => [...prev, opt])}
-                  placeholder="Select unit"
-                  triggerClassName="h-14"
-                  itemClassName="py-3"
-                />
+                >
+                  <SelectTrigger className="h-14">
+                    <SelectValue placeholder="Select unit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DEFAULT_DOSAGE_UNITS.map((unit) => (
+                      <SelectItem key={unit} value={unit} className="py-3">{unit}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
