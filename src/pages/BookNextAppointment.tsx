@@ -395,17 +395,33 @@ export default function BookNextAppointment() {
               </div>
             </div>
             <div>
-              <Label>Service / Treatment *</Label>
-              <Select value={bookForm.service} onValueChange={v => setBookForm(f => ({ ...f, service: v }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select service" />
-                </SelectTrigger>
-                <SelectContent>
-                  {treatments.map(t => (
-                    <SelectItem key={t.id} value={t.treatment_name}>{t.treatment_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Service / Treatment * <span className="text-muted-foreground font-normal text-xs">(select one or more)</span></Label>
+              <div className="mt-1.5 border border-input rounded-md max-h-44 overflow-y-auto divide-y divide-border">
+                {treatments.map(t => {
+                  const selected = bookForm.services.includes(t.treatment_name);
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setBookForm(f => ({
+                        ...f,
+                        services: selected
+                          ? f.services.filter(s => s !== t.treatment_name)
+                          : [...f.services, t.treatment_name],
+                      }))}
+                      className={`w-full text-left px-3 py-2.5 text-sm flex items-center gap-2.5 transition-colors ${selected ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-accent text-foreground'}`}
+                    >
+                      <span className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${selected ? 'bg-primary border-primary' : 'border-input'}`}>
+                        {selected && <svg className="h-2.5 w-2.5 text-primary-foreground" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                      </span>
+                      {t.treatment_name}
+                    </button>
+                  );
+                })}
+              </div>
+              {bookForm.services.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">{bookForm.services.length} selected: {bookForm.services.join(', ')}</p>
+              )}
             </div>
             <div>
               <Label>Notes</Label>
