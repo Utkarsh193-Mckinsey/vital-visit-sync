@@ -19,6 +19,7 @@ const CONFIRMATION_OPTIONS = ['unconfirmed', 'message_sent', 'confirmed_whatsapp
 
 const statusColors: Record<string, string> = {
   upcoming: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  arrived: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300',
   checked_in: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
   in_treatment: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
   completed: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
