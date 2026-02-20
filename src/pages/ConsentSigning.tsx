@@ -117,17 +117,28 @@ export default function ConsentSigning() {
 
       if (packagesError) throw packagesError;
 
-      const pkgsWithConsent = (packagesData as unknown as PackageWithTreatment[])
-        .filter(pkg => pkg.treatment?.consent_template_id);
+      // Include ALL packages — those without consent templates will show physical consent notice
+      const allPkgs = (packagesData as unknown as PackageWithTreatment[]);
+      // Digital consent packages only (for signing flow)
+      const pkgsWithConsent = allPkgs.filter(pkg => pkg.treatment?.consent_template_id);
 
       setAllPackages(pkgsWithConsent);
 
       if (urlPackageIds.length > 0) {
         // Coming from patient dashboard with pre-selected packages — skip selection step
         const filtered = pkgsWithConsent.filter(p => urlPackageIds.includes(p.id));
-        setPackages(filtered);
-        setChosenPackageIds(new Set(urlPackageIds));
-        setCurrentStep('treatment');
+        // Detect if any selected packages have no consent template
+        const noConsentPkgs = allPkgs.filter(p => urlPackageIds.includes(p.id) && !p.treatment?.consent_template_id);
+        if (noConsentPkgs.length > 0 && filtered.length === 0) {
+          // All selected packages have no digital consent — skip to physical notice
+          setPackages([]);
+          setChosenPackageIds(new Set(urlPackageIds));
+          setCurrentStep('treatment');
+        } else {
+          setPackages(filtered);
+          setChosenPackageIds(new Set(urlPackageIds));
+          setCurrentStep(filtered.length > 0 ? 'treatment' : 'treatment');
+        }
       } else {
         // Show selection step — pre-select all by default
         setChosenPackageIds(new Set(pkgsWithConsent.map(p => p.id)));
