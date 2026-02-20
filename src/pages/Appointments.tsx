@@ -336,6 +336,22 @@ export default function Appointments() {
               ))}
             </CollapsibleSection>
 
+            {/* COMPLETED section */}
+            {completedApptCount > 0 && (
+              <CollapsibleSection
+                title="Completed"
+                count={completedApptCount}
+                borderColor="border-l-emerald-500"
+                badgeColor="bg-emerald-100 text-emerald-800"
+                open={completedOpen}
+                onToggle={() => setCompletedOpen(v => !v)}
+              >
+                {completedAppts.map(apt => (
+                  <AppointmentCard key={apt.id} appointment={apt} onUpdateStatus={updateStatus} onUpdateConfirmation={updateConfirmation} onEdit={a => { setEditingAppointment(a); setShowAddModal(true); }} />
+                ))}
+              </CollapsibleSection>
+            )}
+
             {/* CANCELLED section */}
             {cancelledCount > 0 && (
               <CollapsibleSection
