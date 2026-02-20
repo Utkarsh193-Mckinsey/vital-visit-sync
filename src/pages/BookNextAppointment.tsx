@@ -179,12 +179,12 @@ export default function BookNextAppointment() {
       setBookForm({
         date: visit.bookedAppointment.appointment_date,
         time: visit.bookedAppointment.appointment_time,
-        service: visit.bookedAppointment.service,
+        services: visit.bookedAppointment.service ? visit.bookedAppointment.service.split(', ') : [],
         notes: '',
       });
     } else {
       const activeTreatment = visit.activePackages[0]?.treatment?.treatment_name || '';
-      setBookForm({ date: '', time: '10:00', service: activeTreatment, notes: '' });
+      setBookForm({ date: '', time: '10:00', services: activeTreatment ? [activeTreatment] : [], notes: '' });
     }
   };
 
