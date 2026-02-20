@@ -136,9 +136,6 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
       });
       if (error) throw error;
       toast.success(`Calling ${apt.patient_name}...`);
-      // Refresh comms
-      setCommsLoaded(false);
-      if (logOpen) loadComms();
     } catch (e: any) {
       toast.error(e.message || 'Failed to initiate call');
     } finally {
