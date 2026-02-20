@@ -872,7 +872,7 @@ export default function TreatmentAdmin() {
       <TabletButton
         fullWidth
         size="lg"
-        onClick={handleCompleteVisit}
+        onClick={() => setShowCompletionConfirm(true)}
         isLoading={isSaving}
         leftIcon={<CheckCircle />}
       >
@@ -881,6 +881,152 @@ export default function TreatmentAdmin() {
           : 'Complete Visit (No Treatments)'
         }
       </TabletButton>
+
+      {/* Visit Completion Confirmation Dialog */}
+      <AlertDialog open={showCompletionConfirm} onOpenChange={setShowCompletionConfirm}>
+        <AlertDialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-lg">
+              <CheckCircle className="h-5 w-5 text-success" />
+              Confirm Visit Completion
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="text-left space-y-4 mt-2">
+                {/* Patient */}
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Patient</p>
+                  <p className="font-semibold text-foreground">{visit?.patient.full_name}</p>
+                  <p className="text-sm text-muted-foreground">Visit #{visit?.visit_number}</p>
+                </div>
+
+                {/* Staff */}
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Performed By</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-muted/50 rounded-md p-2 text-sm">
+                      <span className="text-muted-foreground block text-xs">Doctor</span>
+                      <span className="font-medium text-foreground">
+                        {doctors.find(d => d.id === selectedDoctorId)?.full_name || <span className="text-destructive">⚠ Not selected</span>}
+                      </span>
+                    </div>
+                    <div className="bg-muted/50 rounded-md p-2 text-sm">
+                      <span className="text-muted-foreground block text-xs">Nurse</span>
+                      <span className="font-medium text-foreground">
+                        {selectedNurseId && selectedNurseId !== '__none__'
+                          ? nurses.find(n => n.id === selectedNurseId)?.full_name || '—'
+                          : '—'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Treatments to be administered */}
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+                    Treatments to Administer ({treatmentsWithDose.length})
+                  </p>
+                  {treatmentsWithDose.length === 0 ? (
+                    <div className="flex items-center gap-2 text-warning bg-warning/10 rounded-md p-2 text-sm">
+                      <AlertTriangle className="h-4 w-4 shrink-0" />
+                      No doses entered — no treatments will be recorded
+                    </div>
+                  ) : (
+                    <ul className="space-y-2">
+                      {treatmentsWithDose.map((t) => {
+                        const tDoctor = (t.doctorId && t.doctorId !== '__default__')
+                          ? doctors.find(d => d.id === t.doctorId)?.full_name
+                          : doctors.find(d => d.id === selectedDoctorId)?.full_name;
+                        const tNurse = (t.nurseId && t.nurseId !== '__default__' && t.nurseId !== '__none__')
+                          ? nurses.find(n => n.id === t.nurseId)?.full_name
+                          : (selectedNurseId && selectedNurseId !== '__none__' ? nurses.find(n => n.id === selectedNurseId)?.full_name : null);
+                        return (
+                          <li key={t.packageId} className="bg-success/5 border border-success/20 rounded-md p-2 text-sm">
+                            <div className="flex justify-between items-start">
+                              <span className="font-medium text-foreground">{t.treatmentName}</span>
+                              <span className="text-success font-semibold ml-2 shrink-0">{t.doseAdministered} {t.doseUnit}</span>
+                            </div>
+                            {t.customBrand && <p className="text-xs text-muted-foreground mt-0.5">Brand: {t.customBrand}</p>}
+                            <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
+                              {tDoctor && <span>Dr: {tDoctor}</span>}
+                              {tNurse && <span>Nurse: {tNurse}</span>}
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+
+                {/* Treatments with consent but no dose */}
+                {treatments.filter(t => t.hasConsentSigned && t.doseAdministered.trim() === '').length > 0 && (
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+                      Consent Signed — No Dose Entered (will be skipped)
+                    </p>
+                    <ul className="space-y-1">
+                      {treatments.filter(t => t.hasConsentSigned && t.doseAdministered.trim() === '').map(t => (
+                        <li key={t.packageId} className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-md p-2">
+                          <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0" />
+                          {t.treatmentName} — no dose, will not be deducted
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Consumables */}
+                {selectedConsumables.length > 0 && (
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+                      Consumables Used ({selectedConsumables.length})
+                    </p>
+                    <ul className="space-y-1">
+                      {selectedConsumables.map((c, i) => (
+                        <li key={i} className="flex justify-between text-sm bg-muted/50 rounded-md p-2">
+                          <span className="text-foreground">{c.itemName || c.stockItemId}</span>
+                          <span className="text-muted-foreground font-medium">{c.quantity} {c.unit}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Doctor Notes */}
+                {doctorNotes && (
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Doctor Notes</p>
+                    <p className="text-sm bg-muted/50 rounded-md p-2 text-foreground whitespace-pre-wrap">{doctorNotes}</p>
+                  </div>
+                )}
+
+                <p className="text-sm text-muted-foreground border-t pt-3">
+                  If anything looks incorrect, go back to make changes before confirming.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex gap-2">
+            <AlertDialogCancel asChild>
+              <TabletButton variant="outline" onClick={() => setShowCompletionConfirm(false)} fullWidth>
+                ← Go Back to Treatment
+              </TabletButton>
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <TabletButton
+                onClick={() => {
+                  setShowCompletionConfirm(false);
+                  handleCompleteVisit();
+                }}
+                fullWidth
+                leftIcon={<CheckCircle />}
+                isLoading={isSaving}
+              >
+                Confirm & Complete Visit
+              </TabletButton>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Consent Warning Dialog */}
       <AlertDialog open={!!consentWarning && !showConsentModal} onOpenChange={() => setConsentWarning(null)}>
