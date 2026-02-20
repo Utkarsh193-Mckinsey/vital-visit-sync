@@ -1,5 +1,10 @@
 export const NATIONALITIES = [
-  'Afghan', 'Albanian', 'Algerian', 'American', 'Andorran', 'Angolan', 'Argentine', 'Armenian',
+  // Top nationalities in Dubai by population
+  'Indian', 'Pakistani', 'Bangladeshi', 'Filipino', 'Emirati', 'Egyptian', 'British', 'Nepalese',
+  'Sri Lankan', 'Chinese', 'American', 'Jordanian', 'Lebanese', 'Yemeni', 'Sudanese', 'Syrian',
+  'Somali', 'Indonesian', 'Canadian', 'Australian',
+  // Rest alphabetically
+  'Afghan', 'Albanian', 'Algerian', 'Andorran', 'Angolan', 'Argentine', 'Armenian',
   'Australian', 'Austrian', 'Azerbaijani', 'Bahamian', 'Bahraini', 'Bangladeshi', 'Barbadian',
   'Belarusian', 'Belgian', 'Belizean', 'Beninese', 'Bhutanese', 'Bolivian', 'Bosnian',
   'Brazilian', 'British', 'Bruneian', 'Bulgarian', 'Burkinabe', 'Burmese', 'Burundian',
