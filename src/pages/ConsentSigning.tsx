@@ -438,15 +438,6 @@ export default function ConsentSigning() {
         description: `Visit #${nextVisitNumber} has been created without consent forms.`,
       });
 
-      // Mark matching arrived appointment as completed
-      const today = new Date().toISOString().split('T')[0];
-      await supabase
-        .from('appointments')
-        .update({ status: 'completed' })
-        .eq('phone', patient.phone_number)
-        .eq('appointment_date', today)
-        .eq('status', 'arrived');
-
       navigate('/waiting');
     } catch (error) {
       console.error('Error creating visit:', error);
