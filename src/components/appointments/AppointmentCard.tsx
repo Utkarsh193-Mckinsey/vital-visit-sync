@@ -62,9 +62,6 @@ interface Props {
 }
 
 export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConfirmation, onEdit, showReminderStatus, showSlotAvailable }: Props) {
-  const [logOpen, setLogOpen] = useState(false);
-  const [comms, setComms] = useState<AppointmentCommunication[]>([]);
-  const [commsLoaded, setCommsLoaded] = useState(false);
   const [calling, setCalling] = useState(false);
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState('');
