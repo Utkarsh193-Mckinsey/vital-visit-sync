@@ -46,7 +46,7 @@ export default function BookNextAppointment() {
   const [tab, setTab] = useState<TabFilter>('pending');
   const [bookingVisit, setBookingVisit] = useState<CompletedVisit | null>(null);
   const [isRescheduling, setIsRescheduling] = useState(false);
-  const [bookForm, setBookForm] = useState({ date: '', time: '10:00', service: '', notes: '' });
+  const [bookForm, setBookForm] = useState({ date: '', time: '10:00', services: [] as string[], notes: '' });
   const [treatments, setTreatments] = useState<{ id: string; treatment_name: string }[]>([]);
   const [saving, setSaving] = useState(false);
 
