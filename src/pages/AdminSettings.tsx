@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { TabletButton } from '@/components/ui/tablet-button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, FileText, Package, Users, Download } from 'lucide-react';
+import { ArrowLeft, FileText, Package, Users, Download, Sparkles } from 'lucide-react';
 import { generateUserManualPDF } from '@/utils/generateUserManualPDF';
 import ConsentTemplatesManager from '@/components/admin/ConsentTemplatesManager';
 import ConsumablesManager from '@/components/admin/ConsumablesManager';
 import StaffManager from '@/components/admin/StaffManager';
+import ClinicPackagesManager from '@/components/admin/ClinicPackagesManager';
 
 export default function AdminSettings() {
   const navigate = useNavigate();
@@ -37,10 +38,14 @@ export default function AdminSettings() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-14">
+        <TabsList className="grid w-full grid-cols-4 h-14">
           <TabsTrigger value="staff" className="h-12 text-base flex items-center gap-2">
             <Users className="h-4 w-4" />
             Staff
+          </TabsTrigger>
+          <TabsTrigger value="packages" className="h-12 text-base flex items-center gap-2">
+            <Sparkles className="h-4 w-4" />
+            Packages
           </TabsTrigger>
           <TabsTrigger value="consumables" className="h-12 text-base flex items-center gap-2">
             <Package className="h-4 w-4" />
@@ -56,6 +61,10 @@ export default function AdminSettings() {
           <StaffManager />
         </TabsContent>
 
+        <TabsContent value="packages" className="mt-4">
+          <ClinicPackagesManager />
+        </TabsContent>
+
         <TabsContent value="consumables" className="mt-4">
           <ConsumablesManager />
         </TabsContent>
@@ -67,3 +76,4 @@ export default function AdminSettings() {
     </PageContainer>
   );
 }
+
