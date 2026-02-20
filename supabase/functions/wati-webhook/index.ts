@@ -812,7 +812,8 @@ Deno.serve(async (req) => {
       const staffNames = await getBookingStaffNames(supabase);
 
       // Extract booked_by and validate against staff
-      const bookedByMatch = messageText.match(/(?:booked\s*by|agent)\s*[:：]\s*(.+)/i);
+      // Support both "Booked by: Priti" and "Book by Priti" (with or without colon)
+      const bookedByMatch = messageText.match(/(?:booked?\s*by|agent)\s*[:：]?\s*(.+)/i);
       let rawBookedBy = bookedByMatch ? bookedByMatch[1].trim() : null;
       let bookedBy = rawBookedBy ? matchStaffName(rawBookedBy, staffNames) : null;
 
