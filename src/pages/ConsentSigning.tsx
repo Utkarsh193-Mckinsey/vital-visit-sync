@@ -6,12 +6,13 @@ import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletCard, TabletCardContent, TabletCardHeader, TabletCardTitle } from '@/components/ui/tablet-card';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Check, FileSignature, AlertCircle, Download, Camera } from 'lucide-react';
+import { ArrowLeft, Check, FileSignature, AlertCircle, Download, Camera, Syringe } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import type { Patient, Package, Treatment, ConsentTemplate } from '@/types/database';
 import { generateConsentPDF } from '@/utils/generateConsentPDF';
 import { downloadPDF, getFirstName, getConsentFileName } from '@/utils/pdfDownload';
 import { format } from 'date-fns';
+import { Checkbox } from '@/components/ui/checkbox';
 
 // Helper function to replace placeholders in consent text
 const replaceConsentPlaceholders = (
@@ -55,13 +56,15 @@ interface TreatmentSignatureData {
   treatmentName: string;
 }
 
-type ConsentStep = 'treatment' | 'photo_video' | 'complete';
+type ConsentStep = 'select_treatments' | 'treatment' | 'photo_video' | 'complete';
 
 export default function ConsentSigning() {
   const { patientId } = useParams<{ patientId: string }>();
   const [searchParams] = useSearchParams();
   const [patient, setPatient] = useState<Patient | null>(null);
+  const [allPackages, setAllPackages] = useState<PackageWithTreatment[]>([]);
   const [packages, setPackages] = useState<PackageWithTreatment[]>([]);
+  const [chosenPackageIds, setChosenPackageIds] = useState<Set<string>>(new Set());
   const [currentPackageIndex, setCurrentPackageIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSigning, setIsSigning] = useState(false);
@@ -70,18 +73,18 @@ export default function ConsentSigning() {
   const [signedConsents, setSignedConsents] = useState<SignedConsentData[]>([]);
   const [allConsentsSigned, setAllConsentsSigned] = useState(false);
   const [createdVisitNumber, setCreatedVisitNumber] = useState<number | null>(null);
-  const [currentStep, setCurrentStep] = useState<ConsentStep>('treatment');
+  const [currentStep, setCurrentStep] = useState<ConsentStep>('select_treatments');
   const signatureRef = useRef<SignatureCanvas>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { staff } = useAuth();
 
-  // Get selected package IDs from URL
-  const selectedPackageIds = searchParams.get('packages')?.split(',').filter(Boolean) || [];
+  // Get pre-selected package IDs from URL (from patient dashboard)
+  const urlPackageIds = searchParams.get('packages')?.split(',').filter(Boolean) || [];
 
   useEffect(() => {
     fetchData();
-  }, [patientId, selectedPackageIds.join(',')]);
+  }, [patientId]);
 
   const fetchData = async () => {
     if (!patientId) return;
@@ -97,8 +100,8 @@ export default function ConsentSigning() {
       if (patientError) throw patientError;
       setPatient(patientData as Patient);
 
-      // Fetch selected packages with treatments and their consent templates
-      let query = supabase
+      // Fetch ALL active packages with remaining sessions + consent templates
+      const { data: packagesData, error: packagesError } = await supabase
         .from('packages')
         .select(`
           *,
@@ -109,22 +112,27 @@ export default function ConsentSigning() {
         `)
         .eq('patient_id', patientId)
         .eq('status', 'active')
+        .gt('sessions_remaining', 0)
         .order('purchase_date', { ascending: true });
 
-      // Filter by selected package IDs if provided
-      if (selectedPackageIds.length > 0) {
-        query = query.in('id', selectedPackageIds);
-      }
-
-      const { data: packagesData, error: packagesError } = await query;
-
       if (packagesError) throw packagesError;
-      
-      // Filter packages that have consent templates
-      const packagesWithConsent = (packagesData as unknown as PackageWithTreatment[])
+
+      const pkgsWithConsent = (packagesData as unknown as PackageWithTreatment[])
         .filter(pkg => pkg.treatment?.consent_template_id);
-      
-      setPackages(packagesWithConsent);
+
+      setAllPackages(pkgsWithConsent);
+
+      if (urlPackageIds.length > 0) {
+        // Coming from patient dashboard with pre-selected packages — skip selection step
+        const filtered = pkgsWithConsent.filter(p => urlPackageIds.includes(p.id));
+        setPackages(filtered);
+        setChosenPackageIds(new Set(urlPackageIds));
+        setCurrentStep('treatment');
+      } else {
+        // Show selection step — pre-select all by default
+        setChosenPackageIds(new Set(pkgsWithConsent.map(p => p.id)));
+        setCurrentStep('select_treatments');
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -136,6 +144,23 @@ export default function ConsentSigning() {
       setIsLoading(false);
     }
   };
+
+  const handleConfirmTreatmentSelection = () => {
+    const selected = allPackages.filter(p => chosenPackageIds.has(p.id));
+    setPackages(selected);
+    setCurrentPackageIndex(0);
+    setCurrentStep('treatment');
+  };
+
+  const toggleChosenPackage = (id: string) => {
+    setChosenPackageIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
 
   const clearSignature = () => {
     signatureRef.current?.clear();
@@ -445,6 +470,80 @@ export default function ConsentSigning() {
     );
   }
 
+  // Step 0: Treatment selection
+  if (currentStep === 'select_treatments') {
+    return (
+      <PageContainer maxWidth="md">
+        <PageHeader
+          title="Select Today's Treatments"
+          subtitle={patient.full_name}
+          backButton={
+            <TabletButton variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Back">
+              <ArrowLeft className="h-5 w-5" />
+            </TabletButton>
+          }
+        />
+
+        {allPackages.length === 0 ? (
+          <TabletCard>
+            <TabletCardContent className="p-8 text-center">
+              <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No Active Packages</h3>
+              <p className="text-muted-foreground mb-6">
+                This patient has no active packages with remaining sessions.
+              </p>
+              <div className="flex gap-4 justify-center">
+                <TabletButton variant="outline" onClick={() => navigate(-1)}>Go Back</TabletButton>
+                <TabletButton onClick={() => { setPackages([]); setCurrentStep('treatment'); }}>
+                  Continue Without Package
+                </TabletButton>
+              </div>
+            </TabletCardContent>
+          </TabletCard>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground mb-4">Choose which treatments the patient will receive today.</p>
+            <div className="space-y-3 mb-6">
+              {allPackages.map((pkg) => (
+                <label
+                  key={pkg.id}
+                  className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                    chosenPackageIds.has(pkg.id)
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <Checkbox
+                    checked={chosenPackageIds.has(pkg.id)}
+                    onCheckedChange={() => toggleChosenPackage(pkg.id)}
+                    className="h-6 w-6"
+                  />
+                  <div className="flex-1">
+                    <h4 className="font-semibold">{pkg.treatment.treatment_name}</h4>
+                    <p className="text-sm text-muted-foreground">{pkg.treatment.category}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-lg font-bold text-primary">{pkg.sessions_remaining}</span>
+                    <span className="text-muted-foreground text-sm">/{pkg.sessions_purchased}</span>
+                    <p className="text-xs text-muted-foreground">sessions left</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+            <TabletButton
+              fullWidth
+              onClick={handleConfirmTreatmentSelection}
+              disabled={chosenPackageIds.size === 0}
+              leftIcon={<Syringe />}
+            >
+              Continue to Consent Forms ({chosenPackageIds.size} selected)
+            </TabletButton>
+          </>
+        )}
+      </PageContainer>
+    );
+  }
+
   const handleDownloadConsent = (consent: SignedConsentData) => {
     if (!patient) return;
     const firstName = getFirstName(patient.full_name);
@@ -637,14 +736,7 @@ export default function ConsentSigning() {
         }
       />
 
-      {/* Selected treatments summary */}
-      {selectedPackageIds.length > 0 && (
-        <div className="mb-4 p-3 bg-primary/5 rounded-lg border border-primary/20">
-          <p className="text-sm text-muted-foreground">
-            Selected treatments for today: <strong>{selectedPackageIds.length}</strong>
-          </p>
-        </div>
-      )}
+
 
       {packages.length === 0 ? (
         <TabletCard>
