@@ -259,7 +259,7 @@ export default function TreatmentsManager() {
                   placeholder="Select category"
                   triggerClassName="h-14"
                   itemClassName="py-3"
-                </Select>
+                />
               </div>
 
               <div className="space-y-2">
