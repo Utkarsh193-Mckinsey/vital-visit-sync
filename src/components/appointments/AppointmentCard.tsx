@@ -1,18 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { Appointment, AppointmentCommunication } from '@/pages/Appointments';
+import type { Appointment } from '@/pages/Appointments';
 import { TabletCard } from '@/components/ui/tablet-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Phone, Clock, User, Edit, AlertTriangle, MessageSquare, MessageCircle, PhoneCall, ChevronDown, ChevronUp, CheckCircle, Send, Loader2, UserPlus, CalendarClock, XCircle } from 'lucide-react';
+import { Phone, Clock, User, Edit, AlertTriangle, MessageCircle, PhoneCall, CheckCircle, Loader2, UserPlus, CalendarClock, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { WhatsAppLink } from '@/components/ui/whatsapp-link';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { TabletInput } from '@/components/ui/tablet-input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
