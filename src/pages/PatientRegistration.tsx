@@ -52,6 +52,7 @@ export default function PatientRegistration() {
     file_number: '',
   });
   const [registeredBy, setRegisteredBy] = useState('');
+  const [fromAppointment, setFromAppointment] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registeredPatient, setRegisteredPatient] = useState<{ id: string; signatureDataUrl: string } | null>(null);
@@ -67,6 +68,7 @@ export default function PatientRegistration() {
     const name = searchParams.get('name');
     const phone = searchParams.get('phone');
     if (name || phone) {
+      setFromAppointment(true);
       setFormData(prev => ({
         ...prev,
         full_name: name || prev.full_name,
@@ -315,10 +317,12 @@ export default function PatientRegistration() {
             <TabletButton fullWidth variant="outline" onClick={handleDownloadRegistration} disabled={isDownloading} leftIcon={<Download />}>
               {isDownloading ? 'Generating PDF...' : 'Download Registration Form'}
             </TabletButton>
-            <TabletButton fullWidth onClick={handleStartNewVisit} leftIcon={<UserPlus />}>
-              Start New Visit
-            </TabletButton>
-            <TabletButton fullWidth variant="outline" onClick={handleContinueToPatient}>
+            {!fromAppointment && (
+              <TabletButton fullWidth onClick={handleStartNewVisit} leftIcon={<UserPlus />}>
+                Start New Visit
+              </TabletButton>
+            )}
+            <TabletButton fullWidth variant={fromAppointment ? 'default' : 'outline'} onClick={handleContinueToPatient}>
               Continue to Doctor Review
             </TabletButton>
           </div>
