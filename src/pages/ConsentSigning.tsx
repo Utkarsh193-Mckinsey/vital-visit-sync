@@ -6,7 +6,7 @@ import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletCard, TabletCardContent, TabletCardHeader, TabletCardTitle } from '@/components/ui/tablet-card';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Check, FileSignature, AlertCircle, Download, Camera, Syringe } from 'lucide-react';
+import { ArrowLeft, Check, FileSignature, AlertCircle, Download, Camera, Syringe, ClipboardCheck } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import type { Patient, Package, Treatment, ConsentTemplate } from '@/types/database';
 import { generateCombinedConsentPDF } from '@/utils/generateConsentPDF';
@@ -117,17 +117,28 @@ export default function ConsentSigning() {
 
       if (packagesError) throw packagesError;
 
-      const pkgsWithConsent = (packagesData as unknown as PackageWithTreatment[])
-        .filter(pkg => pkg.treatment?.consent_template_id);
+      // Include ALL packages — those without consent templates will show physical consent notice
+      const allPkgs = (packagesData as unknown as PackageWithTreatment[]);
+      // Digital consent packages only (for signing flow)
+      const pkgsWithConsent = allPkgs.filter(pkg => pkg.treatment?.consent_template_id);
 
       setAllPackages(pkgsWithConsent);
 
       if (urlPackageIds.length > 0) {
         // Coming from patient dashboard with pre-selected packages — skip selection step
         const filtered = pkgsWithConsent.filter(p => urlPackageIds.includes(p.id));
-        setPackages(filtered);
-        setChosenPackageIds(new Set(urlPackageIds));
-        setCurrentStep('treatment');
+        // Detect if any selected packages have no consent template
+        const noConsentPkgs = allPkgs.filter(p => urlPackageIds.includes(p.id) && !p.treatment?.consent_template_id);
+        if (noConsentPkgs.length > 0 && filtered.length === 0) {
+          // All selected packages have no digital consent — skip to physical notice
+          setPackages([]);
+          setChosenPackageIds(new Set(urlPackageIds));
+          setCurrentStep('treatment');
+        } else {
+          setPackages(filtered);
+          setChosenPackageIds(new Set(urlPackageIds));
+          setCurrentStep(filtered.length > 0 ? 'treatment' : 'treatment');
+        }
       } else {
         // Show selection step — pre-select all by default
         setChosenPackageIds(new Set(pkgsWithConsent.map(p => p.id)));
@@ -750,11 +761,14 @@ export default function ConsentSigning() {
       {packages.length === 0 ? (
         <TabletCard>
           <TabletCardContent className="p-8 text-center">
-            <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Consent Forms Required</h3>
-            <p className="text-muted-foreground mb-6">
-              The selected treatments don't have consent forms configured.
+            <ClipboardCheck className="mx-auto h-12 w-12 text-warning mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Digital Consent Form</h3>
+            <p className="text-muted-foreground mb-2">
+              The selected treatment(s) do not have a digital consent form configured.
             </p>
+            <div className="mb-6 p-4 rounded-lg border bg-warning/5 border-warning/20 text-sm text-warning max-w-sm mx-auto">
+              ⚠️ Please have the patient sign the <strong>physical consent form</strong> before proceeding.
+            </div>
             <div className="flex gap-4 justify-center">
               <TabletButton
                 variant="outline"
@@ -762,8 +776,8 @@ export default function ConsentSigning() {
               >
                 Go Back
               </TabletButton>
-              <TabletButton onClick={handleSkipConsent} disabled={isSigning}>
-                {isSigning ? 'Creating...' : 'Start Visit Without Consent'}
+              <TabletButton onClick={handleSkipConsent} disabled={isSigning} leftIcon={<ClipboardCheck className="h-4 w-4" />}>
+                {isSigning ? 'Creating...' : 'Physical Consent Signed — Start Visit'}
               </TabletButton>
             </div>
           </TabletCardContent>

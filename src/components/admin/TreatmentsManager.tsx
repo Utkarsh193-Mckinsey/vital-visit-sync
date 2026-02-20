@@ -29,6 +29,11 @@ import {
 const DEFAULT_DOSAGE_UNITS: string[] = ['mg', 'ml', 'Units', 'mcg', 'Session'];
 const DEFAULT_CATEGORIES = ['Hair Treatment', 'Face Treatment Injectable', 'Face Treatment non Invasive', 'IV drip', 'Fat loss', 'Body Contouring'];
 
+interface ConsentTemplateOption {
+  id: string;
+  form_name: string;
+}
+
 interface TreatmentFormData {
   treatment_name: string;
   category: string;
@@ -36,6 +41,7 @@ interface TreatmentFormData {
   administration_method: string;
   common_doses: string[];
   default_dose: string;
+  consent_template_id: string; // '' means "add later"
 }
 
 const emptyForm: TreatmentFormData = {
@@ -45,6 +51,7 @@ const emptyForm: TreatmentFormData = {
   administration_method: '',
   common_doses: [],
   default_dose: '',
+  consent_template_id: '',
 };
 
 // Units that support common doses (medical measurable units)
@@ -62,11 +69,23 @@ export default function TreatmentsManager() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   const [dosageUnits, setDosageUnits] = useState<string[]>(DEFAULT_DOSAGE_UNITS);
+  const [consentTemplates, setConsentTemplates] = useState<ConsentTemplateOption[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchTreatments();
+    fetchConsentTemplates();
   }, []);
+
+  const fetchConsentTemplates = async () => {
+    const { data } = await supabase
+      .from('consent_templates')
+      .select('id, form_name')
+      .eq('status', 'active')
+      .eq('is_current_version', true)
+      .order('form_name');
+    if (data) setConsentTemplates(data as ConsentTemplateOption[]);
+  };
 
   const fetchTreatments = async () => {
     setIsLoading(true);
@@ -104,6 +123,7 @@ export default function TreatmentsManager() {
       administration_method: treatment.administration_method || '',
       common_doses: treatment.common_doses || [],
       default_dose: (treatment as any).default_dose || '',
+      consent_template_id: treatment.consent_template_id || '',
     });
   };
 
@@ -146,6 +166,7 @@ export default function TreatmentsManager() {
             administration_method: formData.administration_method.trim() || null,
             common_doses: formData.common_doses.length > 0 ? formData.common_doses : null,
             default_dose: formData.default_dose.trim() || null,
+            consent_template_id: formData.consent_template_id || null,
             status: 'active',
           });
 
@@ -165,6 +186,7 @@ export default function TreatmentsManager() {
             administration_method: formData.administration_method.trim() || null,
             common_doses: formData.common_doses.length > 0 ? formData.common_doses : null,
             default_dose: formData.default_dose.trim() || null,
+            consent_template_id: formData.consent_template_id || null,
           })
           .eq('id', editingId);
 
@@ -286,6 +308,37 @@ export default function TreatmentsManager() {
               value={formData.administration_method}
               onChange={(e) => setFormData({ ...formData, administration_method: e.target.value })}
             />
+
+            {/* Consent Form Mapping */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium">
+                Digital Consent Form
+                <span className="text-muted-foreground font-normal ml-1">- linked to this treatment</span>
+              </label>
+              <Select
+                value={formData.consent_template_id || '__later__'}
+                onValueChange={(value) => setFormData({ ...formData, consent_template_id: value === '__later__' ? '' : value })}
+              >
+                <SelectTrigger className="h-14">
+                  <SelectValue placeholder="Select consent form" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__later__" className="py-3">
+                    📋 Add consent form later (physical form for now)
+                  </SelectItem>
+                  {consentTemplates.map((ct) => (
+                    <SelectItem key={ct.id} value={ct.id} className="py-3">
+                      {ct.form_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!formData.consent_template_id && (
+                <p className="text-xs text-warning flex items-center gap-1">
+                  ⚠️ Without a digital consent form, patients will be prompted to sign a physical consent form.
+                </p>
+              )}
+            </div>
 
             {/* Common Doses Section - only show for measurable units */}
             {UNITS_WITH_DOSES.includes(formData.dosage_unit) && (
@@ -437,6 +490,17 @@ export default function TreatmentsManager() {
                     <div className="text-sm text-muted-foreground">
                       {treatment.category} • {treatment.dosage_unit}
                       {treatment.administration_method && ` • ${treatment.administration_method}`}
+                    </div>
+                    <div className="mt-1">
+                      {treatment.consent_template_id ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-success bg-success/10 px-2 py-0.5 rounded-full">
+                          ✓ Digital consent linked
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs text-warning bg-warning/10 px-2 py-0.5 rounded-full">
+                          ⚠ Physical consent only
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="flex gap-2">

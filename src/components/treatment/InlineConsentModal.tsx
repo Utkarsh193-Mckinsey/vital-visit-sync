@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { TabletButton } from '@/components/ui/tablet-button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { FileSignature, Globe, Camera, Download, CheckCircle } from 'lucide-react';
+import { FileSignature, Globe, Camera, Download, CheckCircle, ClipboardCheck } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import {
   Dialog,
@@ -27,7 +27,7 @@ interface InlineConsentModalProps {
 }
 
 type Language = 'en' | 'ar';
-type ConsentStep = 'language' | 'treatment' | 'photo_video' | 'complete';
+type ConsentStep = 'language' | 'treatment' | 'photo_video' | 'complete' | 'physical_only';
 
 // Helper function to replace placeholders in consent text
 const replaceConsentPlaceholders = (
@@ -98,13 +98,12 @@ export function InlineConsentModal({
         .eq('id', treatmentId)
         .single();
 
-      if (treatmentError || !treatmentData?.consent_template_id) {
-        toast({
-          title: 'No Consent Template',
-          description: 'This treatment does not have a consent template configured.',
-          variant: 'destructive',
-        });
-        onClose();
+      if (treatmentError) throw treatmentError;
+
+      // No digital consent template — show physical consent option
+      if (!treatmentData?.consent_template_id) {
+        setCurrentStep('physical_only');
+        setIsLoading(false);
         return;
       }
 
@@ -287,6 +286,30 @@ export function InlineConsentModal({
     onClose();
   };
 
+  // Handle physical consent signed — just mark consent as signed in visit
+  const handlePhysicalConsentSigned = async () => {
+    try {
+      await supabase
+        .from('visits')
+        .update({ consent_signed: true })
+        .eq('id', visitId);
+
+      toast({
+        title: 'Physical Consent Recorded',
+        description: 'Physical consent has been recorded for this treatment.',
+      });
+      onConsentSigned();
+      onClose();
+    } catch (error) {
+      console.error('Error recording physical consent:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to record physical consent.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const getConsentText = () => {
     if (!consentTemplate || !selectedLanguage) return '';
     const text = selectedLanguage === 'ar' && consentTemplate.consent_text_ar 
@@ -307,6 +330,8 @@ export function InlineConsentModal({
         return 'Photo & Video Consent';
       case 'complete':
         return 'Consent Complete';
+      case 'physical_only':
+        return 'Physical Consent Required';
     }
   };
 
@@ -320,6 +345,8 @@ export function InlineConsentModal({
         return 'Please sign the photo/video consent form.';
       case 'complete':
         return 'All consent forms have been signed successfully.';
+      case 'physical_only':
+        return 'This treatment does not have a digital consent form.';
     }
   };
 
@@ -331,7 +358,9 @@ export function InlineConsentModal({
             {currentStep === 'photo_video' ? (
               <Camera className="h-5 w-5 text-primary" />
             ) : currentStep === 'complete' ? (
-              <CheckCircle className="h-5 w-5 text-green-600" />
+              <CheckCircle className="h-5 w-5 text-success" />
+            ) : currentStep === 'physical_only' ? (
+              <ClipboardCheck className="h-5 w-5 text-warning" />
             ) : (
               <FileSignature className="h-5 w-5 text-primary" />
             )}
@@ -341,7 +370,7 @@ export function InlineConsentModal({
             {getStepDescription()}
           </DialogDescription>
           {/* Step indicator */}
-          {currentStep !== 'language' && currentStep !== 'complete' && (
+          {currentStep !== 'language' && currentStep !== 'complete' && currentStep !== 'physical_only' && (
             <div className="flex items-center gap-2 pt-2">
               <div className={`h-2 flex-1 rounded-full ${currentStep === 'treatment' ? 'bg-primary' : 'bg-muted'}`} />
               <div className={`h-2 flex-1 rounded-full ${currentStep === 'photo_video' ? 'bg-primary' : 'bg-muted'}`} />
@@ -530,11 +559,44 @@ export function InlineConsentModal({
               </TabletButton>
             </div>
           </div>
+        ) : currentStep === 'physical_only' ? (
+          // Physical Consent Only Step
+          <div className="flex-1 flex flex-col items-center justify-center gap-6 py-8">
+            <div className="h-20 w-20 rounded-full bg-warning/10 flex items-center justify-center">
+              <ClipboardCheck className="h-12 w-12 text-warning" />
+            </div>
+            <div className="text-center space-y-2">
+              <h3 className="text-xl font-semibold">No Digital Consent Form</h3>
+              <p className="text-muted-foreground max-w-sm">
+                <strong>{treatmentName}</strong> does not have a digital consent form configured.
+                Please sign the <strong>physical consent form</strong> and confirm below.
+              </p>
+              <div className="mt-4 p-4 rounded-lg border bg-warning/5 border-warning/20 text-sm text-warning">
+                ⚠️ Patient must sign the physical consent form before treatment proceeds.
+              </div>
+            </div>
+            <div className="flex gap-4 w-full max-w-sm">
+              <TabletButton
+                variant="outline"
+                className="flex-1"
+                onClick={onClose}
+              >
+                Cancel
+              </TabletButton>
+              <TabletButton
+                className="flex-1"
+                onClick={handlePhysicalConsentSigned}
+                leftIcon={<ClipboardCheck className="h-4 w-4" />}
+              >
+                Physical Consent Signed
+              </TabletButton>
+            </div>
+          </div>
         ) : currentStep === 'complete' ? (
           // Complete Step - Download PDF
           <div className="flex-1 flex flex-col items-center justify-center gap-6 py-8">
-            <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center">
-              <CheckCircle className="h-12 w-12 text-green-600" />
+            <div className="h-20 w-20 rounded-full bg-success/10 flex items-center justify-center">
+              <CheckCircle className="h-12 w-12 text-success" />
             </div>
             <div className="text-center">
               <h3 className="text-xl font-semibold mb-2">All Consents Signed!</h3>
