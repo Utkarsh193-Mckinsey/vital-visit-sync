@@ -378,9 +378,9 @@ export default function AddPackageModal({
             {totalAmount > 0 && (
               <div className="rounded-lg bg-muted p-3 text-sm space-y-1">
                 <div className="flex justify-between"><span>Total Bill:</span><span className="font-medium">AED {totalAmount.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Paid Now:</span><span className="font-medium text-emerald-600 dark:text-emerald-400">AED {totalPaid.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Paid Now:</span><span className="font-medium text-success">AED {totalPaid.toFixed(2)}</span></div>
                 {remaining > 0 && (
-                  <div className="flex justify-between text-orange-600 dark:text-orange-400"><span>Remaining:</span><span className="font-medium">AED {remaining.toFixed(2)}</span></div>
+                  <div className="flex justify-between text-warning"><span>Remaining:</span><span className="font-medium">AED {remaining.toFixed(2)}</span></div>
                 )}
               </div>
             )}
