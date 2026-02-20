@@ -293,7 +293,7 @@ export default function AddPackageModal({
           {/* Complimentary Treatment Lines */}
           <div className="space-y-3 border-t pt-4">
             <label className="block text-sm font-medium flex items-center gap-2">
-              <Gift className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Complimentary Treatments
+              <Gift className="h-4 w-4 text-success" /> Complimentary Treatments
             </label>
             {compLines.length === 0 && (
               <p className="text-xs text-muted-foreground">No complimentary treatments added</p>
