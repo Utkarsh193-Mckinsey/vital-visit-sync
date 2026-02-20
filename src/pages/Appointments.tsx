@@ -244,9 +244,6 @@ export default function Appointments() {
             <Badge className="bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300 text-xs py-0.5 px-2">
               🏥 {arrivedCount} Arrived
             </Badge>
-            <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300 text-xs py-0.5 px-2">
-              ✔ {completedApptCount} Completed
-            </Badge>
             <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 text-xs py-0.5 px-2">
               ⏳ {unconfirmedCount} Unconfirmed
             </Badge>
