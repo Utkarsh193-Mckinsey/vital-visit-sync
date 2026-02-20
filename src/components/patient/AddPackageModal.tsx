@@ -137,13 +137,24 @@ export default function AddPackageModal({
       return;
     }
 
+    // Check for payment mismatch: paid is less than total by more than tolerance, but status is 'paid'
+    const shortfall = totalAmount - totalPaid;
+    if (shortfall > MISMATCH_TOLERANCE && paymentStatus === 'paid') {
+      setShowMismatchWarning(true);
+      return;
+    }
+
+    await doSubmit();
+  };
+
+  const doSubmit = async () => {
     setIsSubmitting(true);
     try {
       const effectiveStatus = totalPaid >= totalAmount ? 'paid' : 'pending';
       const allPackageIds: string[] = [];
 
       // Create paid treatment packages
-      for (const line of validLines) {
+      for (const line of treatmentLines.filter(l => l.treatmentId && l.sessions > 0)) {
         const { data: pkg, error } = await supabase
           .from('packages')
           .insert({
@@ -197,6 +208,7 @@ export default function AddPackageModal({
               package_id: allPackageIds[0],
               amount: s.amount,
               payment_method: s.method.toLowerCase(),
+              notes: mismatchReason || null,
             })));
           if (payError) throw payError;
         }
