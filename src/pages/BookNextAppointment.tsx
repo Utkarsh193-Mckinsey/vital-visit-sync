@@ -471,7 +471,12 @@ export default function BookNextAppointment() {
             <div className="relative">
               <Label>Service / Treatment * <span className="text-muted-foreground font-normal text-xs">(select one or more)</span></Label>
               <MultiSelectDropdown
-                treatments={treatments}
+                treatments={
+                  bookingVisit?.activePackages.map(pkg => ({
+                    id: pkg.id,
+                    treatment_name: pkg.treatment?.treatment_name,
+                  })).filter(t => t.treatment_name) as { id: string; treatment_name: string }[] ?? []
+                }
                 selected={bookForm.services}
                 onChange={services => setBookForm(f => ({ ...f, services }))}
               />
