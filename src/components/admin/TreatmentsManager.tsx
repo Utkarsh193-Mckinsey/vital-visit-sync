@@ -69,11 +69,23 @@ export default function TreatmentsManager() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   const [dosageUnits, setDosageUnits] = useState<string[]>(DEFAULT_DOSAGE_UNITS);
+  const [consentTemplates, setConsentTemplates] = useState<ConsentTemplateOption[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchTreatments();
+    fetchConsentTemplates();
   }, []);
+
+  const fetchConsentTemplates = async () => {
+    const { data } = await supabase
+      .from('consent_templates')
+      .select('id, form_name')
+      .eq('status', 'active')
+      .eq('is_current_version', true)
+      .order('form_name');
+    if (data) setConsentTemplates(data as ConsentTemplateOption[]);
+  };
 
   const fetchTreatments = async () => {
     setIsLoading(true);
