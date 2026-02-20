@@ -4,7 +4,7 @@ import type { Appointment } from '@/pages/Appointments';
 import { TabletCard } from '@/components/ui/tablet-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Phone, Clock, User, Edit, AlertTriangle, MessageCircle, PhoneCall, CheckCircle, Loader2, UserPlus, CalendarClock, XCircle } from 'lucide-react';
+import { Phone, Clock, User, Edit, AlertTriangle, MessageCircle, PhoneCall, CheckCircle, Loader2, UserPlus, CalendarClock, XCircle, PlayCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { TabletInput } from '@/components/ui/tablet-input';
