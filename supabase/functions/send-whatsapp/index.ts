@@ -42,11 +42,15 @@ Deno.serve(async (req) => {
       // Send template message (works outside 24hr window)
       // broadcast_name must be unique per send to avoid WATI rejections
       const uniqueBroadcastName = broadcast_name || `cosmique_${Date.now()}`;
-      const templateBody = {
+      const templateBody: Record<string, unknown> = {
         template_name,
         broadcast_name: uniqueBroadcastName,
-        parameters: parameters || [],
       };
+      // Only include parameters if there are actual params — WATI rejects empty arrays
+      const params = (parameters || []).filter((p: any) => p.value !== undefined && p.value !== '');
+      if (params.length > 0) {
+        templateBody.parameters = params;
+      }
       console.log("Sending WATI template:", JSON.stringify(templateBody));
       watiRes = await fetch(
         `${WATI_API_URL}/api/v1/sendTemplateMessage/${cleanPhone}`,
