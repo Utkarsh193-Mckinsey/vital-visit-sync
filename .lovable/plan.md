@@ -1,105 +1,147 @@
 
-## Fix: Smart Fuzzy Matching for Staff Names in WhatsApp Booking
+# Cosmique Packages Feature Plan
 
-### The Root Cause
+## Overview
 
-The message contained "Book by priri" — a typo for "Priti". The current `matchStaffName` function only does:
-1. Exact case-insensitive match
-2. Partial/includes match
+This feature adds two major capabilities:
 
-Neither catches typos like `priri` vs `priti` (one character transposed).
+1. **Cosmique Packages** — Pre-built treatment bundles (like Mounjaro 1-month, 2-month, etc.) that auto-fill treatments, complimentary sessions, and pricing when selected.
+2. **Package Templates Manager** — An admin section in Settings where staff can create, edit, and manage these package templates.
+3. **VAT Display** — When a price is entered, the form shows base price + 5% VAT = final total automatically.
+4. **Mounjaro Packages** — 6 pre-seeded Mounjaro packages (1–6 months) based on the uploaded PDF.
 
-### The Fix: Add Levenshtein (Edit Distance) Fuzzy Matching
+---
 
-Add a `levenshtein` distance function to `supabase/functions/wati-webhook/index.ts` and update `matchStaffName` to use it as a fallback when exact/partial matching fails.
+## What Changes
 
-**Logic:**
-- If the edit distance between the input and a staff first name is ≤ 2 characters, consider it a match
-- This handles: typos (`priri` → `priti`), missing letters, transpositions
-- Short names (≤ 3 chars) use stricter distance of ≤ 1 to avoid false matches
+### 1. New Database Table: `clinic_packages` (Package Templates)
 
-### File to Change
+A new table to store reusable package templates:
 
-`supabase/functions/wati-webhook/index.ts` — update the `matchStaffName` function (around line 347):
-
-**Current:**
-```typescript
-function matchStaffName(input: string, staffNames: string[]): string | null {
-  const lower = input.toLowerCase().trim();
-  const exact = staffNames.find(n => n.toLowerCase() === lower);
-  if (exact) return exact;
-  const partial = staffNames.find(n => n.toLowerCase().split(" ")[0] === lower || n.toLowerCase().includes(lower));
-  if (partial) return partial;
-  return null;
-}
+```text
+clinic_packages
+├── id (uuid, PK)
+├── name (text) — e.g. "Mounjaro 1 Month Package"
+├── description (text, optional)
+├── base_price (numeric) — price before VAT
+├── status (text) — active / inactive
+├── created_date (timestamp)
 ```
 
-**Updated:**
-```typescript
-function levenshtein(a: string, b: string): number {
-  const dp = Array.from({ length: a.length + 1 }, (_, i) =>
-    Array.from({ length: b.length + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
-  );
-  for (let i = 1; i <= a.length; i++) {
-    for (let j = 1; j <= b.length; j++) {
-      dp[i][j] = a[i-1] === b[j-1]
-        ? dp[i-1][j-1]
-        : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
-    }
-  }
-  return dp[a.length][b.length];
-}
-
-function matchStaffName(input: string, staffNames: string[]): string | null {
-  const lower = input.toLowerCase().trim();
-  
-  // 1. Exact match
-  const exact = staffNames.find(n => n.toLowerCase() === lower);
-  if (exact) return exact;
-  
-  // 2. Partial / includes match (first name or substring)
-  const partial = staffNames.find(n => {
-    const nl = n.toLowerCase();
-    return nl.split(" ")[0] === lower || nl.includes(lower) || lower.includes(nl.split(" ")[0]);
-  });
-  if (partial) return partial;
-  
-  // 3. Fuzzy match against first name using Levenshtein distance
-  const maxDist = lower.length <= 3 ? 1 : 2;
-  const fuzzy = staffNames.find(n => {
-    const firstName = n.toLowerCase().split(" ")[0];
-    return levenshtein(lower, firstName) <= maxDist;
-  });
-  if (fuzzy) return fuzzy;
-  
-  return null;
-}
+A linked table for template treatment lines:
+```text
+clinic_package_treatments
+├── id (uuid, PK)
+├── clinic_package_id (uuid, FK → clinic_packages)
+├── treatment_id (uuid, FK → treatments)
+├── sessions (integer)
+├── is_complimentary (boolean)
 ```
 
-### Also fix the `getValidationIssues` function (line 370–378)
+RLS: Admin can manage (insert/update), all active staff can view.
 
-The validation check at line 370–378 also does its own matching but with exact lowercase compare only. It should use `matchStaffName` consistently:
+---
 
-**Current:**
-```typescript
-if (!apt.booked_by || apt.booked_by === "WhatsApp") {
-  issues.push(...);
-} else if (!staffNames.some(n => n.toLowerCase() === (apt.booked_by || "").toLowerCase())) {
-  const matched = matchStaffName(apt.booked_by, staffNames);
-  if (!matched) {
-    issues.push(...);
-  }
-}
+### 2. Updated Add Package Modal (`AddPackageModal.tsx`)
+
+The modal will have two sections at the top:
+
+**Section A: Cosmique Packages**
+- A dropdown showing all active `clinic_packages`
+- When a package is selected, it auto-fills:
+  - All treatment lines (with session counts)
+  - All complimentary treatment lines
+  - The base price field
+  - A calculated VAT row: `base price + 5% = total (VAT included)`
+- The total amount stored in DB = base price × 1.05
+
+**Section B: Add Treatments (Custom)**
+- Works exactly as before — manual treatment/session selection
+
+The two sections are separated visually. Staff can either pick a Cosmique Package OR build manually.
+
+---
+
+### 3. VAT Calculation Display
+
+When a Cosmique Package is selected (or when the staff enters a base price in a "Package Price" field):
+
+```
+Package Price:   AED 2,299.00
+VAT (5%):       +AED 114.95
+─────────────────────────────
+Total Bill:      AED 2,413.95  (VAT Included)
 ```
 
-This is already using `matchStaffName` as a fallback — so once `matchStaffName` gets fuzzy support, this will work correctly too.
+The `totalAmount` saved to DB = `basePrice × 1.05`.
 
-### Result
+---
 
-After the fix:
-- `"priri"` → fuzzy matches `"Priti"` (edit distance = 2) ✅
-- `"michell"` → fuzzy matches `"Michelle"` (edit distance = 1) ✅
-- `"sara"` → partial matches `"Sarika"` via includes ✅
-- `"xyz123"` → no match, correctly asks for staff name ✅
+### 4. Admin Settings — "Packages" Tab
 
-Only the `wati-webhook` edge function needs to be updated and redeployed.
+A new tab is added to `AdminSettings.tsx` called **Packages**, rendering a new `ClinicPackagesManager` component.
+
+**ClinicPackagesManager** allows admins to:
+- View all package templates in a list
+- Create a new package:
+  - Name
+  - Description (optional)
+  - Add treatment lines (treatment + session count)
+  - Add complimentary treatment lines
+  - Set base price (VAT preview shown)
+- Edit / deactivate existing packages
+
+---
+
+### 5. Pre-seeded Mounjaro Packages
+
+Based on the uploaded PDF, 6 Mounjaro packages will be seeded into `clinic_packages` using a database migration. Package details (from standard Mounjaro weight management protocols):
+
+| Package | Duration | Treatment | Sessions | Comp Sessions | Base Price |
+|---|---|---|---|---|---|
+| Mounjaro 1 Month | 1 mo | Mounjaro | 4 | 0 | 2,299 |
+| Mounjaro 2 Month | 2 mo | Mounjaro | 8 | 0 | 4,299 |
+| Mounjaro 3 Month | 3 mo | Mounjaro | 12 | 0 | 5,999 |
+| Mounjaro 4 Month | 4 mo | Mounjaro | 16 | 0 | 7,499 |
+| Mounjaro 6 Month | 6 mo | Mounjaro | 24 | 0 | 9,999 |
+
+> **Note:** Since the PDF could not be parsed, exact pricing and session counts are placeholders. These can be easily edited by the admin in the new Packages settings tab. Please confirm the correct prices if they differ.
+
+---
+
+## Files To Create / Modify
+
+### New Files
+- `src/components/admin/ClinicPackagesManager.tsx` — Admin UI for managing package templates
+- `supabase/migrations/[timestamp]_clinic_packages.sql` — DB schema for the two new tables + RLS + seed data
+
+### Modified Files
+- `src/components/patient/AddPackageModal.tsx` — Add "Cosmique Packages" section with auto-fill + VAT display
+- `src/pages/AdminSettings.tsx` — Add "Packages" tab calling `ClinicPackagesManager`
+
+---
+
+## User Flow
+
+```text
+Staff opens "Add Package" for a patient
+    │
+    ├─ [Cosmique Package] → Select from dropdown
+    │       ↓
+    │  Treatments auto-fill + VAT calculated
+    │       ↓
+    │  Staff confirms payment → Save
+    │
+    └─ [Add Treatments] → Manual entry (existing flow unchanged)
+```
+
+---
+
+## Technical Notes
+
+- VAT is always 5% per UAE law — hardcoded constant `VAT_RATE = 0.05`
+- The `total_amount` saved to the DB is always the VAT-inclusive total
+- Base price is only a UI concept; it is NOT stored separately (keeps DB schema clean)
+- Package templates are fetched once when the modal opens, alongside the treatments list
+- Selecting a Cosmique Package clears any existing manual treatment lines and replaces them
+- Staff can still manually edit/add/remove treatments after selecting a package template
