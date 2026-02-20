@@ -309,6 +309,37 @@ export default function TreatmentsManager() {
               onChange={(e) => setFormData({ ...formData, administration_method: e.target.value })}
             />
 
+            {/* Consent Form Mapping */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium">
+                Digital Consent Form
+                <span className="text-muted-foreground font-normal ml-1">- linked to this treatment</span>
+              </label>
+              <Select
+                value={formData.consent_template_id || '__later__'}
+                onValueChange={(value) => setFormData({ ...formData, consent_template_id: value === '__later__' ? '' : value })}
+              >
+                <SelectTrigger className="h-14">
+                  <SelectValue placeholder="Select consent form" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__later__" className="py-3">
+                    📋 Add consent form later (physical form for now)
+                  </SelectItem>
+                  {consentTemplates.map((ct) => (
+                    <SelectItem key={ct.id} value={ct.id} className="py-3">
+                      {ct.form_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!formData.consent_template_id && (
+                <p className="text-xs text-amber-600 flex items-center gap-1">
+                  ⚠️ Without a digital consent form, patients will be prompted to sign a physical consent form.
+                </p>
+              )}
+            </div>
+
             {/* Common Doses Section - only show for measurable units */}
             {UNITS_WITH_DOSES.includes(formData.dosage_unit) && (
               <div className="space-y-2">
