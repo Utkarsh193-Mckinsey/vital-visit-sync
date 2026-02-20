@@ -56,13 +56,15 @@ interface TreatmentSignatureData {
   treatmentName: string;
 }
 
-type ConsentStep = 'treatment' | 'photo_video' | 'complete';
+type ConsentStep = 'select_treatments' | 'treatment' | 'photo_video' | 'complete';
 
 export default function ConsentSigning() {
   const { patientId } = useParams<{ patientId: string }>();
   const [searchParams] = useSearchParams();
   const [patient, setPatient] = useState<Patient | null>(null);
+  const [allPackages, setAllPackages] = useState<PackageWithTreatment[]>([]);
   const [packages, setPackages] = useState<PackageWithTreatment[]>([]);
+  const [chosenPackageIds, setChosenPackageIds] = useState<Set<string>>(new Set());
   const [currentPackageIndex, setCurrentPackageIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSigning, setIsSigning] = useState(false);
@@ -71,18 +73,18 @@ export default function ConsentSigning() {
   const [signedConsents, setSignedConsents] = useState<SignedConsentData[]>([]);
   const [allConsentsSigned, setAllConsentsSigned] = useState(false);
   const [createdVisitNumber, setCreatedVisitNumber] = useState<number | null>(null);
-  const [currentStep, setCurrentStep] = useState<ConsentStep>('treatment');
+  const [currentStep, setCurrentStep] = useState<ConsentStep>('select_treatments');
   const signatureRef = useRef<SignatureCanvas>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { staff } = useAuth();
 
-  // Get selected package IDs from URL
-  const selectedPackageIds = searchParams.get('packages')?.split(',').filter(Boolean) || [];
+  // Get pre-selected package IDs from URL (from patient dashboard)
+  const urlPackageIds = searchParams.get('packages')?.split(',').filter(Boolean) || [];
 
   useEffect(() => {
     fetchData();
-  }, [patientId, selectedPackageIds.join(',')]);
+  }, [patientId]);
 
   const fetchData = async () => {
     if (!patientId) return;
