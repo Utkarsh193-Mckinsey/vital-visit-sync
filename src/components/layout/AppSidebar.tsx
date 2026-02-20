@@ -82,13 +82,6 @@ const navigationItems: NavItem[] = [
     countKey: 'inProgress'
   },
   { 
-    title: 'Completed', 
-    url: '/completed', 
-    icon: CheckCircle,
-    roles: ['admin', 'nurse', 'doctor'],
-    countKey: 'completed'
-  },
-  { 
     title: 'Book Next Appt', 
     url: '/book-next', 
     icon: CalendarPlus,
