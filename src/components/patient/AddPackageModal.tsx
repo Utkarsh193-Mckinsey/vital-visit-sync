@@ -4,7 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletInput } from '@/components/ui/tablet-input';
 import { useToast } from '@/hooks/use-toast';
-import { Package as PackageIcon, Plus, Trash2, Gift } from 'lucide-react';
+import { Package as PackageIcon, Plus, Trash2, Gift, AlertTriangle } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import type { Treatment } from '@/types/database';
 import {
   Dialog,
@@ -64,6 +65,8 @@ export default function AddPackageModal({
   const [nextPaymentDate, setNextPaymentDate] = useState<string>('');
   const [nextPaymentAmount, setNextPaymentAmount] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mismatchReason, setMismatchReason] = useState('');
+  const [showMismatchWarning, setShowMismatchWarning] = useState(false);
   const { staff } = useAuth();
   const { toast } = useToast();
 
@@ -82,7 +85,11 @@ export default function AddPackageModal({
     setPaymentSplits([{ method: 'Cash', amount: 0 }]);
     setNextPaymentDate('');
     setNextPaymentAmount(0);
+    setMismatchReason('');
+    setShowMismatchWarning(false);
   };
+
+  const MISMATCH_TOLERANCE = 10; // AED
 
   const fetchTreatments = async () => {
     const { data, error } = await supabase
@@ -131,13 +138,24 @@ export default function AddPackageModal({
       return;
     }
 
+    // Check for payment mismatch: paid is less than total by more than tolerance, but status is 'paid'
+    const shortfall = totalAmount - totalPaid;
+    if (shortfall > MISMATCH_TOLERANCE && paymentStatus === 'paid') {
+      setShowMismatchWarning(true);
+      return;
+    }
+
+    await doSubmit();
+  };
+
+  const doSubmit = async () => {
     setIsSubmitting(true);
     try {
       const effectiveStatus = totalPaid >= totalAmount ? 'paid' : 'pending';
       const allPackageIds: string[] = [];
 
       // Create paid treatment packages
-      for (const line of validLines) {
+      for (const line of treatmentLines.filter(l => l.treatmentId && l.sessions > 0)) {
         const { data: pkg, error } = await supabase
           .from('packages')
           .insert({
@@ -191,6 +209,7 @@ export default function AddPackageModal({
               package_id: allPackageIds[0],
               amount: s.amount,
               payment_method: s.method.toLowerCase(),
+              notes: mismatchReason || null,
             })));
           if (payError) throw payError;
         }
@@ -274,7 +293,7 @@ export default function AddPackageModal({
           {/* Complimentary Treatment Lines */}
           <div className="space-y-3 border-t pt-4">
             <label className="block text-sm font-medium flex items-center gap-2">
-              <Gift className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Complimentary Treatments
+              <Gift className="h-4 w-4 text-success" /> Complimentary Treatments
             </label>
             {compLines.length === 0 && (
               <p className="text-xs text-muted-foreground">No complimentary treatments added</p>
@@ -359,9 +378,9 @@ export default function AddPackageModal({
             {totalAmount > 0 && (
               <div className="rounded-lg bg-muted p-3 text-sm space-y-1">
                 <div className="flex justify-between"><span>Total Bill:</span><span className="font-medium">AED {totalAmount.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Paid Now:</span><span className="font-medium text-emerald-600 dark:text-emerald-400">AED {totalPaid.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Paid Now:</span><span className="font-medium text-success">AED {totalPaid.toFixed(2)}</span></div>
                 {remaining > 0 && (
-                  <div className="flex justify-between text-orange-600 dark:text-orange-400"><span>Remaining:</span><span className="font-medium">AED {remaining.toFixed(2)}</span></div>
+                  <div className="flex justify-between text-warning"><span>Remaining:</span><span className="font-medium">AED {remaining.toFixed(2)}</span></div>
                 )}
               </div>
             )}
@@ -386,11 +405,52 @@ export default function AddPackageModal({
             </div>
           )}
 
+          {/* Payment Mismatch Warning */}
+          {showMismatchWarning && (
+            <div className="space-y-3 border border-destructive/40 rounded-lg p-4 bg-destructive/5">
+              <div className="flex items-start gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-sm">Payment amount mismatch</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Paid <strong>AED {totalPaid.toFixed(2)}</strong> but total is <strong>AED {totalAmount.toFixed(2)}</strong> (difference: AED {(totalAmount - totalPaid).toFixed(2)}).
+                    Please correct the amounts, switch to <em>Partial / Pending</em>, or provide a reason below.
+                  </p>
+                </div>
+              </div>
+              <Textarea
+                placeholder="Reason for difference (e.g. discount given, change rounded, deferred balance…)"
+                value={mismatchReason}
+                onChange={(e) => setMismatchReason(e.target.value)}
+                rows={2}
+                className="text-sm"
+              />
+              <div className="flex gap-2">
+                <TabletButton type="button" variant="outline" size="sm" fullWidth onClick={() => setShowMismatchWarning(false)}>
+                  Go Back &amp; Correct
+                </TabletButton>
+                <TabletButton
+                  type="button"
+                  variant="warning"
+                  size="sm"
+                  fullWidth
+                  disabled={!mismatchReason.trim()}
+                  onClick={() => doSubmit()}
+                  isLoading={isSubmitting}
+                >
+                  Confirm with Reason
+                </TabletButton>
+              </div>
+            </div>
+          )}
+
           {/* Actions */}
-          <div className="flex gap-3 pt-2">
-            <TabletButton type="button" variant="outline" fullWidth onClick={() => onOpenChange(false)}>Cancel</TabletButton>
-            <TabletButton type="submit" fullWidth isLoading={isSubmitting}>Add Package</TabletButton>
-          </div>
+          {!showMismatchWarning && (
+            <div className="flex gap-3 pt-2">
+              <TabletButton type="button" variant="outline" fullWidth onClick={() => onOpenChange(false)}>Cancel</TabletButton>
+              <TabletButton type="submit" fullWidth isLoading={isSubmitting}>Add Package</TabletButton>
+            </div>
+          )}
         </form>
       </DialogContent>
     </Dialog>
