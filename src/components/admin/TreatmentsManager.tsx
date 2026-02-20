@@ -166,6 +166,7 @@ export default function TreatmentsManager() {
             administration_method: formData.administration_method.trim() || null,
             common_doses: formData.common_doses.length > 0 ? formData.common_doses : null,
             default_dose: formData.default_dose.trim() || null,
+            consent_template_id: formData.consent_template_id || null,
             status: 'active',
           });
 
@@ -185,6 +186,7 @@ export default function TreatmentsManager() {
             administration_method: formData.administration_method.trim() || null,
             common_doses: formData.common_doses.length > 0 ? formData.common_doses : null,
             default_dose: formData.default_dose.trim() || null,
+            consent_template_id: formData.consent_template_id || null,
           })
           .eq('id', editingId);
 
