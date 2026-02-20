@@ -293,6 +293,53 @@ export default function PatientRegistration() {
     }
   };
 
+  const handleStartNewVisit = async () => {
+    if (!registeredPatient) return;
+
+    // Check if registration signature exists
+    if (!registeredPatient.signatureDataUrl) {
+      toast({
+        title: 'Registration Form Not Signed',
+        description: 'No registration form signed. Please sign before starting the visit.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // Get the latest visit number for this patient
+      const { data: existingVisits } = await supabase
+        .from('visits')
+        .select('visit_number')
+        .eq('patient_id', registeredPatient.id)
+        .order('visit_number', { ascending: false })
+        .limit(1);
+
+      const nextVisitNumber = existingVisits && existingVisits.length > 0
+        ? existingVisits[0].visit_number + 1
+        : 1;
+
+      const { data: visit, error } = await supabase
+        .from('visits')
+        .insert({
+          patient_id: registeredPatient.id,
+          visit_number: nextVisitNumber,
+          current_status: 'waiting',
+          visit_date: new Date().toISOString().split('T')[0],
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({ title: 'Visit Started', description: `Visit #${nextVisitNumber} created. Patient added to waiting area.` });
+      navigate('/waiting');
+    } catch (error) {
+      console.error('Error starting visit:', error);
+      toast({ title: 'Error', description: 'Failed to start visit. Please try again.', variant: 'destructive' });
+    }
+  };
+
   // Success screen
   if (registeredPatient) {
     return (
@@ -309,7 +356,10 @@ export default function PatientRegistration() {
             <TabletButton fullWidth variant="outline" onClick={handleDownloadRegistration} disabled={isDownloading} leftIcon={<Download />}>
               {isDownloading ? 'Generating PDF...' : 'Download Registration Form'}
             </TabletButton>
-            <TabletButton fullWidth onClick={handleContinueToPatient}>
+            <TabletButton fullWidth onClick={handleStartNewVisit} leftIcon={<UserPlus />}>
+              Start New Visit
+            </TabletButton>
+            <TabletButton fullWidth variant="outline" onClick={handleContinueToPatient}>
               Continue to Doctor Review
             </TabletButton>
           </div>
