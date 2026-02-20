@@ -84,7 +84,11 @@ export default function AddPackageModal({
     setPaymentSplits([{ method: 'Cash', amount: 0 }]);
     setNextPaymentDate('');
     setNextPaymentAmount(0);
+    setMismatchReason('');
+    setShowMismatchWarning(false);
   };
+
+  const MISMATCH_TOLERANCE = 10; // AED
 
   const fetchTreatments = async () => {
     const { data, error } = await supabase
