@@ -281,7 +281,10 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
         {apt.status === 'upcoming' && (
           <Badge
             className="text-[9px] py-0 px-1.5 h-5 cursor-pointer bg-teal-100 text-teal-800 hover:bg-teal-200 border border-teal-300"
-            onClick={() => onUpdateStatus(apt.id, 'arrived')}
+            onClick={() => {
+              onUpdateStatus(apt.id, 'arrived');
+              onUpdateConfirmation(apt.id, 'confirmed_call');
+            }}
           >
             <CheckCircle className="h-2.5 w-2.5 mr-0.5" /> Arrived
           </Badge>
