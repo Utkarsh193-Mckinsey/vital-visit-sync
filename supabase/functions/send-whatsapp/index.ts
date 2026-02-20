@@ -40,6 +40,14 @@ Deno.serve(async (req) => {
 
     if (template_name) {
       // Send template message (works outside 24hr window)
+      // broadcast_name must be unique per send to avoid WATI rejections
+      const uniqueBroadcastName = broadcast_name || `cosmique_${Date.now()}`;
+      const templateBody = {
+        template_name,
+        broadcast_name: uniqueBroadcastName,
+        parameters: parameters || [],
+      };
+      console.log("Sending WATI template:", JSON.stringify(templateBody));
       watiRes = await fetch(
         `${WATI_API_URL}/api/v1/sendTemplateMessage/${cleanPhone}`,
         {
@@ -48,11 +56,7 @@ Deno.serve(async (req) => {
             Authorization: `Bearer ${WATI_API_KEY}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            template_name,
-            broadcast_name: broadcast_name || "cosmique_reminder",
-            parameters: parameters || [],
-          }),
+          body: JSON.stringify(templateBody),
         }
       );
       logMessage = `[Template: ${template_name}] ${(parameters || []).map((p: any) => `${p.name}=${p.value}`).join(", ")}`;
