@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
-const STATUS_OPTIONS = ['upcoming', 'checked_in', 'in_treatment', 'completed', 'no_show', 'rescheduled', 'cancelled'];
+const STATUS_OPTIONS = ['upcoming', 'arrived', 'checked_in', 'in_treatment', 'completed', 'no_show', 'rescheduled', 'cancelled'];
 const CONFIRMATION_OPTIONS = ['unconfirmed', 'message_sent', 'confirmed_whatsapp', 'confirmed_call', 'double_confirmed', 'called_no_answer', 'called_reschedule', 'cancelled'];
 
 const statusColors: Record<string, string> = {
