@@ -60,6 +60,7 @@ interface Props {
   onEdit: (a: Appointment) => void;
   showReminderStatus?: boolean;
   showSlotAvailable?: boolean;
+  showArrivedActions?: boolean;
 }
 
 export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConfirmation, onEdit, showReminderStatus, showSlotAvailable }: Props) {
