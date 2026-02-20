@@ -131,6 +131,10 @@ export default function AddPackageModal({
   };
 
   const handleSelectClinicPackage = (pkgId: string) => {
+    if (pkgId === '__none__') {
+      setSelectedClinicPackageId('');
+      return;
+    }
     setSelectedClinicPackageId(pkgId);
     if (!pkgId) return;
 
@@ -329,7 +333,7 @@ export default function AddPackageModal({
                 <SelectValue placeholder="Select a Cosmique Package…" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">— None (custom) —</SelectItem>
+                <SelectItem value="__none__">— None (custom) —</SelectItem>
                 {clinicPackages.map((pkg) => (
                   <SelectItem key={pkg.id} value={pkg.id}>
                     <div>
