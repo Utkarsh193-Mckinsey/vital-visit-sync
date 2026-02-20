@@ -405,11 +405,52 @@ export default function AddPackageModal({
             </div>
           )}
 
+          {/* Payment Mismatch Warning */}
+          {showMismatchWarning && (
+            <div className="space-y-3 border border-destructive/40 rounded-lg p-4 bg-destructive/5">
+              <div className="flex items-start gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-sm">Payment amount mismatch</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Paid <strong>AED {totalPaid.toFixed(2)}</strong> but total is <strong>AED {totalAmount.toFixed(2)}</strong> (difference: AED {(totalAmount - totalPaid).toFixed(2)}).
+                    Please correct the amounts, switch to <em>Partial / Pending</em>, or provide a reason below.
+                  </p>
+                </div>
+              </div>
+              <Textarea
+                placeholder="Reason for difference (e.g. discount given, change rounded, deferred balance…)"
+                value={mismatchReason}
+                onChange={(e) => setMismatchReason(e.target.value)}
+                rows={2}
+                className="text-sm"
+              />
+              <div className="flex gap-2">
+                <TabletButton type="button" variant="outline" size="sm" fullWidth onClick={() => setShowMismatchWarning(false)}>
+                  Go Back &amp; Correct
+                </TabletButton>
+                <TabletButton
+                  type="button"
+                  variant="warning"
+                  size="sm"
+                  fullWidth
+                  disabled={!mismatchReason.trim()}
+                  onClick={() => doSubmit()}
+                  isLoading={isSubmitting}
+                >
+                  Confirm with Reason
+                </TabletButton>
+              </div>
+            </div>
+          )}
+
           {/* Actions */}
-          <div className="flex gap-3 pt-2">
-            <TabletButton type="button" variant="outline" fullWidth onClick={() => onOpenChange(false)}>Cancel</TabletButton>
-            <TabletButton type="submit" fullWidth isLoading={isSubmitting}>Add Package</TabletButton>
-          </div>
+          {!showMismatchWarning && (
+            <div className="flex gap-3 pt-2">
+              <TabletButton type="button" variant="outline" fullWidth onClick={() => onOpenChange(false)}>Cancel</TabletButton>
+              <TabletButton type="submit" fullWidth isLoading={isSubmitting}>Add Package</TabletButton>
+            </div>
+          )}
         </form>
       </DialogContent>
     </Dialog>
