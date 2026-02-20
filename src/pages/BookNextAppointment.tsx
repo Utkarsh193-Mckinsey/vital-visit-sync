@@ -46,7 +46,7 @@ export default function BookNextAppointment() {
   const [tab, setTab] = useState<TabFilter>('pending');
   const [bookingVisit, setBookingVisit] = useState<CompletedVisit | null>(null);
   const [isRescheduling, setIsRescheduling] = useState(false);
-  const [bookForm, setBookForm] = useState({ date: '', time: '10:00', service: '', notes: '' });
+  const [bookForm, setBookForm] = useState({ date: '', time: '10:00', services: [] as string[], notes: '' });
   const [treatments, setTreatments] = useState<{ id: string; treatment_name: string }[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -179,20 +179,21 @@ export default function BookNextAppointment() {
       setBookForm({
         date: visit.bookedAppointment.appointment_date,
         time: visit.bookedAppointment.appointment_time,
-        service: visit.bookedAppointment.service,
+        services: visit.bookedAppointment.service ? visit.bookedAppointment.service.split(', ') : [],
         notes: '',
       });
     } else {
       const activeTreatment = visit.activePackages[0]?.treatment?.treatment_name || '';
-      setBookForm({ date: '', time: '10:00', service: activeTreatment, notes: '' });
+      setBookForm({ date: '', time: '10:00', services: activeTreatment ? [activeTreatment] : [], notes: '' });
     }
   };
 
   const handleBookAppointment = async () => {
-    if (!bookingVisit || !bookForm.date || !bookForm.service) {
-      toast.error('Please fill date and service');
+    if (!bookingVisit || !bookForm.date || bookForm.services.length === 0) {
+      toast.error('Please fill date and at least one service');
       return;
     }
+    const serviceStr = bookForm.services.join(', ');
     setSaving(true);
     try {
       if (isRescheduling && bookingVisit.bookedAppointment) {
@@ -202,7 +203,7 @@ export default function BookNextAppointment() {
           .update({
             appointment_date: bookForm.date,
             appointment_time: bookForm.time,
-            service: bookForm.service,
+            service: serviceStr,
             special_instructions: bookForm.notes || null,
           })
           .eq('phone', bookingVisit.patient.phone_number)
@@ -216,7 +217,7 @@ export default function BookNextAppointment() {
           phone: bookingVisit.patient.phone_number,
           appointment_date: bookForm.date,
           appointment_time: bookForm.time,
-          service: bookForm.service,
+          service: serviceStr,
           booked_by: 'Follow-up',
           special_instructions: bookForm.notes || null,
         });
@@ -230,7 +231,7 @@ export default function BookNextAppointment() {
       try {
         const dateFormatted = format(new Date(bookForm.date + 'T00:00:00'), 'EEEE, dd MMM yyyy');
         const action = isRescheduling ? 'rescheduled' : 'booked';
-        const message = `Hi ${bookingVisit.patient.full_name},\n\nYour next appointment at Cosmique Clinic has been ${action}.\n\nDate: ${dateFormatted}\nTime: ${bookForm.time}\nService: ${bookForm.service}\n\nFor any queries, please contact us at +971 58 590 8090.\n\nCosmique Aesthetics & Dermatology\nBeach Park Plaza, Al Mamzar, Dubai`;
+        const message = `Hi ${bookingVisit.patient.full_name},\n\nYour next appointment at Cosmique Clinic has been ${action}.\n\nDate: ${dateFormatted}\nTime: ${bookForm.time}\nService: ${serviceStr}\n\nFor any queries, please contact us at +971 58 590 8090.\n\nCosmique Aesthetics & Dermatology\nBeach Park Plaza, Al Mamzar, Dubai`;
         await supabase.functions.invoke('send-whatsapp', {
           body: { phone: bookingVisit.patient.phone_number, message, patient_name: bookingVisit.patient.full_name },
         });
@@ -394,17 +395,33 @@ export default function BookNextAppointment() {
               </div>
             </div>
             <div>
-              <Label>Service / Treatment *</Label>
-              <Select value={bookForm.service} onValueChange={v => setBookForm(f => ({ ...f, service: v }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select service" />
-                </SelectTrigger>
-                <SelectContent>
-                  {treatments.map(t => (
-                    <SelectItem key={t.id} value={t.treatment_name}>{t.treatment_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Service / Treatment * <span className="text-muted-foreground font-normal text-xs">(select one or more)</span></Label>
+              <div className="mt-1.5 border border-input rounded-md max-h-44 overflow-y-auto divide-y divide-border">
+                {treatments.map(t => {
+                  const selected = bookForm.services.includes(t.treatment_name);
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setBookForm(f => ({
+                        ...f,
+                        services: selected
+                          ? f.services.filter(s => s !== t.treatment_name)
+                          : [...f.services, t.treatment_name],
+                      }))}
+                      className={`w-full text-left px-3 py-2.5 text-sm flex items-center gap-2.5 transition-colors ${selected ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-accent text-foreground'}`}
+                    >
+                      <span className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${selected ? 'bg-primary border-primary' : 'border-input'}`}>
+                        {selected && <svg className="h-2.5 w-2.5 text-primary-foreground" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                      </span>
+                      {t.treatment_name}
+                    </button>
+                  );
+                })}
+              </div>
+              {bookForm.services.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">{bookForm.services.length} selected: {bookForm.services.join(', ')}</p>
+              )}
             </div>
             <div>
               <Label>Notes</Label>
