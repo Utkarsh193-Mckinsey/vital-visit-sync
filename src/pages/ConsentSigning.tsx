@@ -6,12 +6,13 @@ import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletCard, TabletCardContent, TabletCardHeader, TabletCardTitle } from '@/components/ui/tablet-card';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Check, FileSignature, AlertCircle, Download, Camera } from 'lucide-react';
+import { ArrowLeft, Check, FileSignature, AlertCircle, Download, Camera, Syringe } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import type { Patient, Package, Treatment, ConsentTemplate } from '@/types/database';
 import { generateConsentPDF } from '@/utils/generateConsentPDF';
 import { downloadPDF, getFirstName, getConsentFileName } from '@/utils/pdfDownload';
 import { format } from 'date-fns';
+import { Checkbox } from '@/components/ui/checkbox';
 
 // Helper function to replace placeholders in consent text
 const replaceConsentPlaceholders = (
