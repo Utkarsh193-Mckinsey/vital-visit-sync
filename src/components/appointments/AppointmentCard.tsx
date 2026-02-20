@@ -1,18 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { Appointment, AppointmentCommunication } from '@/pages/Appointments';
+import type { Appointment } from '@/pages/Appointments';
 import { TabletCard } from '@/components/ui/tablet-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Phone, Clock, User, Edit, AlertTriangle, MessageSquare, MessageCircle, PhoneCall, ChevronDown, ChevronUp, CheckCircle, Send, Loader2, UserPlus, CalendarClock, XCircle } from 'lucide-react';
+import { Phone, Clock, User, Edit, AlertTriangle, MessageCircle, PhoneCall, CheckCircle, Loader2, UserPlus, CalendarClock, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { WhatsAppLink } from '@/components/ui/whatsapp-link';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { TabletInput } from '@/components/ui/tablet-input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -64,9 +62,6 @@ interface Props {
 }
 
 export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConfirmation, onEdit, showReminderStatus, showSlotAvailable }: Props) {
-  const [logOpen, setLogOpen] = useState(false);
-  const [comms, setComms] = useState<AppointmentCommunication[]>([]);
-  const [commsLoaded, setCommsLoaded] = useState(false);
   const [calling, setCalling] = useState(false);
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState('');
@@ -132,20 +127,6 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
     }
   };
 
-  const loadComms = async () => {
-    if (commsLoaded) return;
-    const { data } = await supabase
-      .from('appointment_communications')
-      .select('*')
-      .eq('appointment_id', apt.id)
-      .order('created_at', { ascending: true });
-    setComms((data || []) as AppointmentCommunication[]);
-    setCommsLoaded(true);
-  };
-
-  useEffect(() => {
-    if (logOpen && !commsLoaded) loadComms();
-  }, [logOpen]);
 
   const handleCallPatient = async () => {
     setCalling(true);
@@ -155,9 +136,6 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
       });
       if (error) throw error;
       toast.success(`Calling ${apt.patient_name}...`);
-      // Refresh comms
-      setCommsLoaded(false);
-      if (logOpen) loadComms();
     } catch (e: any) {
       toast.error(e.message || 'Failed to initiate call');
     } finally {
@@ -285,60 +263,6 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
         </Badge>
       </div>
 
-      {/* Expandable Communication Log */}
-      <Collapsible open={logOpen} onOpenChange={setLogOpen}>
-        <CollapsibleTrigger asChild>
-          <button className="flex items-center gap-1 mt-3 text-xs text-primary hover:underline">
-            <MessageSquare className="h-3.5 w-3.5" />
-            Communication Log
-            {logOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-          </button>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="mt-2 border-t border-border pt-2 space-y-2">
-            {comms.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-2">No communication logs yet</p>
-            ) : (
-              comms.map(c => (
-                <div key={c.id} className="flex items-start gap-2 text-xs">
-                  <span className="mt-0.5">
-                    {c.channel === 'whatsapp' ? '📱' : '📞'}
-                  </span>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium capitalize">{c.channel === 'vapi_call' ? 'Voice Call' : c.channel}</span>
-                      <span className="text-muted-foreground">{c.direction}</span>
-                      {c.call_status && (
-                        <Badge variant="outline" className={`text-[10px] ${
-                          c.call_status === 'answered' ? 'border-green-500 text-green-700' :
-                          c.call_status === 'no_answer' ? 'border-orange-500 text-orange-700' :
-                          c.call_status === 'voicemail' ? 'border-yellow-500 text-yellow-700' :
-                          c.call_status === 'initiated' ? 'border-blue-500 text-blue-700' :
-                          ''
-                        }`}>
-                          {c.call_status === 'initiated' ? '🔄 Calling...' : c.call_status.replace(/_/g, ' ')}
-                        </Badge>
-                      )}
-                      {c.call_duration_seconds && c.call_duration_seconds > 0 && (
-                        <span className="text-muted-foreground">⏱ {formatDuration(c.call_duration_seconds)}</span>
-                      )}
-                      <span className="text-muted-foreground ml-auto">{format(new Date(c.created_at), 'MMM d, h:mm a')}</span>
-                    </div>
-                    {c.message_sent && <p className="text-muted-foreground">Sent: {c.message_sent}</p>}
-                    {c.patient_reply && <p className="text-foreground">Reply: {c.patient_reply}</p>}
-                    {c.call_summary && <p className="text-foreground italic">Summary: {c.call_summary}</p>}
-                    {c.ai_parsed_intent && (
-                      <Badge variant="outline" className="text-[10px] mt-1">
-                        AI: {c.ai_parsed_intent} ({c.ai_confidence})
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
     </TabletCard>
 
     {/* Reschedule Modal */}
