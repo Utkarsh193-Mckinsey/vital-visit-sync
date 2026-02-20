@@ -66,10 +66,12 @@ export default function StaffReports() {
       let packageAttribution: { name: string; total_amount: number; amount_paid: number }[] = [];
       if (packages?.length) {
         const patientIds = [...new Set(packages.map((p: any) => p.patient_id))];
+        // Get oldest non-follow-up appointment per patient for attribution
         const { data: appts } = await supabase
           .from('appointments')
-          .select('patient_name, phone, booked_by, created_at')
-          .order('created_at', { ascending: false });
+          .select('phone, booked_by, created_at')
+          .neq('booked_by', 'Follow-up')
+          .order('created_at', { ascending: true });
 
         // Get patients to match patient_id -> phone
         const { data: patientRecords } = await supabase
@@ -77,14 +79,10 @@ export default function StaffReports() {
           .select('id, phone_number')
           .in('id', patientIds);
 
-        const patientPhoneMap: Record<string, string> = {};
-        (patientRecords || []).forEach((p: any) => { patientPhoneMap[p.id] = p.phone_number; });
-
-        // For each patient, find the first/earliest appointment (original booking SDR)
+        // For each patient, use the earliest non-follow-up appointment's booked_by
         const patientBookedByMap: Record<string, string> = {};
         (appts || []).forEach((a: any) => {
           if (a.booked_by && a.phone) {
-            // Find patient by phone
             const matchedPatient = (patientRecords || []).find((p: any) => p.phone_number === a.phone);
             if (matchedPatient && !patientBookedByMap[matchedPatient.id]) {
               patientBookedByMap[matchedPatient.id] = a.booked_by;
