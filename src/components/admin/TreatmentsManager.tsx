@@ -29,6 +29,11 @@ import {
 const DEFAULT_DOSAGE_UNITS: string[] = ['mg', 'ml', 'Units', 'mcg', 'Session'];
 const DEFAULT_CATEGORIES = ['Hair Treatment', 'Face Treatment Injectable', 'Face Treatment non Invasive', 'IV drip', 'Fat loss', 'Body Contouring'];
 
+interface ConsentTemplateOption {
+  id: string;
+  form_name: string;
+}
+
 interface TreatmentFormData {
   treatment_name: string;
   category: string;
@@ -36,6 +41,7 @@ interface TreatmentFormData {
   administration_method: string;
   common_doses: string[];
   default_dose: string;
+  consent_template_id: string; // '' means "add later"
 }
 
 const emptyForm: TreatmentFormData = {
@@ -45,6 +51,7 @@ const emptyForm: TreatmentFormData = {
   administration_method: '',
   common_doses: [],
   default_dose: '',
+  consent_template_id: '',
 };
 
 // Units that support common doses (medical measurable units)
