@@ -131,6 +131,10 @@ export default function AddPackageModal({
   };
 
   const handleSelectClinicPackage = (pkgId: string) => {
+    if (pkgId === '__none__') {
+      setSelectedClinicPackageId('');
+      return;
+    }
     setSelectedClinicPackageId(pkgId);
     if (!pkgId) return;
 
