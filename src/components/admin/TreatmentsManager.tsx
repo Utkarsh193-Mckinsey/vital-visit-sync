@@ -491,6 +491,17 @@ export default function TreatmentsManager() {
                       {treatment.category} • {treatment.dosage_unit}
                       {treatment.administration_method && ` • ${treatment.administration_method}`}
                     </div>
+                    <div className="mt-1">
+                      {treatment.consent_template_id ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-success bg-success/10 px-2 py-0.5 rounded-full">
+                          ✓ Digital consent linked
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs text-warning bg-warning/10 px-2 py-0.5 rounded-full">
+                          ⚠ Physical consent only
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <TabletButton
