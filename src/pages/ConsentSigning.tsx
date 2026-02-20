@@ -470,6 +470,80 @@ export default function ConsentSigning() {
     );
   }
 
+  // Step 0: Treatment selection
+  if (currentStep === 'select_treatments') {
+    return (
+      <PageContainer maxWidth="md">
+        <PageHeader
+          title="Select Today's Treatments"
+          subtitle={patient.full_name}
+          backButton={
+            <TabletButton variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Back">
+              <ArrowLeft className="h-5 w-5" />
+            </TabletButton>
+          }
+        />
+
+        {allPackages.length === 0 ? (
+          <TabletCard>
+            <TabletCardContent className="p-8 text-center">
+              <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No Active Packages</h3>
+              <p className="text-muted-foreground mb-6">
+                This patient has no active packages with remaining sessions.
+              </p>
+              <div className="flex gap-4 justify-center">
+                <TabletButton variant="outline" onClick={() => navigate(-1)}>Go Back</TabletButton>
+                <TabletButton onClick={() => { setPackages([]); setCurrentStep('treatment'); }}>
+                  Continue Without Package
+                </TabletButton>
+              </div>
+            </TabletCardContent>
+          </TabletCard>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground mb-4">Choose which treatments the patient will receive today.</p>
+            <div className="space-y-3 mb-6">
+              {allPackages.map((pkg) => (
+                <label
+                  key={pkg.id}
+                  className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                    chosenPackageIds.has(pkg.id)
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <Checkbox
+                    checked={chosenPackageIds.has(pkg.id)}
+                    onCheckedChange={() => toggleChosenPackage(pkg.id)}
+                    className="h-6 w-6"
+                  />
+                  <div className="flex-1">
+                    <h4 className="font-semibold">{pkg.treatment.treatment_name}</h4>
+                    <p className="text-sm text-muted-foreground">{pkg.treatment.category}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-lg font-bold text-primary">{pkg.sessions_remaining}</span>
+                    <span className="text-muted-foreground text-sm">/{pkg.sessions_purchased}</span>
+                    <p className="text-xs text-muted-foreground">sessions left</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+            <TabletButton
+              fullWidth
+              onClick={handleConfirmTreatmentSelection}
+              disabled={chosenPackageIds.size === 0}
+              leftIcon={<Syringe />}
+            >
+              Continue to Consent Forms ({chosenPackageIds.size} selected)
+            </TabletButton>
+          </>
+        )}
+      </PageContainer>
+    );
+  }
+
   const handleDownloadConsent = (consent: SignedConsentData) => {
     if (!patient) return;
     const firstName = getFirstName(patient.full_name);
