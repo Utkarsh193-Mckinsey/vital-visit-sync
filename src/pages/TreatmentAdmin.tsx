@@ -93,6 +93,7 @@ export default function TreatmentAdmin() {
   const [doseUnits, setDoseUnits] = useState(['mg', 'ml', 'Units', 'mcg', 'Session', 'vial', 'pen', 'amp']);
   const [addingUnitForIndex, setAddingUnitForIndex] = useState<number | null>(null);
   const [newUnitValue, setNewUnitValue] = useState('');
+  const [showCompletionConfirm, setShowCompletionConfirm] = useState(false);
   const { staff } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
