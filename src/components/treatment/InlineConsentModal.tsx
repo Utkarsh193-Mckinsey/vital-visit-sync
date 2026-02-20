@@ -358,7 +358,9 @@ export function InlineConsentModal({
             {currentStep === 'photo_video' ? (
               <Camera className="h-5 w-5 text-primary" />
             ) : currentStep === 'complete' ? (
-              <CheckCircle className="h-5 w-5 text-green-600" />
+              <CheckCircle className="h-5 w-5 text-success" />
+            ) : currentStep === 'physical_only' ? (
+              <ClipboardCheck className="h-5 w-5 text-warning" />
             ) : (
               <FileSignature className="h-5 w-5 text-primary" />
             )}
@@ -368,7 +370,7 @@ export function InlineConsentModal({
             {getStepDescription()}
           </DialogDescription>
           {/* Step indicator */}
-          {currentStep !== 'language' && currentStep !== 'complete' && (
+          {currentStep !== 'language' && currentStep !== 'complete' && currentStep !== 'physical_only' && (
             <div className="flex items-center gap-2 pt-2">
               <div className={`h-2 flex-1 rounded-full ${currentStep === 'treatment' ? 'bg-primary' : 'bg-muted'}`} />
               <div className={`h-2 flex-1 rounded-full ${currentStep === 'photo_video' ? 'bg-primary' : 'bg-muted'}`} />
