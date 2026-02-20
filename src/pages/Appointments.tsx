@@ -70,6 +70,7 @@ export default function Appointments() {
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const [confirmedOpen, setConfirmedOpen] = useState(true);
   const [unconfirmedOpen, setUnconfirmedOpen] = useState(true);
+  const [arrivedOpen, setArrivedOpen] = useState(true);
   const [cancelledOpen, setCancelledOpen] = useState(true);
 
   const getDateRange = (tab: TabFilter): { from: string; to: string } | { mode: 'past' | 'upcoming' } => {
@@ -134,11 +135,17 @@ export default function Appointments() {
   }, [appointments, searchQuery]);
 
   // Group by confirmation category
+  const arrived = useMemo(() => filtered.filter(a =>
+    a.status === 'arrived'
+  ), [filtered]);
+
   const confirmed = useMemo(() => filtered.filter(a =>
+    a.status !== 'arrived' &&
     ['confirmed_whatsapp', 'confirmed_call', 'double_confirmed'].includes(a.confirmation_status) && a.status !== 'cancelled'
   ), [filtered]);
 
   const unconfirmed = useMemo(() => filtered.filter(a =>
+    a.status !== 'arrived' &&
     !['confirmed_whatsapp', 'confirmed_call', 'double_confirmed', 'cancelled'].includes(a.confirmation_status) && a.status !== 'cancelled'
   ), [filtered]);
 
@@ -150,6 +157,7 @@ export default function Appointments() {
   const total = filtered.length;
   const confirmedCount = confirmed.length;
   const unconfirmedCount = unconfirmed.length;
+  const arrivedCount = arrived.length;
   const cancelledCount = cancelled.length;
   const confirmPct = total > 0 ? Math.round((confirmedCount / total) * 100) : 0;
 
@@ -233,6 +241,9 @@ export default function Appointments() {
             <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 text-xs py-0.5 px-2">
               ✅ {confirmedCount} Confirmed
             </Badge>
+            <Badge className="bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300 text-xs py-0.5 px-2">
+              🏥 {arrivedCount} Arrived
+            </Badge>
             <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 text-xs py-0.5 px-2">
               ⏳ {unconfirmedCount} Unconfirmed
             </Badge>
@@ -272,6 +283,22 @@ export default function Appointments() {
           </TabletCard>
         ) : (
           <div className="space-y-3">
+            {/* ARRIVED section */}
+            {arrivedCount > 0 && (
+              <CollapsibleSection
+                title="Arrived"
+                count={arrivedCount}
+                borderColor="border-l-teal-500"
+                badgeColor="bg-teal-100 text-teal-800"
+                open={arrivedOpen}
+                onToggle={() => setArrivedOpen(v => !v)}
+              >
+                {arrived.map(apt => (
+                  <AppointmentCard key={apt.id} appointment={apt} onUpdateStatus={updateStatus} onUpdateConfirmation={updateConfirmation} onEdit={a => { setEditingAppointment(a); setShowAddModal(true); }} showArrivedActions />
+                ))}
+              </CollapsibleSection>
+            )}
+
             {/* CONFIRMED section */}
             <CollapsibleSection
               title="Confirmed"
