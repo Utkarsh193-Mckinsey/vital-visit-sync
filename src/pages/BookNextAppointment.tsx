@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { TabletCard } from '@/components/ui/tablet-card';
@@ -7,13 +7,87 @@ import { TabletInput } from '@/components/ui/tablet-input';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CalendarPlus, Search, User, Phone, Package, Clock, CheckCircle, PhoneCall, XCircle, RefreshCw } from 'lucide-react';
+import { CalendarPlus, Search, User, Phone, Package, Clock, CheckCircle, PhoneCall, XCircle, RefreshCw, ChevronDown, X } from 'lucide-react';
 import { WhatsAppLink } from '@/components/ui/whatsapp-link';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+
+// Multi-select dropdown component
+function MultiSelectDropdown({
+  treatments,
+  selected,
+  onChange,
+}: {
+  treatments: { id: string; treatment_name: string }[];
+  selected: string[];
+  onChange: (services: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const toggle = (name: string) => {
+    onChange(selected.includes(name) ? selected.filter(s => s !== name) : [...selected, name]);
+  };
+
+  const remove = (name: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange(selected.filter(s => s !== name));
+  };
+
+  return (
+    <div ref={ref} className="relative mt-1.5">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full min-h-[42px] px-3 py-2 border border-input rounded-md bg-background text-left flex items-center gap-2 flex-wrap text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+      >
+        {selected.length === 0 ? (
+          <span className="text-muted-foreground">Select treatment(s)...</span>
+        ) : (
+          selected.map(s => (
+            <span key={s} className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs font-medium px-2 py-0.5 rounded-full">
+              {s}
+              <X className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={e => remove(s, e)} />
+            </span>
+          ))
+        )}
+        <ChevronDown className={`h-4 w-4 text-muted-foreground ml-auto flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full bg-popover border border-border rounded-md shadow-lg max-h-52 overflow-y-auto">
+          {treatments.map(t => {
+            const isSelected = selected.includes(t.treatment_name);
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => toggle(t.treatment_name)}
+                className={`w-full text-left px-3 py-2.5 text-sm flex items-center gap-2.5 transition-colors ${isSelected ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-accent text-foreground'}`}
+              >
+                <span className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-primary border-primary' : 'border-input'}`}>
+                  {isSelected && <svg className="h-2.5 w-2.5 text-primary-foreground" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                </span>
+                {t.treatment_name}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 interface CompletedVisit {
   id: string;
@@ -394,34 +468,13 @@ export default function BookNextAppointment() {
                 <TabletInput type="time" value={bookForm.time} onChange={e => setBookForm(f => ({ ...f, time: e.target.value }))} />
               </div>
             </div>
-            <div>
+            <div className="relative">
               <Label>Service / Treatment * <span className="text-muted-foreground font-normal text-xs">(select one or more)</span></Label>
-              <div className="mt-1.5 border border-input rounded-md max-h-44 overflow-y-auto divide-y divide-border">
-                {treatments.map(t => {
-                  const selected = bookForm.services.includes(t.treatment_name);
-                  return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => setBookForm(f => ({
-                        ...f,
-                        services: selected
-                          ? f.services.filter(s => s !== t.treatment_name)
-                          : [...f.services, t.treatment_name],
-                      }))}
-                      className={`w-full text-left px-3 py-2.5 text-sm flex items-center gap-2.5 transition-colors ${selected ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-accent text-foreground'}`}
-                    >
-                      <span className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${selected ? 'bg-primary border-primary' : 'border-input'}`}>
-                        {selected && <svg className="h-2.5 w-2.5 text-primary-foreground" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                      </span>
-                      {t.treatment_name}
-                    </button>
-                  );
-                })}
-              </div>
-              {bookForm.services.length > 0 && (
-                <p className="text-xs text-muted-foreground mt-1">{bookForm.services.length} selected: {bookForm.services.join(', ')}</p>
-              )}
+              <MultiSelectDropdown
+                treatments={treatments}
+                selected={bookForm.services}
+                onChange={services => setBookForm(f => ({ ...f, services }))}
+              />
             </div>
             <div>
               <Label>Notes</Label>
