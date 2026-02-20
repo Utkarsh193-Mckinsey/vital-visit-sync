@@ -123,6 +123,7 @@ export default function TreatmentsManager() {
       administration_method: treatment.administration_method || '',
       common_doses: treatment.common_doses || [],
       default_dose: (treatment as any).default_dose || '',
+      consent_template_id: treatment.consent_template_id || '',
     });
   };
 
