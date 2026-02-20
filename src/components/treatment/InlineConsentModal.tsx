@@ -98,13 +98,12 @@ export function InlineConsentModal({
         .eq('id', treatmentId)
         .single();
 
-      if (treatmentError || !treatmentData?.consent_template_id) {
-        toast({
-          title: 'No Consent Template',
-          description: 'This treatment does not have a consent template configured.',
-          variant: 'destructive',
-        });
-        onClose();
+      if (treatmentError) throw treatmentError;
+
+      // No digital consent template — show physical consent option
+      if (!treatmentData?.consent_template_id) {
+        setCurrentStep('physical_only');
+        setIsLoading(false);
         return;
       }
 
