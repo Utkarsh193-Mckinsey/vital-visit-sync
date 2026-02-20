@@ -162,6 +162,75 @@ export type Database = {
           },
         ]
       }
+      clinic_package_treatments: {
+        Row: {
+          clinic_package_id: string
+          created_date: string
+          id: string
+          is_complimentary: boolean
+          sessions: number
+          treatment_id: string
+        }
+        Insert: {
+          clinic_package_id: string
+          created_date?: string
+          id?: string
+          is_complimentary?: boolean
+          sessions?: number
+          treatment_id: string
+        }
+        Update: {
+          clinic_package_id?: string
+          created_date?: string
+          id?: string
+          is_complimentary?: boolean
+          sessions?: number
+          treatment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_package_treatments_clinic_package_id_fkey"
+            columns: ["clinic_package_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinic_package_treatments_treatment_id_fkey"
+            columns: ["treatment_id"]
+            isOneToOne: false
+            referencedRelation: "treatments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clinic_packages: {
+        Row: {
+          base_price: number
+          created_date: string
+          description: string | null
+          id: string
+          name: string
+          status: string
+        }
+        Insert: {
+          base_price?: number
+          created_date?: string
+          description?: string | null
+          id?: string
+          name: string
+          status?: string
+        }
+        Update: {
+          base_price?: number
+          created_date?: string
+          description?: string | null
+          id?: string
+          name?: string
+          status?: string
+        }
+        Relationships: []
+      }
       consent_forms: {
         Row: {
           consent_template_id: string
