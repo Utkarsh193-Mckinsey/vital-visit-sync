@@ -428,6 +428,25 @@ export default function WhatsAppChats() {
                     </Select>
                   </div>
 
+                  {/* REJECTED warning */}
+                  {currentWatiTemplate && currentWatiTemplate.status === 'REJECTED' && (
+                    <div className="flex items-start gap-2 bg-destructive/10 border border-destructive/30 rounded-lg p-3">
+                      <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-destructive">Template Rejected</p>
+                        <p className="text-xs text-destructive/80 mt-0.5">This template was rejected by WhatsApp. Delete it from the Templates list and resubmit with compliant wording.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* PENDING warning */}
+                  {currentWatiTemplate && currentWatiTemplate.status === 'PENDING' && (
+                    <div className="flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                      <AlertTriangle className="h-4 w-4 text-yellow-600 shrink-0 mt-0.5" />
+                      <p className="text-xs text-yellow-700">This template is pending WhatsApp approval and may not send successfully yet.</p>
+                    </div>
+                  )}
+
                   {/* Show template body preview */}
                   {currentWatiTemplate && (
                     <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground whitespace-pre-wrap">
@@ -435,8 +454,8 @@ export default function WhatsAppChats() {
                     </div>
                   )}
 
-                  {/* Dynamic parameter fields */}
-                  {currentTemplateParams.map(p => (
+                  {/* Dynamic parameter fields — only show if not rejected */}
+                  {currentWatiTemplate?.status !== 'REJECTED' && currentTemplateParams.map(p => (
                     <div key={p.name}>
                       <Label>{p.label}</Label>
                       <TabletInput
@@ -449,7 +468,11 @@ export default function WhatsAppChats() {
 
                   <div className="flex gap-3">
                     <Button variant="outline" className="w-full" onClick={() => setTemplateModalOpen(false)}>Cancel</Button>
-                    <Button className="w-full" onClick={sendTemplateMessage} disabled={sendingTemplate || !selectedTemplate}>
+                    <Button
+                      className="w-full"
+                      onClick={sendTemplateMessage}
+                      disabled={sendingTemplate || !selectedTemplate || currentWatiTemplate?.status === 'REJECTED'}
+                    >
                       {sendingTemplate ? <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Sending...</> : 'Send Template'}
                     </Button>
                   </div>
