@@ -200,11 +200,12 @@ export default function TreatmentsManager() {
 
       handleCancel();
       fetchTreatments();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving treatment:', error);
+      const message = error?.message || error?.details || 'Failed to save treatment.';
       toast({
         title: 'Error',
-        description: 'Failed to save treatment.',
+        description: message,
         variant: 'destructive',
       });
     } finally {
