@@ -286,6 +286,30 @@ export function InlineConsentModal({
     onClose();
   };
 
+  // Handle physical consent signed — just mark consent as signed in visit
+  const handlePhysicalConsentSigned = async () => {
+    try {
+      await supabase
+        .from('visits')
+        .update({ consent_signed: true })
+        .eq('id', visitId);
+
+      toast({
+        title: 'Physical Consent Recorded',
+        description: 'Physical consent has been recorded for this treatment.',
+      });
+      onConsentSigned();
+      onClose();
+    } catch (error) {
+      console.error('Error recording physical consent:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to record physical consent.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const getConsentText = () => {
     if (!consentTemplate || !selectedLanguage) return '';
     const text = selectedLanguage === 'ar' && consentTemplate.consent_text_ar 
@@ -306,6 +330,8 @@ export function InlineConsentModal({
         return 'Photo & Video Consent';
       case 'complete':
         return 'Consent Complete';
+      case 'physical_only':
+        return 'Physical Consent Required';
     }
   };
 
@@ -319,6 +345,8 @@ export function InlineConsentModal({
         return 'Please sign the photo/video consent form.';
       case 'complete':
         return 'All consent forms have been signed successfully.';
+      case 'physical_only':
+        return 'This treatment does not have a digital consent form.';
     }
   };
 
