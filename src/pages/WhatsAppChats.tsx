@@ -6,7 +6,7 @@ import { TabletInput } from '@/components/ui/tablet-input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Search, User, ArrowLeft, Clock, Send, BellOff, Bell, FileText, Loader2, Plus, List } from 'lucide-react';
+import { MessageSquare, Search, User, ArrowLeft, Clock, Send, BellOff, Bell, FileText, Loader2, Plus, List, Trash2, AlertTriangle } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -242,8 +242,30 @@ export default function WhatsAppChats() {
     setTemplateModalOpen(true);
     // Fetch WATI templates from API every time modal opens
     const templates = await fetchWatiTemplates();
+    // Auto-select first APPROVED template (skip rejected)
     if (templates.length > 0 && !selectedTemplate) {
-      setSelectedTemplate(templates[0].elementName || templates[0].name || '');
+      const firstApproved = templates.find(t => t.status === 'APPROVED');
+      setSelectedTemplate((firstApproved?.elementName || firstApproved?.name || templates[0].elementName || templates[0].name || ''));
+    }
+  };
+
+  const handleDeleteTemplate = async (elementName: string) => {
+    if (!confirm(`Delete template "${elementName}"? This cannot be undone.`)) return;
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-wati-templates', {
+        body: { action: 'delete', template: { elementName } },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success('Template deleted');
+        const updated = watiTemplates.filter(t => (t.elementName || t.name) !== elementName);
+        setWatiTemplates(updated);
+        if (selectedTemplate === elementName) setSelectedTemplate('');
+      } else {
+        toast.error('Failed to delete: ' + JSON.stringify(data?.data || 'Unknown'));
+      }
+    } catch (err: any) {
+      toast.error('Error: ' + (err.message || 'Unknown'));
     }
   };
 
@@ -406,6 +428,25 @@ export default function WhatsAppChats() {
                     </Select>
                   </div>
 
+                  {/* REJECTED warning */}
+                  {currentWatiTemplate && currentWatiTemplate.status === 'REJECTED' && (
+                    <div className="flex items-start gap-2 bg-destructive/10 border border-destructive/30 rounded-lg p-3">
+                      <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-destructive">Template Rejected</p>
+                        <p className="text-xs text-destructive/80 mt-0.5">This template was rejected by WhatsApp. Delete it from the Templates list and resubmit with compliant wording.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* PENDING warning */}
+                  {currentWatiTemplate && currentWatiTemplate.status === 'PENDING' && (
+                    <div className="flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                      <AlertTriangle className="h-4 w-4 text-yellow-600 shrink-0 mt-0.5" />
+                      <p className="text-xs text-yellow-700">This template is pending WhatsApp approval and may not send successfully yet.</p>
+                    </div>
+                  )}
+
                   {/* Show template body preview */}
                   {currentWatiTemplate && (
                     <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground whitespace-pre-wrap">
@@ -413,8 +454,8 @@ export default function WhatsAppChats() {
                     </div>
                   )}
 
-                  {/* Dynamic parameter fields */}
-                  {currentTemplateParams.map(p => (
+                  {/* Dynamic parameter fields — only show if not rejected */}
+                  {currentWatiTemplate?.status !== 'REJECTED' && currentTemplateParams.map(p => (
                     <div key={p.name}>
                       <Label>{p.label}</Label>
                       <TabletInput
@@ -427,7 +468,11 @@ export default function WhatsAppChats() {
 
                   <div className="flex gap-3">
                     <Button variant="outline" className="w-full" onClick={() => setTemplateModalOpen(false)}>Cancel</Button>
-                    <Button className="w-full" onClick={sendTemplateMessage} disabled={sendingTemplate || !selectedTemplate}>
+                    <Button
+                      className="w-full"
+                      onClick={sendTemplateMessage}
+                      disabled={sendingTemplate || !selectedTemplate || currentWatiTemplate?.status === 'REJECTED'}
+                    >
                       {sendingTemplate ? <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Sending...</> : 'Send Template'}
                     </Button>
                   </div>
@@ -576,18 +621,39 @@ export default function WhatsAppChats() {
               {watiTemplates.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">No templates found</p>
               ) : (
-                watiTemplates.map((t, i) => (
-                  <div key={t.id || i} className="border border-border rounded-lg p-3 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-sm">{t.elementName || t.name}</span>
-                      <Badge variant={t.status === 'APPROVED' ? 'default' : 'secondary'} className="text-xs">
-                        {t.status || 'Unknown'}
-                      </Badge>
+                watiTemplates.map((t, i) => {
+                  const tName = t.elementName || t.name || '';
+                  const isRejected = t.status === 'REJECTED';
+                  return (
+                    <div key={t.id || i} className={`border rounded-lg p-3 space-y-1 ${isRejected ? 'border-destructive/40 bg-destructive/5' : 'border-border'}`}>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {isRejected && <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />}
+                          <span className="font-medium text-sm truncate">{tName}</span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge variant={t.status === 'APPROVED' ? 'default' : isRejected ? 'destructive' : 'secondary'} className="text-xs">
+                            {t.status || 'Unknown'}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => handleDeleteTemplate(tName)}
+                            title="Delete template"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{t.category}</p>
+                      <p className="text-sm whitespace-pre-wrap bg-muted/50 p-2 rounded text-foreground">{t.body || t.bodyOriginal || '(no body)'}</p>
+                      {isRejected && (
+                        <p className="text-xs text-destructive mt-1">⚠ Rejected by WhatsApp — delete and resubmit with compliant wording</p>
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground">{t.category}</p>
-                    <p className="text-sm whitespace-pre-wrap bg-muted/50 p-2 rounded text-foreground">{t.body || t.bodyOriginal || '(no body)'}</p>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </ScrollArea>
