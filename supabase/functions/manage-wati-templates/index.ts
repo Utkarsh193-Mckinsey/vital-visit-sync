@@ -85,8 +85,36 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "delete") {
+      const { elementName } = template || {};
+      if (!elementName) {
+        return new Response(
+          JSON.stringify({ error: "Missing elementName" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const res = await fetch(
+        `${WATI_API_URL}/api/v1/whatsApp/templates/${encodeURIComponent(elementName)}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${WATI_API_KEY}` },
+        }
+      );
+
+      const text = await res.text();
+      console.log("WATI delete template response:", res.status, text);
+
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+
+      return new Response(JSON.stringify({ success: res.ok, status: res.status, data }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     return new Response(
-      JSON.stringify({ error: "Invalid action. Use 'list' or 'create'" }),
+      JSON.stringify({ error: "Invalid action. Use 'list', 'create', or 'delete'" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: any) {
