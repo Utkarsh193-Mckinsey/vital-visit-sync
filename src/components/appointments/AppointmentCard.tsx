@@ -304,6 +304,13 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
           </Badge>
         )}
 
+        {apt.status === 'upcoming' && (
+          <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-5 cursor-pointer hover:bg-accent text-green-700 border-green-300" onClick={handleStartNewVisit}>
+            {startingVisit ? <Loader2 className="h-2.5 w-2.5 animate-spin mr-0.5" /> : <PlayCircle className="h-2.5 w-2.5 mr-0.5" />}
+            Start Visit
+          </Badge>
+        )}
+
         {apt.status !== 'no_show' && apt.status !== 'rescheduled' && apt.status !== 'completed' && apt.status !== 'cancelled' && (
           <>
             <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-5 cursor-pointer hover:bg-accent text-orange-600 border-orange-300" onClick={() => setShowRescheduleModal(true)}>
