@@ -196,7 +196,12 @@ export default function WhatsAppChats() {
       toast.success('Message sent');
       await fetchChats();
     } catch (err: any) {
-      toast.error('Failed to send: ' + (err.message || 'Unknown error'));
+      const msg = err.message || '';
+      if (msg.includes('400')) {
+        toast.error('Cannot send — patient hasn\'t messaged in 24 hrs. Use the template button 📋 instead.');
+      } else {
+        toast.error('Failed to send: ' + msg);
+      }
     } finally {
       setSending(false);
     }
