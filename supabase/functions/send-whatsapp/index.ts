@@ -81,10 +81,11 @@ Deno.serve(async (req) => {
     }
 
     const watiText = await watiRes.text();
-    console.log("WATI send response:", watiRes.status, watiText);
+    console.log("WATI send response status:", watiRes.status);
+    console.log("WATI send response body:", watiText);
 
     if (!watiRes.ok) {
-      console.error("WATI API error:", watiRes.status, watiText);
+      console.error("WATI API error body:", watiText);
       return new Response(JSON.stringify({ error: `WATI API error ${watiRes.status}: ${watiText}` }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
