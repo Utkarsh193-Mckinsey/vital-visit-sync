@@ -52,6 +52,7 @@ export default function PatientRegistration() {
     file_number: '',
   });
   const [registeredBy, setRegisteredBy] = useState('');
+  const [fromAppointment, setFromAppointment] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registeredPatient, setRegisteredPatient] = useState<{ id: string; signatureDataUrl: string } | null>(null);
