@@ -554,7 +554,9 @@ export default function ConsentSigning() {
   const handleDownloadConsent = (consent: SignedConsentData) => {
     if (!patient) return;
     const firstName = getFirstName(patient.full_name);
-    const fileName = getConsentFileName(firstName, consent.treatmentName, consent.visitNumber);
+    const dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).replace(' ', '');
+    const phone = patient.phone_number.replace(/\D/g, '').slice(-10);
+    const fileName = `${firstName} ${dateStr} ${consent.treatmentName} V${consent.visitNumber} ${phone} C form.pdf`;
     downloadPDF(consent.pdfBlob, fileName);
     toast({
       title: 'Download Started',
