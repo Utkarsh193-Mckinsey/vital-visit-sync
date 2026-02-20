@@ -71,6 +71,7 @@ export default function Appointments() {
   const [confirmedOpen, setConfirmedOpen] = useState(true);
   const [unconfirmedOpen, setUnconfirmedOpen] = useState(true);
   const [arrivedOpen, setArrivedOpen] = useState(true);
+  const [completedOpen, setCompletedOpen] = useState(true);
   const [cancelledOpen, setCancelledOpen] = useState(true);
 
   const getDateRange = (tab: TabFilter): { from: string; to: string } | { mode: 'past' | 'upcoming' } => {
