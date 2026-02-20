@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { TabletButton } from '@/components/ui/tablet-button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { FileSignature, Globe, Camera, Download, CheckCircle } from 'lucide-react';
+import { FileSignature, Globe, Camera, Download, CheckCircle, ClipboardCheck } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import {
   Dialog,
@@ -27,7 +27,7 @@ interface InlineConsentModalProps {
 }
 
 type Language = 'en' | 'ar';
-type ConsentStep = 'language' | 'treatment' | 'photo_video' | 'complete';
+type ConsentStep = 'language' | 'treatment' | 'photo_video' | 'complete' | 'physical_only';
 
 // Helper function to replace placeholders in consent text
 const replaceConsentPlaceholders = (
