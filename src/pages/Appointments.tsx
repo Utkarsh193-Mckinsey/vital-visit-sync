@@ -283,6 +283,22 @@ export default function Appointments() {
           </TabletCard>
         ) : (
           <div className="space-y-3">
+            {/* ARRIVED section */}
+            {arrivedCount > 0 && (
+              <CollapsibleSection
+                title="Arrived"
+                count={arrivedCount}
+                borderColor="border-l-teal-500"
+                badgeColor="bg-teal-100 text-teal-800"
+                open={arrivedOpen}
+                onToggle={() => setArrivedOpen(v => !v)}
+              >
+                {arrived.map(apt => (
+                  <AppointmentCard key={apt.id} appointment={apt} onUpdateStatus={updateStatus} onUpdateConfirmation={updateConfirmation} onEdit={a => { setEditingAppointment(a); setShowAddModal(true); }} showArrivedActions />
+                ))}
+              </CollapsibleSection>
+            )}
+
             {/* CONFIRMED section */}
             <CollapsibleSection
               title="Confirmed"
