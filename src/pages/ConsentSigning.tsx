@@ -662,14 +662,7 @@ export default function ConsentSigning() {
         }
       />
 
-      {/* Selected treatments summary */}
-      {selectedPackageIds.length > 0 && (
-        <div className="mb-4 p-3 bg-primary/5 rounded-lg border border-primary/20">
-          <p className="text-sm text-muted-foreground">
-            Selected treatments for today: <strong>{selectedPackageIds.length}</strong>
-          </p>
-        </div>
-      )}
+
 
       {packages.length === 0 ? (
         <TabletCard>
