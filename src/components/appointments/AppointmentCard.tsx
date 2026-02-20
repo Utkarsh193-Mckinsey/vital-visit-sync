@@ -277,17 +277,27 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
           </Badge>
         )}
 
+        {/* Arrived button — only for upcoming status */}
         {apt.status === 'upcoming' && (
-          <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-5 cursor-pointer hover:bg-accent" onClick={handleRegisterNewPatient}>
-            <UserPlus className="h-2.5 w-2.5 mr-0.5" /> Register
+          <Badge
+            className="text-[9px] py-0 px-1.5 h-5 cursor-pointer bg-teal-100 text-teal-800 hover:bg-teal-200 border border-teal-300"
+            onClick={() => onUpdateStatus(apt.id, 'arrived')}
+          >
+            <CheckCircle className="h-2.5 w-2.5 mr-0.5" /> Arrived
           </Badge>
         )}
 
-        {apt.status === 'upcoming' && (
-          <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-5 cursor-pointer hover:bg-accent text-green-700 border-green-300" onClick={handleStartNewVisit}>
-            {startingVisit ? <Loader2 className="h-2.5 w-2.5 animate-spin mr-0.5" /> : <PlayCircle className="h-2.5 w-2.5 mr-0.5" />}
-            Start Visit
-          </Badge>
+        {/* Register + Start Visit — only shown in Arrived section */}
+        {showArrivedActions && apt.status === 'arrived' && (
+          <>
+            <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-5 cursor-pointer hover:bg-accent" onClick={handleRegisterNewPatient}>
+              <UserPlus className="h-2.5 w-2.5 mr-0.5" /> Register
+            </Badge>
+            <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-5 cursor-pointer hover:bg-accent text-green-700 border-green-300" onClick={handleStartNewVisit}>
+              {startingVisit ? <Loader2 className="h-2.5 w-2.5 animate-spin mr-0.5" /> : <PlayCircle className="h-2.5 w-2.5 mr-0.5" />}
+              Start Visit
+            </Badge>
+          </>
         )}
 
         {apt.status !== 'no_show' && apt.status !== 'rescheduled' && apt.status !== 'completed' && apt.status !== 'cancelled' && (
