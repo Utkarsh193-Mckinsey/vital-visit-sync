@@ -9,8 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Check, FileSignature, AlertCircle, Download, Camera, Syringe } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import type { Patient, Package, Treatment, ConsentTemplate } from '@/types/database';
-import { generateConsentPDF } from '@/utils/generateConsentPDF';
-import { downloadPDF, getFirstName, getConsentFileName } from '@/utils/pdfDownload';
+import { generateCombinedConsentPDF } from '@/utils/generateConsentPDF';
+import { downloadPDF, getFirstName } from '@/utils/pdfDownload';
 import { format } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -281,7 +281,7 @@ export default function ConsentSigning() {
 
       if (visitError) throw visitError;
 
-      // Generate PDFs and upload for each treatment
+      // Generate PDFs and upload for each treatment (individual uploads for DB records)
       const consentFormsToInsert = [];
       const signedConsentsList: SignedConsentData[] = [];
 
@@ -301,47 +301,53 @@ export default function ConsentSigning() {
           .from('signatures')
           .getPublicUrl(signatureFileName);
 
-        // Generate PDF with BOTH English and Arabic text, plus photo/video signature
-        const pdfBlob = await generateConsentPDF({
-          patientName: patient.full_name,
-          patientDOB: patient.date_of_birth,
-          patientPhone: patient.phone_number,
-          treatmentName: treatmentSig.treatmentName,
-          consentFormName: treatmentSig.consentTemplate.form_name,
-          consentText: treatmentSig.consentTemplate.consent_text,
-          consentTextAr: treatmentSig.consentTemplate.consent_text_ar || undefined,
-          signatureDataUrl: treatmentSig.signatureDataUrl,
-          signedDate: new Date(),
-          photoVideoSignatureDataUrl: photoVideoSignatureDataUrl,
-        });
-
-        // Upload PDF
-        const pdfFileName = `consent-pdfs/${patientId}/${treatmentSig.treatmentId}/${Date.now()}.pdf`;
-        const { error: pdfUploadError } = await supabase.storage
-          .from('clinic-documents')
-          .upload(pdfFileName, pdfBlob, { contentType: 'application/pdf' });
-
-        if (pdfUploadError) throw pdfUploadError;
-
-        const { data: pdfUrlData } = supabase.storage
-          .from('clinic-documents')
-          .getPublicUrl(pdfFileName);
-
         consentFormsToInsert.push({
           visit_id: newVisit.id,
           treatment_id: treatmentSig.treatmentId,
           consent_template_id: treatmentSig.consentTemplate.id,
           signature_url: signatureUrlData.publicUrl,
-          pdf_url: pdfUrlData.publicUrl,
+          pdf_url: '', // will be filled after combined PDF upload
         });
 
         signedConsentsList.push({
           packageId: treatmentSig.packageId,
           treatmentName: treatmentSig.treatmentName,
-          pdfBlob: pdfBlob,
+          pdfBlob: new Blob(), // placeholder
           visitNumber: nextVisitNumber,
         });
       }
+
+      // Generate ONE combined PDF for all treatments
+      const combinedPdfBlob = await generateCombinedConsentPDF({
+        patientName: patient.full_name,
+        patientDOB: patient.date_of_birth,
+        patientPhone: patient.phone_number,
+        treatments: treatmentSignatures.map(ts => ({
+          treatmentName: ts.treatmentName,
+          consentFormName: ts.consentTemplate.form_name,
+          consentText: ts.consentTemplate.consent_text,
+          consentTextAr: ts.consentTemplate.consent_text_ar || undefined,
+          signatureDataUrl: ts.signatureDataUrl,
+        })),
+        signedDate: new Date(),
+        photoVideoSignatureDataUrl: photoVideoSignatureDataUrl,
+      });
+
+      // Upload combined PDF once
+      const combinedPdfFileName = `consent-pdfs/${patientId}/combined/${Date.now()}.pdf`;
+      const { error: pdfUploadError } = await supabase.storage
+        .from('clinic-documents')
+        .upload(combinedPdfFileName, combinedPdfBlob, { contentType: 'application/pdf' });
+
+      if (pdfUploadError) throw pdfUploadError;
+
+      const { data: pdfUrlData } = supabase.storage
+        .from('clinic-documents')
+        .getPublicUrl(combinedPdfFileName);
+
+      // Set same combined PDF URL on all consent form records
+      consentFormsToInsert.forEach(cf => { cf.pdf_url = pdfUrlData.publicUrl; });
+      signedConsentsList.forEach(sc => { sc.pdfBlob = combinedPdfBlob; });
 
       // Insert all consent forms
       const { error: consentError } = await supabase
@@ -355,12 +361,13 @@ export default function ConsentSigning() {
       setCurrentStep('complete');
       setAllConsentsSigned(true);
 
-      // Auto-download all consent PDFs
-      for (const consent of signedConsentsList) {
-        const firstName = getFirstName(patient.full_name);
-        const fileName = getConsentFileName(firstName, consent.treatmentName, consent.visitNumber);
-        downloadPDF(consent.pdfBlob, fileName);
-      }
+      // Auto-download ONE combined PDF with the new naming convention
+      const firstName = getFirstName(patient.full_name);
+      const dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).replace(' ', '');
+      const treatmentNames = treatmentSignatures.map(ts => ts.treatmentName).join(', ');
+      const phone = patient.phone_number.replace(/\D/g, '').slice(-10);
+      const combinedFileName = `${firstName} ${dateStr} ${treatmentNames} V${nextVisitNumber} ${phone} C form.pdf`;
+      downloadPDF(combinedPdfBlob, combinedFileName);
 
       toast({
         title: 'All Consents Signed',
@@ -547,7 +554,9 @@ export default function ConsentSigning() {
   const handleDownloadConsent = (consent: SignedConsentData) => {
     if (!patient) return;
     const firstName = getFirstName(patient.full_name);
-    const fileName = getConsentFileName(firstName, consent.treatmentName, consent.visitNumber);
+    const dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).replace(' ', '');
+    const phone = patient.phone_number.replace(/\D/g, '').slice(-10);
+    const fileName = `${firstName} ${dateStr} ${consent.treatmentName} V${consent.visitNumber} ${phone} C form.pdf`;
     downloadPDF(consent.pdfBlob, fileName);
     toast({
       title: 'Download Started',

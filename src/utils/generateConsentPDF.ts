@@ -17,6 +17,274 @@ interface ConsentPDFData {
   photoVideoSignatureDataUrl?: string;
 }
 
+export interface MultiConsentEntry {
+  treatmentName: string;
+  consentFormName: string;
+  consentText: string;
+  consentTextAr?: string;
+  signatureDataUrl: string;
+  dosage?: string;
+}
+
+export interface MultiConsentPDFData {
+  patientName: string;
+  patientDOB: string;
+  patientPhone: string;
+  treatments: MultiConsentEntry[];
+  signedDate: Date;
+  photoVideoSignatureDataUrl?: string;
+}
+
+/**
+ * Generate a single combined PDF containing all treatment consent forms
+ */
+export async function generateCombinedConsentPDF(data: MultiConsentPDFData): Promise<Blob> {
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  let hasAmiriFont = false;
+  try {
+    const amiriBase64 = await getAmiriFont();
+    pdf.addFileToVFS('Amiri-Regular.ttf', amiriBase64);
+    pdf.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
+    hasAmiriFont = true;
+  } catch {
+    console.warn('Could not load Amiri font');
+  }
+
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 20;
+  const contentWidth = pageWidth - margin * 2;
+  let yPosition = margin;
+
+  const checkNewPage = (requiredSpace = 30) => {
+    if (yPosition > pageHeight - requiredSpace) {
+      pdf.addPage();
+      yPosition = margin;
+    }
+  };
+
+  const setEnglishFont = (style: 'normal' | 'bold' = 'normal') => pdf.setFont('helvetica', style);
+  const setArabicFont = () => {
+    if (hasAmiriFont) pdf.setFont('Amiri', 'normal');
+    else pdf.setFont('helvetica', 'normal');
+  };
+
+  const drawDivider = () => {
+    yPosition += 4;
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(0.3);
+    pdf.line(margin, yPosition, pageWidth - margin, yPosition);
+    yPosition += 8;
+  };
+
+  const drawHeader = async (isFirstPage: boolean) => {
+    if (!isFirstPage) {
+      pdf.addPage();
+      yPosition = margin;
+    }
+    try {
+      const logo = await loadLogoImage();
+      const aspectRatio = (logo.naturalWidth || logo.width) / (logo.naturalHeight || logo.height);
+      const logoHeight = 25;
+      const logoWidth = logoHeight * aspectRatio;
+      pdf.addImage(logo, 'PNG', (pageWidth - logoWidth) / 2, yPosition, logoWidth, logoHeight);
+      yPosition += logoHeight + 5;
+    } catch {
+      yPosition += 10;
+    }
+
+    setEnglishFont('bold');
+    pdf.setFontSize(18);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text('COSMIQUE', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 6;
+    pdf.setFontSize(10);
+    setEnglishFont('normal');
+    pdf.text('Aesthetics and Dermatology Clinic', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 12;
+  };
+
+  for (let i = 0; i < data.treatments.length; i++) {
+    const entry = data.treatments[i];
+    await drawHeader(i === 0);
+
+    // Form title
+    pdf.setFontSize(14);
+    setEnglishFont('bold');
+    pdf.setTextColor(200, 50, 50);
+    pdf.text(`Consent Form - ${getTreatmentTitle(entry.treatmentName)}`, pageWidth / 2, yPosition, { align: 'center' });
+    pdf.setTextColor(0, 0, 0);
+    yPosition += 12;
+
+    // Patient info
+    pdf.setFontSize(11);
+    setEnglishFont('bold');
+    pdf.text('Patient Name:', margin, yPosition);
+    const nameLabelWidth = pdf.getTextWidth('Patient Name:');
+    setEnglishFont('normal');
+    pdf.text(' ' + data.patientName, margin + nameLabelWidth, yPosition);
+    const nameTextWidth = pdf.getTextWidth(' ' + data.patientName);
+    pdf.setLineWidth(0.3);
+    pdf.line(margin + nameLabelWidth + nameTextWidth + 2, yPosition + 1, pageWidth - margin, yPosition + 1);
+    yPosition += 8;
+
+    setEnglishFont('bold');
+    pdf.text('Date of Treatment:', margin, yPosition);
+    const dateLabelWidth = pdf.getTextWidth('Date of Treatment:');
+    setEnglishFont('normal');
+    pdf.text(' ' + formatDate(data.signedDate.toISOString()), margin + dateLabelWidth, yPosition);
+    yPosition += 8;
+
+    setEnglishFont('bold');
+    pdf.text('Dosage:', margin, yPosition);
+    const dosageLabelWidth = pdf.getTextWidth('Dosage:');
+    setEnglishFont('normal');
+    if (entry.dosage) pdf.text(' ' + entry.dosage, margin + dosageLabelWidth, yPosition);
+    pdf.setLineWidth(0.3);
+    pdf.line(margin + dosageLabelWidth + 2, yPosition + 1, margin + 100, yPosition + 1);
+    yPosition += 6;
+
+    drawDivider();
+
+    // Consent sections
+    const sections = parseConsentSections(entry.consentText, entry.consentTextAr);
+    for (const section of sections) {
+      checkNewPage(50);
+      pdf.setFontSize(11);
+      setEnglishFont('bold');
+      pdf.text(section.englishTitle, margin, yPosition);
+      yPosition += 6;
+
+      pdf.setFontSize(10);
+      setEnglishFont('normal');
+      const englishLines = pdf.splitTextToSize(section.englishContent, contentWidth);
+      for (const line of englishLines) {
+        checkNewPage();
+        pdf.text(line, margin, yPosition);
+        yPosition += 5;
+      }
+      yPosition += 2;
+
+      if (section.arabicTitle) {
+        checkNewPage();
+        setArabicFont();
+        pdf.setFontSize(11);
+        pdf.text(section.arabicTitle, pageWidth - margin, yPosition, { align: 'right' });
+        yPosition += 6;
+      }
+      if (section.arabicContent) {
+        pdf.setFontSize(10);
+        setArabicFont();
+        const arabicLines = pdf.splitTextToSize(section.arabicContent, contentWidth);
+        for (const line of arabicLines) {
+          checkNewPage();
+          pdf.text(line, pageWidth - margin, yPosition, { align: 'right' });
+          yPosition += 5;
+        }
+      }
+      drawDivider();
+    }
+
+    // Patient signature
+    checkNewPage(70);
+    pdf.setFontSize(11);
+    setEnglishFont('bold');
+    pdf.text("Patient's Acknowledgement and Signature", margin, yPosition);
+    yPosition += 6;
+    pdf.setFontSize(10);
+    setEnglishFont('normal');
+    const ackLines = pdf.splitTextToSize(
+      `I acknowledge I have been informed about the ${entry.treatmentName} treatment. I consent to proceed.`,
+      contentWidth
+    );
+    for (const line of ackLines) { pdf.text(line, margin, yPosition); yPosition += 5; }
+    yPosition += 2;
+    setArabicFont();
+    pdf.text('إقرار المريض وتوقيعه', pageWidth - margin, yPosition, { align: 'right' });
+    yPosition += 6;
+    pdf.text('أقر أنه تم إبلاغي بالعلاج. أوافق على المتابعة.', pageWidth - margin, yPosition, { align: 'right' });
+    yPosition += 12;
+
+    try {
+      const sigImg = await loadImage(entry.signatureDataUrl);
+      pdf.addImage(sigImg, 'PNG', margin, yPosition, 50, 20);
+      yPosition += 22;
+    } catch { yPosition += 5; }
+
+    setEnglishFont('bold');
+    pdf.setFontSize(10);
+    pdf.text("Patient's Signature:", margin, yPosition);
+    pdf.setLineWidth(0.3);
+    pdf.line(margin + 38, yPosition + 1, margin + 95, yPosition + 1);
+    pdf.text('Date:', margin + 100, yPosition);
+    setEnglishFont('normal');
+    pdf.text(' ' + formatDate(data.signedDate.toISOString()), margin + 112, yPosition);
+    yPosition += 8;
+    setEnglishFont('bold');
+    pdf.text("Doctor's Signature:", margin, yPosition);
+    pdf.setLineWidth(0.3);
+    pdf.line(margin + 38, yPosition + 1, margin + 95, yPosition + 1);
+    pdf.text('Date:', margin + 100, yPosition);
+    pdf.line(margin + 112, yPosition + 1, margin + 150, yPosition + 1);
+    yPosition += 6;
+    drawDivider();
+
+    // Photo/video consent (on every treatment page)
+    checkNewPage(60);
+    pdf.setFontSize(11);
+    setEnglishFont('bold');
+    pdf.text('Video & Photographic Consent', margin, yPosition);
+    yPosition += 6;
+    pdf.setFontSize(10);
+    setEnglishFont('normal');
+    const photoLines = pdf.splitTextToSize(
+      `I consent to the taking of photographs/videos during my ${entry.treatmentName} treatment for educational, promotional, or medical purposes. My identity will be kept confidential unless I give explicit consent to share.`,
+      contentWidth
+    );
+    for (const line of photoLines) { pdf.text(line, margin, yPosition); yPosition += 5; }
+    yPosition += 2;
+    setArabicFont();
+    pdf.text('الموافقة على التصوير والفيديو', pageWidth - margin, yPosition, { align: 'right' });
+    yPosition += 6;
+    const photoArLines = pdf.splitTextToSize('أوافق على التقاط الصور/الفيديو أثناء علاجي لأغراض تعليمية أو ترويجية أو طبية. ستظل هويتي سرية إلا إذا منحت موافقة صريحة للمشاركة.', contentWidth);
+    for (const line of photoArLines) { pdf.text(line, pageWidth - margin, yPosition, { align: 'right' }); yPosition += 5; }
+    yPosition += 8;
+
+    if (data.photoVideoSignatureDataUrl) {
+      try {
+        const photoSigImg = await loadImage(data.photoVideoSignatureDataUrl);
+        pdf.addImage(photoSigImg, 'PNG', margin, yPosition, 50, 20);
+        yPosition += 22;
+      } catch { /* skip */ }
+    }
+
+    setEnglishFont('bold');
+    pdf.text('Signature:', margin, yPosition);
+    pdf.setLineWidth(0.3);
+    pdf.line(margin + 22, yPosition + 1, margin + 80, yPosition + 1);
+    pdf.text('Date:', margin + 85, yPosition);
+    setEnglishFont('normal');
+    if (data.photoVideoSignatureDataUrl) {
+      pdf.text(' ' + formatDate(data.signedDate.toISOString()), margin + 97, yPosition);
+    } else {
+      pdf.line(margin + 97, yPosition + 1, margin + 135, yPosition + 1);
+    }
+
+    // Footer on last page of each section
+    setEnglishFont('normal');
+    pdf.setFontSize(7);
+    pdf.setTextColor(128, 128, 128);
+    pdf.text(
+      `Document generated on ${formatDateTime(new Date())} | Cosmique Aesthetic and Dermatology Clinic`,
+      pageWidth / 2, pageHeight - 10, { align: 'center' }
+    );
+    pdf.setTextColor(0, 0, 0);
+  }
+
+  return pdf.output('blob');
+}
+
 // Cache the font to avoid loading it multiple times
 let cachedAmiriFont: string | null = null;
 
