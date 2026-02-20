@@ -13,12 +13,10 @@ export function downloadPDF(blob: Blob, fileName: string): void {
 }
 
 /**
- * Get the first name from a full name, stripping common titles
+ * Get the first name from a full name
  */
 export function getFirstName(fullName: string): string {
-  const titles = /^(mr\.?|mrs\.?|ms\.?|dr\.?|prof\.?)\s+/i;
-  const stripped = fullName.trim().replace(titles, '');
-  return stripped.split(' ')[0] || fullName.trim();
+  return fullName.trim().split(' ')[0] || fullName.trim();
 }
 
 /**
