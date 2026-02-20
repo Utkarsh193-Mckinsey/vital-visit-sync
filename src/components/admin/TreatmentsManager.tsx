@@ -334,7 +334,7 @@ export default function TreatmentsManager() {
                 </SelectContent>
               </Select>
               {!formData.consent_template_id && (
-                <p className="text-xs text-amber-600 flex items-center gap-1">
+                <p className="text-xs text-warning flex items-center gap-1">
                   ⚠️ Without a digital consent form, patients will be prompted to sign a physical consent form.
                 </p>
               )}
