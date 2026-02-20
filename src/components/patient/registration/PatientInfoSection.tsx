@@ -1,7 +1,13 @@
+import { useState } from 'react';
 import { TabletInput } from '@/components/ui/tablet-input';
 import { TabletCard, TabletCardContent, TabletCardHeader, TabletCardTitle } from '@/components/ui/tablet-card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { NATIONALITIES, COUNTRIES, UAE_EMIRATES } from './constants';
 
 interface PatientInfoSectionProps {
@@ -20,6 +26,8 @@ interface PatientInfoSectionProps {
 }
 
 export default function PatientInfoSection({ formData, errors, onChange }: PatientInfoSectionProps) {
+  const [nationalityOpen, setNationalityOpen] = useState(false);
+
   return (
     <TabletCard className="mb-6">
       <TabletCardHeader>
@@ -55,16 +63,42 @@ export default function PatientInfoSection({ formData, errors, onChange }: Patie
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label className="block text-sm font-medium text-foreground">Nationality *</Label>
-            <Select value={formData.nationality} onValueChange={(v) => onChange('nationality', v)}>
-              <SelectTrigger className="h-14 rounded-xl text-base">
-                <SelectValue placeholder="Select nationality" />
-              </SelectTrigger>
-              <SelectContent className="max-h-60">
-                {NATIONALITIES.map((n) => (
-                  <SelectItem key={n} value={n}>{n}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={nationalityOpen} onOpenChange={setNationalityOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={nationalityOpen}
+                  className="w-full h-14 rounded-xl text-base justify-between font-normal"
+                >
+                  {formData.nationality || <span className="text-muted-foreground">Select nationality</span>}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search nationality..." className="h-10" />
+                  <CommandList className="max-h-60">
+                    <CommandEmpty>No nationality found.</CommandEmpty>
+                    <CommandGroup>
+                      {NATIONALITIES.map((n) => (
+                        <CommandItem
+                          key={n}
+                          value={n}
+                          onSelect={(val) => {
+                            onChange('nationality', val === formData.nationality ? '' : val);
+                            setNationalityOpen(false);
+                          }}
+                        >
+                          <Check className={cn("mr-2 h-4 w-4", formData.nationality === n ? "opacity-100" : "opacity-0")} />
+                          {n}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
             {errors.nationality && <p className="text-sm text-destructive">{errors.nationality}</p>}
           </div>
 
