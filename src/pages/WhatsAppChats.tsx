@@ -242,8 +242,10 @@ export default function WhatsAppChats() {
     setTemplateModalOpen(true);
     // Fetch WATI templates from API every time modal opens
     const templates = await fetchWatiTemplates();
+    // Auto-select first APPROVED template (skip rejected)
     if (templates.length > 0 && !selectedTemplate) {
-      setSelectedTemplate(templates[0].elementName || templates[0].name || '');
+      const firstApproved = templates.find(t => t.status === 'APPROVED');
+      setSelectedTemplate((firstApproved?.elementName || firstApproved?.name || templates[0].elementName || templates[0].name || ''));
     }
   };
 
