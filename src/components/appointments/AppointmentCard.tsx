@@ -4,7 +4,7 @@ import type { Appointment } from '@/pages/Appointments';
 import { TabletCard } from '@/components/ui/tablet-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Phone, Clock, User, Edit, AlertTriangle, MessageCircle, PhoneCall, CheckCircle, Loader2, UserPlus, CalendarClock, XCircle } from 'lucide-react';
+import { Phone, Clock, User, Edit, AlertTriangle, MessageCircle, PhoneCall, CheckCircle, Loader2, UserPlus, CalendarClock, XCircle, PlayCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { TabletInput } from '@/components/ui/tablet-input';
@@ -67,7 +67,64 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
   const [rescheduleDate, setRescheduleDate] = useState('');
   const [rescheduleReason, setRescheduleReason] = useState('');
   const [rescheduling, setRescheduling] = useState(false);
+  const [startingVisit, setStartingVisit] = useState(false);
   const navigate = useNavigate();
+
+  const handleStartNewVisit = async () => {
+    setStartingVisit(true);
+    try {
+      // Find patient by phone number
+      const { data: patients, error: patientError } = await supabase
+        .from('patients')
+        .select('id, full_name, registration_signature_url')
+        .eq('phone_number', apt.phone)
+        .limit(1);
+
+      if (patientError) throw patientError;
+
+      if (!patients || patients.length === 0) {
+        toast.error('Patient not found. Please register the patient first.');
+        return;
+      }
+
+      const patient = patients[0];
+
+      if (!patient.registration_signature_url) {
+        toast.error('No registration form signed. Please sign before starting the visit.');
+        return;
+      }
+
+      // Get latest visit number
+      const { data: existingVisits } = await supabase
+        .from('visits')
+        .select('visit_number')
+        .eq('patient_id', patient.id)
+        .order('visit_number', { ascending: false })
+        .limit(1);
+
+      const nextVisitNumber = existingVisits && existingVisits.length > 0
+        ? existingVisits[0].visit_number + 1
+        : 1;
+
+      const { error: visitError } = await supabase
+        .from('visits')
+        .insert({
+          patient_id: patient.id,
+          visit_number: nextVisitNumber,
+          current_status: 'waiting',
+          visit_date: new Date().toISOString().split('T')[0],
+        });
+
+      if (visitError) throw visitError;
+
+      toast.success(`Visit started for ${patient.full_name}. Added to waiting area.`);
+      navigate('/waiting');
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to start visit');
+    } finally {
+      setStartingVisit(false);
+    }
+  };
 
   const handleRegisterNewPatient = () => {
     const params = new URLSearchParams({
@@ -244,6 +301,13 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
         {apt.status === 'upcoming' && (
           <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-5 cursor-pointer hover:bg-accent" onClick={handleRegisterNewPatient}>
             <UserPlus className="h-2.5 w-2.5 mr-0.5" /> Register
+          </Badge>
+        )}
+
+        {apt.status === 'upcoming' && (
+          <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-5 cursor-pointer hover:bg-accent text-green-700 border-green-300" onClick={handleStartNewVisit}>
+            {startingVisit ? <Loader2 className="h-2.5 w-2.5 animate-spin mr-0.5" /> : <PlayCircle className="h-2.5 w-2.5 mr-0.5" />}
+            Start Visit
           </Badge>
         )}
 
