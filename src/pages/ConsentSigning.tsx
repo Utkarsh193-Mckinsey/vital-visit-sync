@@ -761,11 +761,14 @@ export default function ConsentSigning() {
       {packages.length === 0 ? (
         <TabletCard>
           <TabletCardContent className="p-8 text-center">
-            <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Consent Forms Required</h3>
-            <p className="text-muted-foreground mb-6">
-              The selected treatments don't have consent forms configured.
+            <ClipboardCheck className="mx-auto h-12 w-12 text-warning mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Digital Consent Form</h3>
+            <p className="text-muted-foreground mb-2">
+              The selected treatment(s) do not have a digital consent form configured.
             </p>
+            <div className="mb-6 p-4 rounded-lg border bg-warning/5 border-warning/20 text-sm text-warning max-w-sm mx-auto">
+              ⚠️ Please have the patient sign the <strong>physical consent form</strong> before proceeding.
+            </div>
             <div className="flex gap-4 justify-center">
               <TabletButton
                 variant="outline"
@@ -773,8 +776,8 @@ export default function ConsentSigning() {
               >
                 Go Back
               </TabletButton>
-              <TabletButton onClick={handleSkipConsent} disabled={isSigning}>
-                {isSigning ? 'Creating...' : 'Start Visit Without Consent'}
+              <TabletButton onClick={handleSkipConsent} disabled={isSigning} leftIcon={<ClipboardCheck className="h-4 w-4" />}>
+                {isSigning ? 'Creating...' : 'Physical Consent Signed — Start Visit'}
               </TabletButton>
             </div>
           </TabletCardContent>
