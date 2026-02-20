@@ -9,8 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Check, FileSignature, AlertCircle, Download, Camera, Syringe } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import type { Patient, Package, Treatment, ConsentTemplate } from '@/types/database';
-import { generateConsentPDF } from '@/utils/generateConsentPDF';
-import { downloadPDF, getFirstName, getConsentFileName } from '@/utils/pdfDownload';
+import { generateCombinedConsentPDF } from '@/utils/generateConsentPDF';
+import { downloadPDF, getFirstName } from '@/utils/pdfDownload';
 import { format } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
 
