@@ -127,20 +127,6 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
     }
   };
 
-  const loadComms = async () => {
-    if (commsLoaded) return;
-    const { data } = await supabase
-      .from('appointment_communications')
-      .select('*')
-      .eq('appointment_id', apt.id)
-      .order('created_at', { ascending: true });
-    setComms((data || []) as AppointmentCommunication[]);
-    setCommsLoaded(true);
-  };
-
-  useEffect(() => {
-    if (logOpen && !commsLoaded) loadComms();
-  }, [logOpen]);
 
   const handleCallPatient = async () => {
     setCalling(true);
