@@ -79,6 +79,14 @@ Deno.serve(async (req) => {
     const watiText = await watiRes.text();
     console.log("WATI send response:", watiRes.status, watiText);
 
+    if (!watiRes.ok) {
+      console.error("WATI API error:", watiRes.status, watiText);
+      return new Response(JSON.stringify({ error: `WATI API error ${watiRes.status}: ${watiText}` }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Log outbound message
     await supabase.from("whatsapp_messages").insert({
       phone: cleanPhone,
