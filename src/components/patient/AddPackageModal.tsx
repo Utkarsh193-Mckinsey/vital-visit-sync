@@ -64,6 +64,8 @@ export default function AddPackageModal({
   const [nextPaymentDate, setNextPaymentDate] = useState<string>('');
   const [nextPaymentAmount, setNextPaymentAmount] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mismatchReason, setMismatchReason] = useState('');
+  const [showMismatchWarning, setShowMismatchWarning] = useState(false);
   const { staff } = useAuth();
   const { toast } = useToast();
 
