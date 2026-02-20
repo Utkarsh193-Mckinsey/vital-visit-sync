@@ -110,7 +110,11 @@ export default function BookNextAppointment() {
       });
     }
 
+    // Deduplicate: keep only the latest visit per patient
+    const seenPatients = new Set<string>();
     (data || []).forEach((v: any) => {
+      if (seenPatients.has(v.patient_id)) return; // already have a newer visit for this patient
+      seenPatients.add(v.patient_id);
       const bookedApt = v.next_appointment_status === 'booked' ? bookedAppointmentsMap[v.patient?.phone_number] || null : null;
       visitsWithPackages.push({
         ...v,
