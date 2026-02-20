@@ -55,12 +55,49 @@ export default function StaffReports() {
         .gte('registration_date', fromISO)
         .lte('registration_date', toISO);
 
-      // Get packages in range
+      // Get packages in range — join with appointments to attribute sales to the SDR who booked
       const { data: packages } = await supabase
         .from('packages')
-        .select('created_by, total_amount, amount_paid, staff:staff!packages_created_by_fkey(full_name)')
+        .select('patient_id, total_amount, amount_paid')
         .gte('purchase_date', fromISO)
         .lte('purchase_date', toISO);
+
+      // For each package, find the latest appointment for that patient to get booked_by
+      let packageAttribution: { name: string; total_amount: number; amount_paid: number }[] = [];
+      if (packages?.length) {
+        const patientIds = [...new Set(packages.map((p: any) => p.patient_id))];
+        const { data: appts } = await supabase
+          .from('appointments')
+          .select('patient_name, phone, booked_by, created_at')
+          .order('created_at', { ascending: false });
+
+        // Get patients to match patient_id -> phone
+        const { data: patientRecords } = await supabase
+          .from('patients')
+          .select('id, phone_number')
+          .in('id', patientIds);
+
+        const patientPhoneMap: Record<string, string> = {};
+        (patientRecords || []).forEach((p: any) => { patientPhoneMap[p.id] = p.phone_number; });
+
+        // For each patient, find the first/earliest appointment (original booking SDR)
+        const patientBookedByMap: Record<string, string> = {};
+        (appts || []).forEach((a: any) => {
+          if (a.booked_by && a.phone) {
+            // Find patient by phone
+            const matchedPatient = (patientRecords || []).find((p: any) => p.phone_number === a.phone);
+            if (matchedPatient && !patientBookedByMap[matchedPatient.id]) {
+              patientBookedByMap[matchedPatient.id] = a.booked_by;
+            }
+          }
+        });
+
+        packageAttribution = packages.map((pkg: any) => ({
+          name: patientBookedByMap[pkg.patient_id] || 'Unknown',
+          total_amount: Number(pkg.total_amount || 0),
+          amount_paid: Number(pkg.amount_paid || 0),
+        }));
+      }
 
       // Aggregate by staff name
       const map: Record<string, SdrRow> = {};
@@ -77,12 +114,11 @@ export default function StaffReports() {
         if (p.registered_by) { ensure(p.registered_by); map[p.registered_by].patientsRegistered++; }
       });
 
-      (packages || []).forEach((pkg: any) => {
-        const staffName = pkg.staff?.full_name;
-        if (staffName) {
-          ensure(staffName);
-          map[staffName].totalSales += Number(pkg.total_amount || 0);
-          map[staffName].amountCollected += Number(pkg.amount_paid || 0);
+      packageAttribution.forEach(pkg => {
+        if (pkg.name && pkg.name !== 'Unknown') {
+          ensure(pkg.name);
+          map[pkg.name].totalSales += pkg.total_amount;
+          map[pkg.name].amountCollected += pkg.amount_paid;
         }
       });
 
