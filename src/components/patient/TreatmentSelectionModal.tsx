@@ -55,8 +55,8 @@ export default function TreatmentSelectionModal({
 
       if (error) throw error;
       setPackages(data as unknown as PackageWithTreatment[]);
-      // Pre-select all by default
-      setSelectedPackages(new Set((data || []).map(p => p.id)));
+      // Start with nothing selected
+      setSelectedPackages(new Set());
     } catch (error) {
       console.error('Error fetching packages:', error);
     } finally {
