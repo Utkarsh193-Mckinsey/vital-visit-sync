@@ -26,7 +26,7 @@ import {
 import type { Treatment } from '@/types/database';
 
 const PAYMENT_METHODS = ['Cash', 'Card', 'Tabby', 'Tamara', 'Toothpick'] as const;
-const SESSION_OPTIONS = Array.from({ length: 20 }, (_, i) => i + 1);
+const SESSION_OPTIONS = Array.from({ length: 30 }, (_, i) => i + 1);
 
 interface TreatmentLine {
   treatmentId: string;

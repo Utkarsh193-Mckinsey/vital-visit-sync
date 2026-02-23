@@ -16,7 +16,7 @@ import {
 import type { Treatment } from '@/types/database';
 
 const VAT_RATE = 0.05;
-const SESSION_OPTIONS = Array.from({ length: 20 }, (_, i) => i + 1);
+const SESSION_OPTIONS = Array.from({ length: 30 }, (_, i) => i + 1);
 
 interface TreatmentLine {
   treatmentId: string;
