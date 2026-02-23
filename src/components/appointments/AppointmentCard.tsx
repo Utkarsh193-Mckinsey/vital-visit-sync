@@ -316,7 +316,8 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
         {showArrivedActions && apt.status === 'arrived' && (
           <>
             <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-5 cursor-pointer hover:bg-accent" onClick={handleRegisterNewPatient}>
-              <UserPlus className="h-2.5 w-2.5 mr-0.5" /> Register
+              {checkingPatient ? <Loader2 className="h-2.5 w-2.5 animate-spin mr-0.5" /> : <UserPlus className="h-2.5 w-2.5 mr-0.5" />}
+              Register
             </Badge>
             <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-5 cursor-pointer hover:bg-accent text-green-700 border-green-300" onClick={handleStartNewVisit}>
               {startingVisit ? <Loader2 className="h-2.5 w-2.5 animate-spin mr-0.5" /> : <PlayCircle className="h-2.5 w-2.5 mr-0.5" />}
