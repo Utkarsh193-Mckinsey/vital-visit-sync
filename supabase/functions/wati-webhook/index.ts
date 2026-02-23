@@ -146,27 +146,39 @@ async function sendWatiMessage(phone: string, message: string) {
 function parseAppointmentMessage(msg: string): {
   name: string; phone: string; date: string; time: string; service: string; doctor?: string;
 } | null {
-  // Detect structured appointment messages like:
-  // "Appointment Confirmation\nName : Mr Daniel\nPhone :0566648823\nDate : Wednesday 18th February 2026\nTime :5:00 PM\nService : Face Consultation\nDr Deepika"
+  // Detect structured appointment messages
   const lower = msg.toLowerCase();
   if (!lower.includes("appointment") && !lower.includes("booking")) return null;
 
+  // Clean lines: remove bold markers, bullet points, leading symbols
+  const cleanLine = (l: string) => l.replace(/^\*+|\*+$/g, "").replace(/^[•\-–]\s*/, "").trim();
+  const lines = msg.split("\n").map(cleanLine).filter(Boolean);
+
+  // Generic field extractor supporting aliases and partial matches
+  const extractField = (aliases: string[]): string => {
+    for (const line of lines) {
+      for (const alias of aliases) {
+        const re = new RegExp(`^${alias}[\\s]*[:：]\\s*(.+)`, "i");
+        const m = line.match(re);
+        if (m) return m[1].trim();
+      }
+    }
+    return "";
+  };
+
   // Extract name
-  const nameMatch = msg.match(/name\s*[:：]\s*(.+)/i);
-  if (!nameMatch) return null;
-  const name = nameMatch[1].trim();
+  const name = extractField(["name"]);
+  if (!name) return null;
 
-  // Extract phone
-  const phoneMatch = msg.match(/phone\s*[:：]\s*([\d\s+()-]+)/i);
-  if (!phoneMatch) return null;
-  const phone = phoneMatch[1].trim().replace(/\s+/g, "");
+  // Extract phone — support "Phone", "Number", "Mobile", "Contact"
+  const phone = extractField(["phone", "number", "mobile", "contact"]);
+  if (!phone) return null;
 
-  // Extract date - handle various formats
-  const dateMatch = msg.match(/date\s*[:：]\s*(.+)/i);
-  if (!dateMatch) return null;
-  const dateStr = dateMatch[1].trim();
+  // Extract date
+  const dateStr = extractField(["date"]);
+  if (!dateStr) return null;
 
-  // Parse date: "Wednesday 18th February 2026" or "18/02/2026" or "2026-02-18"
+  // Parse date with year inference
   let parsedDate: string | null = null;
 
   // Try ISO format first
@@ -176,22 +188,39 @@ function parseAppointmentMessage(msg: string): {
   }
 
   // Try DD/MM/YYYY
-  const slashMatch = dateStr.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-  if (!parsedDate && slashMatch) {
-    parsedDate = `${slashMatch[3]}-${slashMatch[2].padStart(2, "0")}-${slashMatch[1].padStart(2, "0")}`;
+  if (!parsedDate) {
+    const slashMatch = dateStr.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+    if (slashMatch) {
+      parsedDate = `${slashMatch[3]}-${slashMatch[2].padStart(2, "0")}-${slashMatch[1].padStart(2, "0")}`;
+    }
   }
 
-  // Try "18th February 2026" or "February 18, 2026" (with optional day name)
+  // Try "18th February 2026" or "Wednesday 18th February 2026"
   if (!parsedDate) {
     const months: Record<string, string> = {
       january: "01", february: "02", march: "03", april: "04",
       may: "05", june: "06", july: "07", august: "08",
       september: "09", october: "10", november: "11", december: "12",
     };
-    // "18th February 2026"
+    // With year: "18th February 2026"
     const dmy = dateStr.match(/(\d{1,2})(?:st|nd|rd|th)?\s+(\w+)\s+(\d{4})/i);
     if (dmy && months[dmy[2].toLowerCase()]) {
       parsedDate = `${dmy[3]}-${months[dmy[2].toLowerCase()]}-${dmy[1].padStart(2, "0")}`;
+    }
+    // Without year: "24th February" or "Tuesday 24th February" — infer current year
+    if (!parsedDate) {
+      const dmNoYear = dateStr.match(/(\d{1,2})(?:st|nd|rd|th)?\s+(\w+)\s*$/i);
+      if (dmNoYear && months[dmNoYear[2].toLowerCase()]) {
+        const now = new Date();
+        const uaeOffset = 4 * 60;
+        const uaeNow = new Date(now.getTime() + (uaeOffset + now.getTimezoneOffset()) * 60000);
+        const year = uaeNow.getFullYear();
+        parsedDate = `${year}-${months[dmNoYear[2].toLowerCase()]}-${dmNoYear[1].padStart(2, "0")}`;
+        // If date is in the past, bump to next year
+        if (parsedDate < uaeNow.toISOString().split("T")[0]) {
+          parsedDate = `${year + 1}-${months[dmNoYear[2].toLowerCase()]}-${dmNoYear[1].padStart(2, "0")}`;
+        }
+      }
     }
     // "February 18, 2026"
     if (!parsedDate) {
@@ -204,31 +233,46 @@ function parseAppointmentMessage(msg: string): {
 
   if (!parsedDate) return null;
 
-  // Extract time
-  const timeMatch = msg.match(/time\s*[:：]\s*(\d{1,2}[:\.]\d{2}\s*(?:AM|PM|am|pm)?)/i);
-  if (!timeMatch) return null;
-  let timeStr = timeMatch[1].trim().replace(".", ":");
+  // Extract time — support "Time", with bullet points already cleaned
+  const timeStr = extractField(["time"]);
+  if (!timeStr) return null;
 
-  // Convert to 24h format
-  const pmMatch = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  // Parse time to 24h
+  let time24: string | null = null;
+  const pmMatch = timeStr.match(/(\d{1,2})[:.](\d{2})\s*(AM|PM)/i);
   if (pmMatch) {
     let h = parseInt(pmMatch[1]);
     const m = pmMatch[2];
     const ampm = pmMatch[3].toUpperCase();
     if (ampm === "PM" && h < 12) h += 12;
     if (ampm === "AM" && h === 12) h = 0;
-    timeStr = `${h.toString().padStart(2, "0")}:${m}`;
+    time24 = `${h.toString().padStart(2, "0")}:${m}`;
+  } else {
+    const simpleTime = timeStr.match(/(\d{1,2})[:.](\d{2})/);
+    if (simpleTime) {
+      time24 = `${simpleTime[1].padStart(2, "0")}:${simpleTime[2]}`;
+    } else {
+      const hourOnly = timeStr.match(/(\d{1,2})\s*(AM|PM)/i);
+      if (hourOnly) {
+        let h = parseInt(hourOnly[1]);
+        const ampm = hourOnly[2].toUpperCase();
+        if (ampm === "PM" && h < 12) h += 12;
+        if (ampm === "AM" && h === 12) h = 0;
+        time24 = `${h.toString().padStart(2, "0")}:00`;
+      }
+    }
   }
 
-  // Extract service
-  const serviceMatch = msg.match(/service\s*[:：]\s*(.+)/i);
-  const service = serviceMatch ? serviceMatch[1].trim() : "Consultation";
+  if (!time24) return null;
 
-  // Extract doctor (look for "Dr" or "Doctor" line)
-  const drMatch = msg.match(/(?:^|\n)\s*(Dr\.?\s+\w+[\w\s]*)/im);
+  // Extract service — support "Service", "Servic", "Treatment"
+  const service = extractField(["servic(?:e)?", "treatment"]) || "Consultation";
+
+  // Extract doctor (look for "Dr" or "Doctor" or "Only Dr" line)
+  const drMatch = msg.match(/(?:^|\n)\s*(?:only\s+)?(Dr\.?\s+\w+[\w\s]*)/im);
   const doctor = drMatch ? drMatch[1].trim() : undefined;
 
-  return { name, phone, date: parsedDate, time: timeStr, service, doctor };
+  return { name, phone: phone.replace(/\s+/g, ""), date: parsedDate, time: time24, service, doctor };
 }
 
 function parseTimeString(timeStr: string): string | null {
