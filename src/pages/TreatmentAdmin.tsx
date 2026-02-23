@@ -394,13 +394,17 @@ export default function TreatmentAdmin() {
         const treatmentDoctorId = (treatment.doctorId && treatment.doctorId !== '__default__') ? treatment.doctorId : doctorId;
         const treatmentNurseId = (treatment.nurseId && treatment.nurseId !== '__default__' && treatment.nurseId !== '__none__') ? treatment.nurseId : nurseId;
         
+        // Find the first package with remaining sessions (FIFO)
+        const targetPkg = treatment.packages.find(p => p.sessionsRemaining > 0);
+        if (!targetPkg) continue;
+
         // Insert visit treatment
         const { error: treatmentError } = await supabase
           .from('visit_treatments')
           .insert({
             visit_id: visitId,
             treatment_id: treatment.treatmentId,
-            package_id: treatment.packageId,
+            package_id: targetPkg.packageId,
             dose_administered: treatment.doseAdministered,
             dose_unit: treatment.doseUnit,
             administration_details: [treatment.customBrand, treatment.administrationDetails].filter(Boolean).join(' - ') || null,
@@ -412,15 +416,15 @@ export default function TreatmentAdmin() {
 
         if (treatmentError) throw treatmentError;
 
-        // Deduct session from package
-        const newRemaining = treatment.sessionsRemaining - 1;
+        // Deduct session from the target package
+        const newRemaining = targetPkg.sessionsRemaining - 1;
         const { error: pkgError } = await supabase
           .from('packages')
           .update({
             sessions_remaining: newRemaining,
             status: newRemaining <= 0 ? 'depleted' : 'active',
           })
-          .eq('id', treatment.packageId);
+          .eq('id', targetPkg.packageId);
 
         if (pkgError) throw pkgError;
       }
