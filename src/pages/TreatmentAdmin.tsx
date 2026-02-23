@@ -167,28 +167,48 @@ export default function TreatmentAdmin() {
 
       if (packagesError) throw packagesError;
 
-      // Initialize treatment entries from ALL packages with default doses pre-filled
-      const entries: TreatmentEntry[] = (packagesData as unknown as PackageWithTreatment[]).map((pkg) => ({
-        packageId: pkg.id,
-        treatmentId: pkg.treatment_id,
-        treatmentName: pkg.treatment?.treatment_name || 'Unknown Treatment',
-        doseAdministered: (pkg.treatment as any)?.default_dose || '',
-        doseUnit: pkg.treatment?.dosage_unit || 'Session',
-        administrationDetails: '',
-        sessionsRemaining: pkg.sessions_remaining,
-        sessionsPurchased: pkg.sessions_purchased,
-        commonDoses: (pkg.treatment?.common_doses as string[]) || [],
-        hasConsentSigned: signedTreatmentIds.has(pkg.treatment_id),
-        isCustomDose: false,
-        customDoseValue: '',
-        customDoseUnit: pkg.treatment?.dosage_unit || 'Session',
-        customBrand: '',
-        saveAsDefault: false,
-        doctorId: '',
-        nurseId: '',
-      }));
-      
-      setTreatments(entries);
+      // Initialize treatment entries from ALL packages, merging same treatmentId
+      const pkgList = packagesData as unknown as PackageWithTreatment[];
+      const mergedMap = new Map<string, TreatmentEntry>();
+
+      for (const pkg of pkgList) {
+        const existing = mergedMap.get(pkg.treatment_id);
+        const pkgRef: PackageRef = {
+          packageId: pkg.id,
+          sessionsRemaining: pkg.sessions_remaining,
+          sessionsPurchased: pkg.sessions_purchased,
+        };
+
+        if (existing) {
+          // Merge into existing entry
+          existing.packages.push(pkgRef);
+          existing.sessionsRemaining += pkg.sessions_remaining;
+          existing.sessionsPurchased += pkg.sessions_purchased;
+        } else {
+          mergedMap.set(pkg.treatment_id, {
+            packageId: pkg.id,
+            packages: [pkgRef],
+            treatmentId: pkg.treatment_id,
+            treatmentName: pkg.treatment?.treatment_name || 'Unknown Treatment',
+            doseAdministered: (pkg.treatment as any)?.default_dose || '',
+            doseUnit: pkg.treatment?.dosage_unit || 'Session',
+            administrationDetails: '',
+            sessionsRemaining: pkg.sessions_remaining,
+            sessionsPurchased: pkg.sessions_purchased,
+            commonDoses: (pkg.treatment?.common_doses as string[]) || [],
+            hasConsentSigned: signedTreatmentIds.has(pkg.treatment_id),
+            isCustomDose: false,
+            customDoseValue: '',
+            customDoseUnit: pkg.treatment?.dosage_unit || 'Session',
+            customBrand: '',
+            saveAsDefault: false,
+            doctorId: '',
+            nurseId: '',
+          });
+        }
+      }
+
+      setTreatments(Array.from(mergedMap.values()));
     } catch (error) {
       console.error('Error fetching visit:', error);
       toast({
