@@ -49,15 +49,22 @@ interface PackageWithTreatment {
   treatment: Treatment;
 }
 
-interface TreatmentEntry {
+interface PackageRef {
   packageId: string;
+  sessionsRemaining: number;
+  sessionsPurchased: number;
+}
+
+interface TreatmentEntry {
+  packageId: string; // primary package id (first/oldest)
+  packages: PackageRef[]; // all underlying packages for this treatment
   treatmentId: string;
   treatmentName: string;
   doseAdministered: string;
   doseUnit: string;
   administrationDetails: string;
-  sessionsRemaining: number;
-  sessionsPurchased: number;
+  sessionsRemaining: number; // total across all packages
+  sessionsPurchased: number; // total across all packages
   commonDoses: string[];
   hasConsentSigned: boolean;
   isCustomDose: boolean;
@@ -160,28 +167,48 @@ export default function TreatmentAdmin() {
 
       if (packagesError) throw packagesError;
 
-      // Initialize treatment entries from ALL packages with default doses pre-filled
-      const entries: TreatmentEntry[] = (packagesData as unknown as PackageWithTreatment[]).map((pkg) => ({
-        packageId: pkg.id,
-        treatmentId: pkg.treatment_id,
-        treatmentName: pkg.treatment?.treatment_name || 'Unknown Treatment',
-        doseAdministered: (pkg.treatment as any)?.default_dose || '',
-        doseUnit: pkg.treatment?.dosage_unit || 'Session',
-        administrationDetails: '',
-        sessionsRemaining: pkg.sessions_remaining,
-        sessionsPurchased: pkg.sessions_purchased,
-        commonDoses: (pkg.treatment?.common_doses as string[]) || [],
-        hasConsentSigned: signedTreatmentIds.has(pkg.treatment_id),
-        isCustomDose: false,
-        customDoseValue: '',
-        customDoseUnit: pkg.treatment?.dosage_unit || 'Session',
-        customBrand: '',
-        saveAsDefault: false,
-        doctorId: '',
-        nurseId: '',
-      }));
-      
-      setTreatments(entries);
+      // Initialize treatment entries from ALL packages, merging same treatmentId
+      const pkgList = packagesData as unknown as PackageWithTreatment[];
+      const mergedMap = new Map<string, TreatmentEntry>();
+
+      for (const pkg of pkgList) {
+        const existing = mergedMap.get(pkg.treatment_id);
+        const pkgRef: PackageRef = {
+          packageId: pkg.id,
+          sessionsRemaining: pkg.sessions_remaining,
+          sessionsPurchased: pkg.sessions_purchased,
+        };
+
+        if (existing) {
+          // Merge into existing entry
+          existing.packages.push(pkgRef);
+          existing.sessionsRemaining += pkg.sessions_remaining;
+          existing.sessionsPurchased += pkg.sessions_purchased;
+        } else {
+          mergedMap.set(pkg.treatment_id, {
+            packageId: pkg.id,
+            packages: [pkgRef],
+            treatmentId: pkg.treatment_id,
+            treatmentName: pkg.treatment?.treatment_name || 'Unknown Treatment',
+            doseAdministered: (pkg.treatment as any)?.default_dose || '',
+            doseUnit: pkg.treatment?.dosage_unit || 'Session',
+            administrationDetails: '',
+            sessionsRemaining: pkg.sessions_remaining,
+            sessionsPurchased: pkg.sessions_purchased,
+            commonDoses: (pkg.treatment?.common_doses as string[]) || [],
+            hasConsentSigned: signedTreatmentIds.has(pkg.treatment_id),
+            isCustomDose: false,
+            customDoseValue: '',
+            customDoseUnit: pkg.treatment?.dosage_unit || 'Session',
+            customBrand: '',
+            saveAsDefault: false,
+            doctorId: '',
+            nurseId: '',
+          });
+        }
+      }
+
+      setTreatments(Array.from(mergedMap.values()));
     } catch (error) {
       console.error('Error fetching visit:', error);
       toast({
@@ -367,13 +394,17 @@ export default function TreatmentAdmin() {
         const treatmentDoctorId = (treatment.doctorId && treatment.doctorId !== '__default__') ? treatment.doctorId : doctorId;
         const treatmentNurseId = (treatment.nurseId && treatment.nurseId !== '__default__' && treatment.nurseId !== '__none__') ? treatment.nurseId : nurseId;
         
+        // Find the first package with remaining sessions (FIFO)
+        const targetPkg = treatment.packages.find(p => p.sessionsRemaining > 0);
+        if (!targetPkg) continue;
+
         // Insert visit treatment
         const { error: treatmentError } = await supabase
           .from('visit_treatments')
           .insert({
             visit_id: visitId,
             treatment_id: treatment.treatmentId,
-            package_id: treatment.packageId,
+            package_id: targetPkg.packageId,
             dose_administered: treatment.doseAdministered,
             dose_unit: treatment.doseUnit,
             administration_details: [treatment.customBrand, treatment.administrationDetails].filter(Boolean).join(' - ') || null,
@@ -385,15 +416,15 @@ export default function TreatmentAdmin() {
 
         if (treatmentError) throw treatmentError;
 
-        // Deduct session from package
-        const newRemaining = treatment.sessionsRemaining - 1;
+        // Deduct session from the target package
+        const newRemaining = targetPkg.sessionsRemaining - 1;
         const { error: pkgError } = await supabase
           .from('packages')
           .update({
             sessions_remaining: newRemaining,
             status: newRemaining <= 0 ? 'depleted' : 'active',
           })
-          .eq('id', treatment.packageId);
+          .eq('id', targetPkg.packageId);
 
         if (pkgError) throw pkgError;
       }
