@@ -49,15 +49,22 @@ interface PackageWithTreatment {
   treatment: Treatment;
 }
 
-interface TreatmentEntry {
+interface PackageRef {
   packageId: string;
+  sessionsRemaining: number;
+  sessionsPurchased: number;
+}
+
+interface TreatmentEntry {
+  packageId: string; // primary package id (first/oldest)
+  packages: PackageRef[]; // all underlying packages for this treatment
   treatmentId: string;
   treatmentName: string;
   doseAdministered: string;
   doseUnit: string;
   administrationDetails: string;
-  sessionsRemaining: number;
-  sessionsPurchased: number;
+  sessionsRemaining: number; // total across all packages
+  sessionsPurchased: number; // total across all packages
   commonDoses: string[];
   hasConsentSigned: boolean;
   isCustomDose: boolean;
