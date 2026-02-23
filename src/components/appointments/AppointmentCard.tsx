@@ -108,7 +108,7 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
     }
   };
 
-  const handleRegisterNewPatient = () => {
+  const navigateToRegister = () => {
     const params = new URLSearchParams({
       name: apt.patient_name,
       phone: apt.phone,
@@ -117,6 +117,28 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
       appointment_id: apt.id,
     });
     navigate(`/patient/register?${params.toString()}`);
+  };
+
+  const handleRegisterNewPatient = async () => {
+    setCheckingPatient(true);
+    try {
+      const { data: patients } = await supabase
+        .from('patients')
+        .select('id')
+        .eq('phone_number', apt.phone)
+        .limit(1);
+
+      if (patients && patients.length > 0) {
+        setExistingPatientId(patients[0].id);
+        setShowAlreadyRegistered(true);
+      } else {
+        navigateToRegister();
+      }
+    } catch {
+      navigateToRegister();
+    } finally {
+      setCheckingPatient(false);
+    }
   };
 
   const handleNoShow = async () => {
