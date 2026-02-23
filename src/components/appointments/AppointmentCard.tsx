@@ -70,6 +70,9 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
   const [rescheduleReason, setRescheduleReason] = useState('');
   const [rescheduling, setRescheduling] = useState(false);
   const [startingVisit, setStartingVisit] = useState(false);
+  const [checkingPatient, setCheckingPatient] = useState(false);
+  const [showAlreadyRegistered, setShowAlreadyRegistered] = useState(false);
+  const [existingPatientId, setExistingPatientId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const handleStartNewVisit = async () => {
@@ -105,7 +108,7 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
     }
   };
 
-  const handleRegisterNewPatient = () => {
+  const navigateToRegister = () => {
     const params = new URLSearchParams({
       name: apt.patient_name,
       phone: apt.phone,
@@ -114,6 +117,28 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
       appointment_id: apt.id,
     });
     navigate(`/patient/register?${params.toString()}`);
+  };
+
+  const handleRegisterNewPatient = async () => {
+    setCheckingPatient(true);
+    try {
+      const { data: patients } = await supabase
+        .from('patients')
+        .select('id')
+        .eq('phone_number', apt.phone)
+        .limit(1);
+
+      if (patients && patients.length > 0) {
+        setExistingPatientId(patients[0].id);
+        setShowAlreadyRegistered(true);
+      } else {
+        navigateToRegister();
+      }
+    } catch {
+      navigateToRegister();
+    } finally {
+      setCheckingPatient(false);
+    }
   };
 
   const handleNoShow = async () => {
@@ -291,7 +316,8 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
         {showArrivedActions && apt.status === 'arrived' && (
           <>
             <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-5 cursor-pointer hover:bg-accent" onClick={handleRegisterNewPatient}>
-              <UserPlus className="h-2.5 w-2.5 mr-0.5" /> Register
+              {checkingPatient ? <Loader2 className="h-2.5 w-2.5 animate-spin mr-0.5" /> : <UserPlus className="h-2.5 w-2.5 mr-0.5" />}
+              Register
             </Badge>
             <Badge variant="outline" className="text-[9px] py-0 px-1.5 h-5 cursor-pointer hover:bg-accent text-green-700 border-green-300" onClick={handleStartNewVisit}>
               {startingVisit ? <Loader2 className="h-2.5 w-2.5 animate-spin mr-0.5" /> : <PlayCircle className="h-2.5 w-2.5 mr-0.5" />}
@@ -339,6 +365,31 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
               {rescheduling ? 'Saving...' : 'Confirm Reschedule'}
             </Button>
           </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+    {/* Already Registered Dialog */}
+    <Dialog open={showAlreadyRegistered} onOpenChange={setShowAlreadyRegistered}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Patient Already Registered</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          <strong>{apt.patient_name}</strong> ({apt.phone}) is already registered in the system. Would you like to register again or view the existing profile?
+        </p>
+        <div className="flex gap-3 mt-4">
+          <Button variant="outline" className="w-full" onClick={() => {
+            setShowAlreadyRegistered(false);
+            if (existingPatientId) navigate(`/patient/${existingPatientId}/review`);
+          }}>
+            View Profile
+          </Button>
+          <Button className="w-full" onClick={() => {
+            setShowAlreadyRegistered(false);
+            navigateToRegister();
+          }}>
+            Register Again
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
