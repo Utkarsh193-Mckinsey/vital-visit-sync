@@ -368,6 +368,31 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
         </div>
       </DialogContent>
     </Dialog>
+    {/* Already Registered Dialog */}
+    <Dialog open={showAlreadyRegistered} onOpenChange={setShowAlreadyRegistered}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Patient Already Registered</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          <strong>{apt.patient_name}</strong> ({apt.phone}) is already registered in the system. Would you like to register again or view the existing profile?
+        </p>
+        <div className="flex gap-3 mt-4">
+          <Button variant="outline" className="w-full" onClick={() => {
+            setShowAlreadyRegistered(false);
+            if (existingPatientId) navigate(`/patient/${existingPatientId}/review`);
+          }}>
+            View Profile
+          </Button>
+          <Button className="w-full" onClick={() => {
+            setShowAlreadyRegistered(false);
+            navigateToRegister();
+          }}>
+            Register Again
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }
