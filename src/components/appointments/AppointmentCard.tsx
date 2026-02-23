@@ -70,6 +70,9 @@ export function AppointmentCard({ appointment: apt, onUpdateStatus, onUpdateConf
   const [rescheduleReason, setRescheduleReason] = useState('');
   const [rescheduling, setRescheduling] = useState(false);
   const [startingVisit, setStartingVisit] = useState(false);
+  const [checkingPatient, setCheckingPatient] = useState(false);
+  const [showAlreadyRegistered, setShowAlreadyRegistered] = useState(false);
+  const [existingPatientId, setExistingPatientId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const handleStartNewVisit = async () => {
