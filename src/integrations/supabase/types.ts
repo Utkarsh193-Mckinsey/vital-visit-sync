@@ -447,9 +447,11 @@ export type Database = {
       patients: {
         Row: {
           address: string | null
+          caution_notes: string | null
           consultation_date: string | null
           consultation_done_by: string | null
           consultation_status: string | null
+          contraindicated_treatments: string[] | null
           country_of_residence: string | null
           date_of_birth: string
           doctor_reviewed: boolean | null
@@ -478,6 +480,7 @@ export type Database = {
           medical_other: boolean | null
           medical_other_details: string | null
           nationality: string | null
+          package_notes: string | null
           phone_number: string
           registered_by: string | null
           registration_date: string
@@ -487,9 +490,11 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          caution_notes?: string | null
           consultation_date?: string | null
           consultation_done_by?: string | null
           consultation_status?: string | null
+          contraindicated_treatments?: string[] | null
           country_of_residence?: string | null
           date_of_birth: string
           doctor_reviewed?: boolean | null
@@ -518,6 +523,7 @@ export type Database = {
           medical_other?: boolean | null
           medical_other_details?: string | null
           nationality?: string | null
+          package_notes?: string | null
           phone_number: string
           registered_by?: string | null
           registration_date?: string
@@ -527,9 +533,11 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          caution_notes?: string | null
           consultation_date?: string | null
           consultation_done_by?: string | null
           consultation_status?: string | null
+          contraindicated_treatments?: string[] | null
           country_of_residence?: string | null
           date_of_birth?: string
           doctor_reviewed?: boolean | null
@@ -558,6 +566,7 @@ export type Database = {
           medical_other?: boolean | null
           medical_other_details?: string | null
           nationality?: string | null
+          package_notes?: string | null
           phone_number?: string
           registered_by?: string | null
           registration_date?: string
