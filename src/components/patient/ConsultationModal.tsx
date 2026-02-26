@@ -188,7 +188,6 @@ export function ConsultationModal({ open, onOpenChange, patient, onComplete }: C
             selectedIds={contraindicatedTreatmentIds}
             onToggle={toggleContraindicated}
           />
-          </div>
         </div>
 
         <DialogFooter>
