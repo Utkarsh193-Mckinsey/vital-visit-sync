@@ -708,7 +708,7 @@ export default function AddPackageModal({
           )}
 
           {/* Actions */}
-          {!showMismatchWarning && !showContraindicationWarning && (
+          {!showMismatchWarning && !showContraindicationWarning && !showPatientInitiatedConfirm && (
             <div className="flex gap-3 pt-2">
               <TabletButton type="button" variant="outline" fullWidth onClick={() => onOpenChange(false)}>Cancel</TabletButton>
               <TabletButton type="submit" fullWidth isLoading={isSubmitting}>Add Package</TabletButton>
