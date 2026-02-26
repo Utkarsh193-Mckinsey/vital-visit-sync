@@ -78,12 +78,13 @@ export default function PatientDashboard() {
         setContraindicatedTreatmentNames([]);
       }
 
-      // Fetch packages with treatments
+      // Fetch packages with treatments + consulting doctor
       const { data: packagesData, error: packagesError } = await supabase
         .from('packages')
         .select(`
           *,
-          treatment:treatments (*)
+          treatment:treatments (*),
+          consulting_doctor:staff!packages_consulting_doctor_id_fkey (full_name)
         `)
         .eq('patient_id', patientId)
         .eq('status', 'active')
@@ -91,6 +92,19 @@ export default function PatientDashboard() {
 
       if (packagesError) throw packagesError;
       setPackages(packagesData as unknown as PackageWithTreatment[]);
+
+      // Fetch ALL packages for history
+      const { data: allPkgData } = await supabase
+        .from('packages')
+        .select(`
+          *,
+          treatment:treatments (*),
+          consulting_doctor:staff!packages_consulting_doctor_id_fkey (full_name)
+        `)
+        .eq('patient_id', patientId)
+        .order('purchase_date', { ascending: false });
+
+      setAllPackages((allPkgData || []) as unknown as PackageWithTreatment[]);
 
       // Fetch active visits (not completed)
       const { data: visitsData, error: visitsError } = await supabase
