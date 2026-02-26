@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletInput } from '@/components/ui/tablet-input';
 import { useToast } from '@/hooks/use-toast';
-import { Package as PackageIcon, Plus, Trash2, Gift, AlertTriangle, Sparkles } from 'lucide-react';
+import { Package as PackageIcon, Plus, Trash2, Gift, AlertTriangle, Sparkles, ShieldAlert } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import type { Treatment } from '@/types/database';
@@ -62,6 +62,7 @@ interface AddPackageModalProps {
   onOpenChange: (open: boolean) => void;
   patientId: string;
   onSuccess: () => void;
+  contraindicatedTreatmentIds?: string[];
 }
 
 export default function AddPackageModal({
@@ -69,6 +70,7 @@ export default function AddPackageModal({
   onOpenChange,
   patientId,
   onSuccess,
+  contraindicatedTreatmentIds = [],
 }: AddPackageModalProps) {
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [clinicPackages, setClinicPackages] = useState<ClinicPackageTemplate[]>([]);
@@ -89,6 +91,8 @@ export default function AddPackageModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mismatchReason, setMismatchReason] = useState('');
   const [showMismatchWarning, setShowMismatchWarning] = useState(false);
+  const [contraindicationOverrides, setContraindicationOverrides] = useState<Record<string, string>>({});
+  const [showContraindicationWarning, setShowContraindicationWarning] = useState(false);
   const { staff } = useAuth();
   const { toast } = useToast();
 
@@ -117,6 +121,8 @@ export default function AddPackageModal({
     setNextPaymentAmount(0);
     setMismatchReason('');
     setShowMismatchWarning(false);
+    setContraindicationOverrides({});
+    setShowContraindicationWarning(false);
   };
 
   const fetchData = async () => {
@@ -184,6 +190,7 @@ export default function AddPackageModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const validLines = treatmentLines.filter((l) => l.treatmentId && l.sessions > 0);
+    const allLines = [...validLines, ...compLines.filter((l) => l.treatmentId && l.sessions > 0)];
     if (validLines.length === 0) {
       toast({ title: 'Add Treatments', description: 'Please add at least one treatment with sessions.', variant: 'destructive' });
       return;
@@ -191,6 +198,16 @@ export default function AddPackageModal({
     if (totalAmount <= 0) {
       toast({ title: 'Invalid Amount', description: 'Please enter the package price.', variant: 'destructive' });
       return;
+    }
+
+    // Check for contraindicated treatments
+    const contraindicatedInPackage = allLines.filter(l => contraindicatedTreatmentIds.includes(l.treatmentId));
+    if (contraindicatedInPackage.length > 0) {
+      const missingOverrides = contraindicatedInPackage.filter(l => !contraindicationOverrides[l.treatmentId]?.trim());
+      if (missingOverrides.length > 0) {
+        setShowContraindicationWarning(true);
+        return;
+      }
     }
 
     const shortfall = totalAmount - totalPaid;
@@ -510,6 +527,55 @@ export default function AddPackageModal({
             </div>
           )}
 
+          {/* Contraindication Warning */}
+          {showContraindicationWarning && (
+            <div className="space-y-3 border-2 border-destructive rounded-lg p-4 bg-destructive/10">
+              <div className="flex items-start gap-2 text-destructive">
+                <ShieldAlert className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold text-sm">⚠ Contraindicated Treatment Warning</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    The following treatments are advised against by the doctor. Provide a reason for each to proceed.
+                  </p>
+                </div>
+              </div>
+              {[...treatmentLines, ...compLines]
+                .filter(l => l.treatmentId && contraindicatedTreatmentIds.includes(l.treatmentId))
+                .map((l) => (
+                  <div key={l.treatmentId} className="space-y-1">
+                    <p className="text-sm font-medium text-destructive">
+                      🚫 {getTreatmentName(l.treatmentId)}
+                    </p>
+                    <Textarea
+                      placeholder="Reason for including this treatment despite contraindication…"
+                      value={contraindicationOverrides[l.treatmentId] || ''}
+                      onChange={(e) => setContraindicationOverrides(prev => ({ ...prev, [l.treatmentId]: e.target.value }))}
+                      rows={2}
+                      className="text-sm border-destructive/30"
+                    />
+                  </div>
+                ))}
+              <div className="flex gap-2">
+                <TabletButton type="button" variant="outline" size="sm" fullWidth onClick={() => setShowContraindicationWarning(false)}>
+                  Go Back &amp; Remove
+                </TabletButton>
+                <TabletButton
+                  type="submit"
+                  variant="destructive"
+                  size="sm"
+                  fullWidth
+                  disabled={
+                    [...treatmentLines, ...compLines]
+                      .filter(l => l.treatmentId && contraindicatedTreatmentIds.includes(l.treatmentId))
+                      .some(l => !contraindicationOverrides[l.treatmentId]?.trim())
+                  }
+                >
+                  Override &amp; Continue
+                </TabletButton>
+              </div>
+            </div>
+          )}
+
           {/* Payment Mismatch Warning */}
           {showMismatchWarning && (
             <div className="space-y-3 border border-destructive/40 rounded-lg p-4 bg-destructive/5">
@@ -550,7 +616,7 @@ export default function AddPackageModal({
           )}
 
           {/* Actions */}
-          {!showMismatchWarning && (
+          {!showMismatchWarning && !showContraindicationWarning && (
             <div className="flex gap-3 pt-2">
               <TabletButton type="button" variant="outline" fullWidth onClick={() => onOpenChange(false)}>Cancel</TabletButton>
               <TabletButton type="submit" fullWidth isLoading={isSubmitting}>Add Package</TabletButton>

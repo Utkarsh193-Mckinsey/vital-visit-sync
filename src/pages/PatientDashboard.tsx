@@ -25,6 +25,7 @@ import AddPackageModal from '@/components/patient/AddPackageModal';
 import TreatmentSelectionModal from '@/components/patient/TreatmentSelectionModal';
 import PatientProgress from '@/components/patient/PatientProgress';
 import { WhatsAppLink } from '@/components/ui/whatsapp-link';
+import { CautionBanner } from '@/components/patient/CautionBanner';
 
 interface PackageWithTreatment extends Package {
   treatment: Treatment;
@@ -42,6 +43,7 @@ export default function PatientDashboard() {
   const [activeVisits, setActiveVisits] = useState<VisitWithDetails[]>([]);
   const [nextVisitNumber, setNextVisitNumber] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [contraindicatedTreatmentNames, setContraindicatedTreatmentNames] = useState<string[]>([]);
   const [showAddPackage, setShowAddPackage] = useState(false);
   const [showTreatmentSelection, setShowTreatmentSelection] = useState(false);
   const navigate = useNavigate();
@@ -61,6 +63,18 @@ export default function PatientDashboard() {
 
       if (patientError) throw patientError;
       setPatient(patientData as Patient);
+
+      // Resolve contraindicated treatment names
+      const cIds = (patientData as any)?.contraindicated_treatments as string[] | null;
+      if (cIds && cIds.length > 0) {
+        const { data: cTreatments } = await supabase
+          .from('treatments')
+          .select('treatment_name')
+          .in('id', cIds);
+        setContraindicatedTreatmentNames(cTreatments?.map(t => t.treatment_name) || []);
+      } else {
+        setContraindicatedTreatmentNames([]);
+      }
 
       // Fetch packages with treatments
       const { data: packagesData, error: packagesError } = await supabase
@@ -256,6 +270,12 @@ export default function PatientDashboard() {
             <ArrowLeft className="h-5 w-5" />
           </TabletButton>
         }
+      />
+
+      {/* Caution Banner */}
+      <CautionBanner
+        cautionNotes={(patient as any)?.caution_notes}
+        contraindicatedTreatmentNames={contraindicatedTreatmentNames}
       />
 
       {/* Patient Info Card */}
@@ -502,6 +522,7 @@ export default function PatientDashboard() {
         onOpenChange={setShowAddPackage}
         patientId={patientId!}
         onSuccess={handlePackageAdded}
+        contraindicatedTreatmentIds={(patient as any)?.contraindicated_treatments || []}
       />
 
       {/* Treatment Selection Modal */}
