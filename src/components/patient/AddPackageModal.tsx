@@ -260,7 +260,10 @@ export default function AddPackageModal({
             amount_paid: totalPaid,
             next_payment_date: paymentStatus === 'pending' && nextPaymentDate ? nextPaymentDate : null,
             next_payment_amount: paymentStatus === 'pending' && nextPaymentAmount > 0 ? nextPaymentAmount : null,
-          })
+            consulting_doctor_id: consultingDoctorId || null,
+            package_notes: packageNotes.trim() || null,
+            is_patient_initiated: isPatientInitiated,
+          } as any)
           .select('id')
           .single();
         if (error) throw error;
