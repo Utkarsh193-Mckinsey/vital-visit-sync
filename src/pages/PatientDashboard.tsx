@@ -522,6 +522,7 @@ export default function PatientDashboard() {
         onOpenChange={setShowAddPackage}
         patientId={patientId!}
         onSuccess={handlePackageAdded}
+        contraindicatedTreatmentIds={(patient as any)?.contraindicated_treatments || []}
       />
 
       {/* Treatment Selection Modal */}
