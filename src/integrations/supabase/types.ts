@@ -374,11 +374,14 @@ export type Database = {
       packages: {
         Row: {
           amount_paid: number
+          consulting_doctor_id: string | null
           created_by: string | null
           expiry_date: string | null
           id: string
+          is_patient_initiated: boolean
           next_payment_amount: number | null
           next_payment_date: string | null
+          package_notes: string | null
           patient_id: string
           payment_status: Database["public"]["Enums"]["payment_status"]
           purchase_date: string
@@ -390,11 +393,14 @@ export type Database = {
         }
         Insert: {
           amount_paid?: number
+          consulting_doctor_id?: string | null
           created_by?: string | null
           expiry_date?: string | null
           id?: string
+          is_patient_initiated?: boolean
           next_payment_amount?: number | null
           next_payment_date?: string | null
+          package_notes?: string | null
           patient_id: string
           payment_status?: Database["public"]["Enums"]["payment_status"]
           purchase_date?: string
@@ -406,11 +412,14 @@ export type Database = {
         }
         Update: {
           amount_paid?: number
+          consulting_doctor_id?: string | null
           created_by?: string | null
           expiry_date?: string | null
           id?: string
+          is_patient_initiated?: boolean
           next_payment_amount?: number | null
           next_payment_date?: string | null
+          package_notes?: string | null
           patient_id?: string
           payment_status?: Database["public"]["Enums"]["payment_status"]
           purchase_date?: string
@@ -421,6 +430,13 @@ export type Database = {
           treatment_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "packages_consulting_doctor_id_fkey"
+            columns: ["consulting_doctor_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "packages_created_by_fkey"
             columns: ["created_by"]
