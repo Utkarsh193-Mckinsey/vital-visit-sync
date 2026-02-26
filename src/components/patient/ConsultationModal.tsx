@@ -183,30 +183,11 @@ export function ConsultationModal({ open, onOpenChange, patient, onComplete }: C
           </div>
 
           {/* Contraindicated Treatments */}
-          <div className="space-y-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-            <Label className="text-sm font-medium flex items-center gap-2 text-destructive">
-              <ShieldAlert className="h-4 w-4" /> Contraindicated Treatments
-            </Label>
-            <p className="text-xs text-muted-foreground">Treatments this patient must NOT receive. Staff will be warned if they try to add these.</p>
-            <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
-              {treatments.map(t => (
-                <label
-                  key={t.id}
-                  className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
-                    contraindicatedTreatmentIds.includes(t.id)
-                      ? 'bg-destructive/10 border-destructive/40 text-destructive'
-                      : 'hover:bg-accent'
-                  }`}
-                >
-                  <Checkbox
-                    checked={contraindicatedTreatmentIds.includes(t.id)}
-                    onCheckedChange={() => toggleContraindicated(t.id)}
-                  />
-                  <span className="font-medium">{t.treatment_name}</span>
-                  <span className="text-xs text-muted-foreground ml-auto">{t.category}</span>
-                </label>
-              ))}
-            </div>
+          <ContraindicatedSelector
+            treatments={treatments}
+            selectedIds={contraindicatedTreatmentIds}
+            onToggle={toggleContraindicated}
+          />
           </div>
         </div>
 
