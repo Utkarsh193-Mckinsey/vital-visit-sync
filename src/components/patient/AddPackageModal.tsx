@@ -63,6 +63,7 @@ interface AddPackageModalProps {
   patientId: string;
   onSuccess: () => void;
   contraindicatedTreatmentIds?: string[];
+  hasExistingPackages?: boolean;
 }
 
 export default function AddPackageModal({
