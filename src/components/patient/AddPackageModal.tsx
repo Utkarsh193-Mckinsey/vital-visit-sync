@@ -412,7 +412,7 @@ export default function AddPackageModal({
                 <Stethoscope className="h-4 w-4" />
                 Consulted By (Doctor) {hasExistingPackages ? '' : '*'}
               </label>
-              <Select value={consultingDoctorId} onValueChange={setConsultingDoctorId}>
+              <Select value={consultingDoctorId} onValueChange={(v) => setConsultingDoctorId(v === '__none__' ? '' : v)}>
                 <SelectTrigger className="h-12 text-base">
                   <SelectValue placeholder="Select consulting doctor (optional for renewal)" />
                 </SelectTrigger>
