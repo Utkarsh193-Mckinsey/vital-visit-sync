@@ -40,6 +40,129 @@ interface VisitWithDetails extends Visit {
   doctor_staff?: { full_name: string } | null;
 }
 
+// Group packages by purchase event (same purchase_date rounded to 2s = same bundle)
+function groupPackagesByPurchase(packages: PackageWithTreatment[]) {
+  const groupMap: Record<string, PackageWithTreatment[]> = {};
+  for (const pkg of packages) {
+    const ts = new Date(pkg.purchase_date).getTime();
+    const roundedKey = String(Math.round(ts / 2000));
+    if (!groupMap[roundedKey]) groupMap[roundedKey] = [];
+    groupMap[roundedKey].push(pkg);
+  }
+  return Object.keys(groupMap)
+    .sort((a, b) => Number(b) - Number(a))
+    .map((key, _i, arr) => ({
+      key,
+      date: groupMap[key][0].purchase_date,
+      packages: groupMap[key],
+      index: arr.length - arr.indexOf(key),
+    }));
+}
+
+function PackageHistorySection({ allPackages, formatDate }: { allPackages: PackageWithTreatment[]; formatDate: (d: string) => string }) {
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const groups = groupPackagesByPurchase(allPackages);
+
+  return (
+    <TabletCard className="mt-6">
+      <TabletCardHeader>
+        <div className="flex items-center gap-2">
+          <History className="h-5 w-5" />
+          <TabletCardTitle>Package History</TabletCardTitle>
+        </div>
+      </TabletCardHeader>
+      <TabletCardContent>
+        <div className="space-y-2">
+          {groups.map((group, idx) => {
+            const isExpanded = expandedGroup === group.key;
+            const totalAmount = group.packages.reduce((sum, p) => sum + (p.total_amount || 0), 0);
+            const totalPaid = group.packages.reduce((sum, p) => sum + p.amount_paid, 0);
+            const totalSessions = group.packages.reduce((sum, p) => sum + p.sessions_purchased, 0);
+            const totalRemaining = group.packages.reduce((sum, p) => sum + p.sessions_remaining, 0);
+            const hasActive = group.packages.some(p => p.status === 'active' && p.sessions_remaining > 0);
+            const doctor = group.packages.find(p => p.consulting_doctor)?.consulting_doctor;
+            const notes = group.packages.find(p => p.package_notes)?.package_notes;
+            const isPatientInitiated = group.packages.some(p => p.is_patient_initiated);
+
+            return (
+              <div key={group.key} className="rounded-xl border bg-card overflow-hidden">
+                <button
+                  onClick={() => setExpandedGroup(isExpanded ? null : group.key)}
+                  className="w-full flex items-center justify-between p-4 text-left hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                    <div>
+                      <h4 className="font-semibold">Package {groups.length - idx}</h4>
+                      <p className="text-xs text-muted-foreground">{formatDate(group.date)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium">{group.packages.length} treatment{group.packages.length !== 1 ? 's' : ''}</span>
+                    {totalAmount > 0 && <span className="text-sm font-semibold text-primary">AED {totalAmount.toFixed(0)}</span>}
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${hasActive ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
+                      {hasActive ? 'Active' : 'Depleted'}
+                    </span>
+                  </div>
+                </button>
+
+                {isExpanded && (
+                  <div className="border-t px-4 pb-4 pt-3 space-y-3">
+                    <div className="grid grid-cols-3 gap-3 text-sm">
+                      <div>
+                        <span className="text-muted-foreground text-xs">Total Sessions</span>
+                        <p className="font-medium">{totalRemaining}/{totalSessions} remaining</p>
+                      </div>
+                      {totalAmount > 0 && (
+                        <div>
+                          <span className="text-muted-foreground text-xs">Total Price</span>
+                          <p className="font-medium">AED {totalAmount.toFixed(0)}</p>
+                        </div>
+                      )}
+                      {totalPaid > 0 && (
+                        <div>
+                          <span className="text-muted-foreground text-xs">Amount Paid</span>
+                          <p className="font-medium">AED {totalPaid.toFixed(0)}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Treatments</p>
+                      {group.packages.map(pkg => (
+                        <div key={pkg.id} className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-secondary/30">
+                          <div>
+                            <span className="text-sm font-medium">{pkg.treatment.treatment_name}</span>
+                            <span className="text-xs text-muted-foreground ml-2">{pkg.treatment.category}</span>
+                          </div>
+                          <span className="text-sm text-muted-foreground">{pkg.sessions_remaining}/{pkg.sessions_purchased} sessions</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {(doctor || notes || isPatientInitiated) && (
+                      <div className="border-t pt-2 space-y-1">
+                        {doctor && (
+                          <p className="text-xs text-muted-foreground">
+                            <Stethoscope className="h-3 w-3 inline mr-1" />
+                            Consulted by: <span className="font-medium text-foreground">{(doctor as any)?.full_name}</span>
+                          </p>
+                        )}
+                        {isPatientInitiated && <p className="text-xs text-warning font-medium">📋 Patient-initiated renewal/upgrade</p>}
+                        {notes && <p className="text-xs text-muted-foreground">📝 {notes}</p>}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </TabletCardContent>
+    </TabletCard>
+  );
+}
+
 export default function PatientDashboard() {
   const { patientId } = useParams<{ patientId: string }>();
   const [patient, setPatient] = useState<Patient | null>(null);
