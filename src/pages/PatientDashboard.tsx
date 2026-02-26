@@ -18,7 +18,8 @@ import {
   Clock,
   Activity,
   CheckCircle,
-  UserCheck
+  UserCheck,
+  Stethoscope
 } from 'lucide-react';
 import type { Patient, Package, Treatment, Visit } from '@/types/database';
 import AddPackageModal from '@/components/patient/AddPackageModal';
