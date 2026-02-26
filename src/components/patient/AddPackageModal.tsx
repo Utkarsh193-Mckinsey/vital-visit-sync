@@ -72,6 +72,7 @@ export default function AddPackageModal({
   patientId,
   onSuccess,
   contraindicatedTreatmentIds = [],
+  hasExistingPackages = false,
 }: AddPackageModalProps) {
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [clinicPackages, setClinicPackages] = useState<ClinicPackageTemplate[]>([]);
