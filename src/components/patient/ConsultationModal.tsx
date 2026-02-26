@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -19,7 +19,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { TabletButton } from '@/components/ui/tablet-button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { AlertTriangle, ShieldAlert, Package as PackageIcon } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { AlertTriangle, ShieldAlert, Package as PackageIcon, Search, X } from 'lucide-react';
 import type { Treatment } from '@/types/database';
 
 const TREATMENT_INTERESTS = ['Hair', 'Skin', 'Fat Loss', 'IV'];
