@@ -272,6 +272,12 @@ export default function PatientDashboard() {
         }
       />
 
+      {/* Caution Banner */}
+      <CautionBanner
+        cautionNotes={(patient as any)?.caution_notes}
+        contraindicatedTreatmentNames={contraindicatedTreatmentNames}
+      />
+
       {/* Patient Info Card */}
       <TabletCard className="mb-6">
         <TabletCardContent className="p-5">
