@@ -121,6 +121,10 @@ export default function AddPackageModal({
   const resetForm = () => {
     setSelectedClinicPackageId('');
     setBasePrice(0);
+    setConsultingDoctorId('');
+    setPackageNotes('');
+    setIsPatientInitiated(false);
+    setShowPatientInitiatedConfirm(false);
     setTreatmentLines([{ treatmentId: '', sessions: 4 }]);
     setCompLines([]);
     setPaymentStatus('paid');
