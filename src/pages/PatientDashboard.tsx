@@ -29,6 +29,7 @@ import { CautionBanner } from '@/components/patient/CautionBanner';
 
 interface PackageWithTreatment extends Package {
   treatment: Treatment;
+  consulting_doctor?: { full_name: string } | null;
 }
 
 interface VisitWithDetails extends Visit {
