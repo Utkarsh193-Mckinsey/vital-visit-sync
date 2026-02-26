@@ -19,7 +19,9 @@ import {
   Activity,
   CheckCircle,
   UserCheck,
-  Stethoscope
+  Stethoscope,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import type { Patient, Package, Treatment, Visit } from '@/types/database';
 import AddPackageModal from '@/components/patient/AddPackageModal';
