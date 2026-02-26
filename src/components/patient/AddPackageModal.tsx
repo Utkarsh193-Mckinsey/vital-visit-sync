@@ -214,6 +214,12 @@ export default function AddPackageModal({
       return;
     }
 
+    // If has existing packages and no doctor selected, require patient-initiated confirmation
+    if (hasExistingPackages && !consultingDoctorId && !isPatientInitiated) {
+      setShowPatientInitiatedConfirm(true);
+      return;
+    }
+
     // Check for contraindicated treatments
     const contraindicatedInPackage = allLines.filter(l => contraindicatedTreatmentIds.includes(l.treatmentId));
     if (contraindicatedInPackage.length > 0) {
