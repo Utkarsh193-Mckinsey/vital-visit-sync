@@ -537,78 +537,7 @@ export default function PatientDashboard() {
 
       {/* Package History */}
       {allPackages.length > 0 && (
-        <TabletCard className="mt-6">
-          <TabletCardHeader>
-            <div className="flex items-center gap-2">
-              <History className="h-5 w-5" />
-              <TabletCardTitle>Package History</TabletCardTitle>
-            </div>
-          </TabletCardHeader>
-          <TabletCardContent>
-            <div className="space-y-4">
-              {allPackages.map((pkg) => (
-                <div key={pkg.id} className="rounded-xl border bg-card p-4 space-y-2">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h4 className="font-semibold">{pkg.treatment.treatment_name}</h4>
-                      <p className="text-xs text-muted-foreground">{pkg.treatment.category}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        pkg.status === 'active' ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'
-                      }`}>
-                        {pkg.status}
-                      </span>
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        pkg.payment_status === 'paid' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
-                      }`}>
-                        {pkg.payment_status}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                    <div>
-                      <span className="text-muted-foreground text-xs">Date</span>
-                      <p className="font-medium">{formatDate(pkg.purchase_date)}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground text-xs">Sessions</span>
-                      <p className="font-medium">{pkg.sessions_remaining}/{pkg.sessions_purchased}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground text-xs">Total</span>
-                      <p className="font-medium">AED {(pkg.total_amount || 0).toFixed(0)}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground text-xs">Paid</span>
-                      <p className="font-medium">AED {pkg.amount_paid.toFixed(0)}</p>
-                    </div>
-                  </div>
-                  {((pkg as any).consulting_doctor || (pkg as any).package_notes || (pkg as any).is_patient_initiated) && (
-                    <div className="border-t pt-2 mt-2 space-y-1">
-                      {(pkg as any).consulting_doctor && (
-                        <p className="text-xs text-muted-foreground">
-                          <Stethoscope className="h-3 w-3 inline mr-1" />
-                          Consulted by: <span className="font-medium text-foreground">{(pkg.consulting_doctor as any)?.full_name}</span>
-                        </p>
-                      )}
-                      {(pkg as any).is_patient_initiated && (
-                        <p className="text-xs text-warning font-medium">
-                          📋 Patient-initiated renewal/upgrade
-                        </p>
-                      )}
-                      {(pkg as any).package_notes && (
-                        <p className="text-xs text-muted-foreground">
-                          📝 {(pkg as any).package_notes}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </TabletCardContent>
-        </TabletCard>
+        <PackageHistorySection allPackages={allPackages} formatDate={formatDate} />
       )}
 
       <AddPackageModal
