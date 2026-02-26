@@ -324,17 +324,35 @@ export default function AddPackageModal({
   };
 
   const renderTreatmentSelect = (value: string, onChange: (val: string) => void) => (
-    <Select value={value} onValueChange={onChange}>
+    <Select value={value} onValueChange={(val) => {
+      if (contraindicatedTreatmentIds.includes(val)) {
+        toast({
+          title: '⚠️ Contraindicated Treatment',
+          description: `${getTreatmentName(val) || 'This treatment'} is contraindicated for this patient. It cannot be added.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+      onChange(val);
+    }}>
       <SelectTrigger className="h-12 text-base">
         <SelectValue placeholder="Select treatment" />
       </SelectTrigger>
       <SelectContent>
-        {treatments.map((t) => (
-          <SelectItem key={t.id} value={t.id} className="py-2">
-            <span className="font-medium">{t.treatment_name}</span>
-            <span className="text-xs text-muted-foreground ml-2">{t.category}</span>
-          </SelectItem>
-        ))}
+        {treatments.map((t) => {
+          const isContraindicated = contraindicatedTreatmentIds.includes(t.id);
+          return (
+            <SelectItem
+              key={t.id}
+              value={t.id}
+              className={`py-2 ${isContraindicated ? 'text-destructive opacity-60' : ''}`}
+            >
+              <span className={`font-medium ${isContraindicated ? 'line-through' : ''}`}>{t.treatment_name}</span>
+              <span className="text-xs text-muted-foreground ml-2">{t.category}</span>
+              {isContraindicated && <span className="text-xs text-destructive ml-2">⛔ Contraindicated</span>}
+            </SelectItem>
+          );
+        })}
       </SelectContent>
     </Select>
   );
