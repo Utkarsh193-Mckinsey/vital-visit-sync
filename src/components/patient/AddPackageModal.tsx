@@ -75,10 +75,16 @@ export default function AddPackageModal({
   hasExistingPackages = false,
 }: AddPackageModalProps) {
   const [treatments, setTreatments] = useState<Treatment[]>([]);
+  const [doctors, setDoctors] = useState<{ id: string; full_name: string }[]>([]);
   const [clinicPackages, setClinicPackages] = useState<ClinicPackageTemplate[]>([]);
   const [clinicPackageTreatments, setClinicPackageTreatments] = useState<ClinicPackageTreatment[]>([]);
   const [selectedClinicPackageId, setSelectedClinicPackageId] = useState<string>('');
   const [basePrice, setBasePrice] = useState<number>(0);
+
+  const [consultingDoctorId, setConsultingDoctorId] = useState<string>('');
+  const [packageNotes, setPackageNotes] = useState('');
+  const [isPatientInitiated, setIsPatientInitiated] = useState(false);
+  const [showPatientInitiatedConfirm, setShowPatientInitiatedConfirm] = useState(false);
 
   const [treatmentLines, setTreatmentLines] = useState<TreatmentLine[]>([
     { treatmentId: '', sessions: 4 },
