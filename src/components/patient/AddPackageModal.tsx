@@ -405,7 +405,41 @@ export default function AddPackageModal({
             )}
           </div>
 
-          {/* ── SECTION B: Add Treatments (custom) ── */}
+          {/* ── Doctor Consultation & Notes ── */}
+          <div className="space-y-3 border-t pt-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium flex items-center gap-2">
+                <Stethoscope className="h-4 w-4" />
+                Consulted By (Doctor) {hasExistingPackages ? '' : '*'}
+              </label>
+              <Select value={consultingDoctorId} onValueChange={setConsultingDoctorId}>
+                <SelectTrigger className="h-12 text-base">
+                  <SelectValue placeholder="Select consulting doctor (optional for renewal)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— None —</SelectItem>
+                  {doctors.map((d) => (
+                    <SelectItem key={d.id} value={d.id} className="py-2">
+                      {d.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" /> Package Notes
+              </label>
+              <Textarea
+                placeholder="Doctor's notes for this package (e.g. recommended protocol, special instructions…)"
+                value={packageNotes}
+                onChange={(e) => setPackageNotes(e.target.value)}
+                rows={2}
+                className="text-sm"
+              />
+            </div>
+          </div>
+
           <div className="space-y-3">
             <label className="block text-sm font-medium">
               {selectedClinicPackageId ? 'Treatments (auto-filled, editable)' : 'Treatments *'}
