@@ -129,15 +129,23 @@ function PackageHistorySection({ allPackages, formatDate }: { allPackages: Packa
 
                     <div className="space-y-1.5">
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Treatments</p>
-                      {group.packages.map(pkg => (
-                        <div key={pkg.id} className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-secondary/30">
-                          <div>
-                            <span className="text-sm font-medium">{pkg.treatment.treatment_name}</span>
-                            <span className="text-xs text-muted-foreground ml-2">{pkg.treatment.category}</span>
+                      {group.packages.map(pkg => {
+                        const isComplimentary = (pkg.total_amount || 0) === 0 && pkg.amount_paid === 0;
+                        return (
+                          <div key={pkg.id} className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-secondary/30">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">{pkg.treatment.treatment_name}</span>
+                              <span className="text-xs text-muted-foreground">{pkg.treatment.category}</span>
+                              {isComplimentary && (
+                                <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px] font-medium">
+                                  Complimentary
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-sm text-muted-foreground">{pkg.sessions_remaining}/{pkg.sessions_purchased} sessions</span>
                           </div>
-                          <span className="text-sm text-muted-foreground">{pkg.sessions_remaining}/{pkg.sessions_purchased} sessions</span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
 
                     {(doctor || notes || isPatientInitiated) && (
