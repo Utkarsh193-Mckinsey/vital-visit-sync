@@ -45,7 +45,7 @@ function groupPackagesByPurchase(packages: PackageWithTreatment[]) {
   const groupMap: Record<string, PackageWithTreatment[]> = {};
   for (const pkg of packages) {
     const ts = new Date(pkg.purchase_date).getTime();
-    const roundedKey = String(Math.round(ts / 2000));
+    const roundedKey = String(Math.round(ts / 60000)); // 60-second window
     if (!groupMap[roundedKey]) groupMap[roundedKey] = [];
     groupMap[roundedKey].push(pkg);
   }
