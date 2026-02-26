@@ -165,12 +165,27 @@ export default function AddPackageModal({
     const paidLines = lines.filter((l) => !l.is_complimentary);
     const compLinesData = lines.filter((l) => l.is_complimentary);
 
+    // Warn about contraindicated treatments in the template
+    const contraindicatedInTemplate = lines.filter(l => contraindicatedTreatmentIds.includes(l.treatment_id));
+    if (contraindicatedInTemplate.length > 0) {
+      const names = contraindicatedInTemplate.map(l => getTreatmentName(l.treatment_id)).filter(Boolean).join(', ');
+      toast({
+        title: '⚠️ Contraindicated Treatments Removed',
+        description: `${names} removed from template because they are contraindicated for this patient.`,
+        variant: 'destructive',
+      });
+    }
+
+    // Filter out contraindicated treatments
+    const safePaid = paidLines.filter(l => !contraindicatedTreatmentIds.includes(l.treatment_id));
+    const safeComp = compLinesData.filter(l => !contraindicatedTreatmentIds.includes(l.treatment_id));
+
     setTreatmentLines(
-      paidLines.length > 0
-        ? paidLines.map((l) => ({ treatmentId: l.treatment_id, sessions: l.sessions }))
+      safePaid.length > 0
+        ? safePaid.map((l) => ({ treatmentId: l.treatment_id, sessions: l.sessions }))
         : [{ treatmentId: '', sessions: 4 }]
     );
-    setCompLines(compLinesData.map((l) => ({ treatmentId: l.treatment_id, sessions: l.sessions })));
+    setCompLines(safeComp.map((l) => ({ treatmentId: l.treatment_id, sessions: l.sessions })));
     setBasePrice(pkg.base_price);
   };
 
