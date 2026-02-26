@@ -523,6 +523,7 @@ export default function PatientDashboard() {
         patientId={patientId!}
         onSuccess={handlePackageAdded}
         contraindicatedTreatmentIds={(patient as any)?.contraindicated_treatments || []}
+        hasExistingPackages={packages.length > 0}
       />
 
       {/* Treatment Selection Modal */}
