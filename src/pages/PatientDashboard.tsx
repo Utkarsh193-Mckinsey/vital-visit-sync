@@ -43,6 +43,7 @@ export default function PatientDashboard() {
   const [activeVisits, setActiveVisits] = useState<VisitWithDetails[]>([]);
   const [nextVisitNumber, setNextVisitNumber] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [contraindicatedTreatmentNames, setContraindicatedTreatmentNames] = useState<string[]>([]);
   const [showAddPackage, setShowAddPackage] = useState(false);
   const [showTreatmentSelection, setShowTreatmentSelection] = useState(false);
   const navigate = useNavigate();
