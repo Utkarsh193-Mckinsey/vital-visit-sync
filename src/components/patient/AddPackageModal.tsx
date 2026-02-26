@@ -138,14 +138,16 @@ export default function AddPackageModal({
   };
 
   const fetchData = async () => {
-    const [tRes, cpRes, cptRes] = await Promise.all([
+    const [tRes, cpRes, cptRes, docRes] = await Promise.all([
       supabase.from('treatments').select('*').eq('status', 'active').order('treatment_name'),
       supabase.from('clinic_packages').select('*').eq('status', 'active').order('name'),
       supabase.from('clinic_package_treatments').select('*'),
+      supabase.from('staff').select('id, full_name').eq('status', 'active').eq('role', 'doctor').order('full_name'),
     ]);
     if (tRes.data) setTreatments(tRes.data as Treatment[]);
     if (cpRes.data) setClinicPackages(cpRes.data as ClinicPackageTemplate[]);
     if (cptRes.data) setClinicPackageTreatments(cptRes.data as ClinicPackageTreatment[]);
+    if (docRes.data) setDoctors(docRes.data);
   };
 
   const handleSelectClinicPackage = (pkgId: string) => {
