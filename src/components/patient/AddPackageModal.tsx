@@ -527,6 +527,55 @@ export default function AddPackageModal({
             </div>
           )}
 
+          {/* Contraindication Warning */}
+          {showContraindicationWarning && (
+            <div className="space-y-3 border-2 border-destructive rounded-lg p-4 bg-destructive/10">
+              <div className="flex items-start gap-2 text-destructive">
+                <ShieldAlert className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold text-sm">⚠ Contraindicated Treatment Warning</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    The following treatments are advised against by the doctor. Provide a reason for each to proceed.
+                  </p>
+                </div>
+              </div>
+              {[...treatmentLines, ...compLines]
+                .filter(l => l.treatmentId && contraindicatedTreatmentIds.includes(l.treatmentId))
+                .map((l) => (
+                  <div key={l.treatmentId} className="space-y-1">
+                    <p className="text-sm font-medium text-destructive">
+                      🚫 {getTreatmentName(l.treatmentId)}
+                    </p>
+                    <Textarea
+                      placeholder="Reason for including this treatment despite contraindication…"
+                      value={contraindicationOverrides[l.treatmentId] || ''}
+                      onChange={(e) => setContraindicationOverrides(prev => ({ ...prev, [l.treatmentId]: e.target.value }))}
+                      rows={2}
+                      className="text-sm border-destructive/30"
+                    />
+                  </div>
+                ))}
+              <div className="flex gap-2">
+                <TabletButton type="button" variant="outline" size="sm" fullWidth onClick={() => setShowContraindicationWarning(false)}>
+                  Go Back &amp; Remove
+                </TabletButton>
+                <TabletButton
+                  type="submit"
+                  variant="destructive"
+                  size="sm"
+                  fullWidth
+                  disabled={
+                    [...treatmentLines, ...compLines]
+                      .filter(l => l.treatmentId && contraindicatedTreatmentIds.includes(l.treatmentId))
+                      .some(l => !contraindicationOverrides[l.treatmentId]?.trim())
+                  }
+                >
+                  Override &amp; Continue
+                </TabletButton>
+              </div>
+            </div>
+          )}
+
           {/* Payment Mismatch Warning */}
           {showMismatchWarning && (
             <div className="space-y-3 border border-destructive/40 rounded-lg p-4 bg-destructive/5">
