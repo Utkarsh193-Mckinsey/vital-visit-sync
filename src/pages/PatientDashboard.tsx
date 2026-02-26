@@ -41,6 +41,7 @@ export default function PatientDashboard() {
   const { patientId } = useParams<{ patientId: string }>();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [packages, setPackages] = useState<PackageWithTreatment[]>([]);
+  const [allPackages, setAllPackages] = useState<PackageWithTreatment[]>([]);
   const [activeVisits, setActiveVisits] = useState<VisitWithDetails[]>([]);
   const [nextVisitNumber, setNextVisitNumber] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
