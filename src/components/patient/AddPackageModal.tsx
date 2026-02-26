@@ -587,6 +587,38 @@ export default function AddPackageModal({
             </div>
           )}
 
+          {/* Patient-Initiated Confirmation */}
+          {showPatientInitiatedConfirm && (
+            <div className="space-y-3 border-2 border-warning rounded-lg p-4 bg-warning/10">
+              <div className="flex items-start gap-2">
+                <PackageIcon className="h-5 w-5 text-warning mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold text-sm">No Doctor Consultation Selected</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Is this package being renewed or upgraded by the patient on their own will (without a new doctor consultation)?
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <TabletButton type="button" variant="outline" size="sm" fullWidth onClick={() => setShowPatientInitiatedConfirm(false)}>
+                  Go Back
+                </TabletButton>
+                <TabletButton
+                  type="button"
+                  variant="warning"
+                  size="sm"
+                  fullWidth
+                  onClick={() => {
+                    setIsPatientInitiated(true);
+                    setShowPatientInitiatedConfirm(false);
+                  }}
+                >
+                  Yes, Patient Requested
+                </TabletButton>
+              </div>
+            </div>
+          )}
+
           {/* Contraindication Warning */}
           {showContraindicationWarning && (
             <div className="space-y-3 border-2 border-destructive rounded-lg p-4 bg-destructive/10">
