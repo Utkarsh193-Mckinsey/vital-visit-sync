@@ -73,6 +73,13 @@ export interface Package {
   payment_status: PaymentStatus;
   status: PackageStatus;
   created_by?: string;
+  total_amount?: number;
+  amount_paid: number;
+  next_payment_date?: string;
+  next_payment_amount?: number;
+  consulting_doctor_id?: string;
+  package_notes?: string;
+  is_patient_initiated?: boolean;
   // Joined data
   treatment?: Treatment;
 }

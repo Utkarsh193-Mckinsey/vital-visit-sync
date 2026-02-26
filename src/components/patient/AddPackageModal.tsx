@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletInput } from '@/components/ui/tablet-input';
 import { useToast } from '@/hooks/use-toast';
-import { Package as PackageIcon, Plus, Trash2, Gift, AlertTriangle, Sparkles, ShieldAlert } from 'lucide-react';
+import { Package as PackageIcon, Plus, Trash2, Gift, AlertTriangle, Sparkles, ShieldAlert, Stethoscope, MessageSquare } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import type { Treatment } from '@/types/database';
@@ -63,6 +63,7 @@ interface AddPackageModalProps {
   patientId: string;
   onSuccess: () => void;
   contraindicatedTreatmentIds?: string[];
+  hasExistingPackages?: boolean;
 }
 
 export default function AddPackageModal({
@@ -71,12 +72,19 @@ export default function AddPackageModal({
   patientId,
   onSuccess,
   contraindicatedTreatmentIds = [],
+  hasExistingPackages = false,
 }: AddPackageModalProps) {
   const [treatments, setTreatments] = useState<Treatment[]>([]);
+  const [doctors, setDoctors] = useState<{ id: string; full_name: string }[]>([]);
   const [clinicPackages, setClinicPackages] = useState<ClinicPackageTemplate[]>([]);
   const [clinicPackageTreatments, setClinicPackageTreatments] = useState<ClinicPackageTreatment[]>([]);
   const [selectedClinicPackageId, setSelectedClinicPackageId] = useState<string>('');
   const [basePrice, setBasePrice] = useState<number>(0);
+
+  const [consultingDoctorId, setConsultingDoctorId] = useState<string>('');
+  const [packageNotes, setPackageNotes] = useState('');
+  const [isPatientInitiated, setIsPatientInitiated] = useState(false);
+  const [showPatientInitiatedConfirm, setShowPatientInitiatedConfirm] = useState(false);
 
   const [treatmentLines, setTreatmentLines] = useState<TreatmentLine[]>([
     { treatmentId: '', sessions: 4 },
@@ -113,6 +121,10 @@ export default function AddPackageModal({
   const resetForm = () => {
     setSelectedClinicPackageId('');
     setBasePrice(0);
+    setConsultingDoctorId('');
+    setPackageNotes('');
+    setIsPatientInitiated(false);
+    setShowPatientInitiatedConfirm(false);
     setTreatmentLines([{ treatmentId: '', sessions: 4 }]);
     setCompLines([]);
     setPaymentStatus('paid');
@@ -126,14 +138,16 @@ export default function AddPackageModal({
   };
 
   const fetchData = async () => {
-    const [tRes, cpRes, cptRes] = await Promise.all([
+    const [tRes, cpRes, cptRes, docRes] = await Promise.all([
       supabase.from('treatments').select('*').eq('status', 'active').order('treatment_name'),
       supabase.from('clinic_packages').select('*').eq('status', 'active').order('name'),
       supabase.from('clinic_package_treatments').select('*'),
+      supabase.from('staff').select('id, full_name').eq('status', 'active').eq('role', 'doctor').order('full_name'),
     ]);
     if (tRes.data) setTreatments(tRes.data as Treatment[]);
     if (cpRes.data) setClinicPackages(cpRes.data as ClinicPackageTemplate[]);
     if (cptRes.data) setClinicPackageTreatments(cptRes.data as ClinicPackageTreatment[]);
+    if (docRes.data) setDoctors(docRes.data);
   };
 
   const handleSelectClinicPackage = (pkgId: string) => {
@@ -200,6 +214,12 @@ export default function AddPackageModal({
       return;
     }
 
+    // If has existing packages and no doctor selected, require patient-initiated confirmation
+    if (hasExistingPackages && !consultingDoctorId && !isPatientInitiated) {
+      setShowPatientInitiatedConfirm(true);
+      return;
+    }
+
     // Check for contraindicated treatments
     const contraindicatedInPackage = allLines.filter(l => contraindicatedTreatmentIds.includes(l.treatmentId));
     if (contraindicatedInPackage.length > 0) {
@@ -240,7 +260,10 @@ export default function AddPackageModal({
             amount_paid: totalPaid,
             next_payment_date: paymentStatus === 'pending' && nextPaymentDate ? nextPaymentDate : null,
             next_payment_amount: paymentStatus === 'pending' && nextPaymentAmount > 0 ? nextPaymentAmount : null,
-          })
+            consulting_doctor_id: consultingDoctorId || null,
+            package_notes: packageNotes.trim() || null,
+            is_patient_initiated: isPatientInitiated,
+          } as any)
           .select('id')
           .single();
         if (error) throw error;
@@ -260,7 +283,10 @@ export default function AddPackageModal({
             created_by: staff?.id,
             total_amount: 0,
             amount_paid: 0,
-          })
+            consulting_doctor_id: consultingDoctorId || null,
+            package_notes: packageNotes.trim() || null,
+            is_patient_initiated: isPatientInitiated,
+          } as any)
           .select('id')
           .single();
         if (error) throw error;
@@ -379,7 +405,41 @@ export default function AddPackageModal({
             )}
           </div>
 
-          {/* ── SECTION B: Add Treatments (custom) ── */}
+          {/* ── Doctor Consultation & Notes ── */}
+          <div className="space-y-3 border-t pt-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium flex items-center gap-2">
+                <Stethoscope className="h-4 w-4" />
+                Consulted By (Doctor) {hasExistingPackages ? '' : '*'}
+              </label>
+              <Select value={consultingDoctorId} onValueChange={(v) => setConsultingDoctorId(v === '__none__' ? '' : v)}>
+                <SelectTrigger className="h-12 text-base">
+                  <SelectValue placeholder="Select consulting doctor (optional for renewal)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— None —</SelectItem>
+                  {doctors.map((d) => (
+                    <SelectItem key={d.id} value={d.id} className="py-2">
+                      {d.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" /> Package Notes
+              </label>
+              <Textarea
+                placeholder="Doctor's notes for this package (e.g. recommended protocol, special instructions…)"
+                value={packageNotes}
+                onChange={(e) => setPackageNotes(e.target.value)}
+                rows={2}
+                className="text-sm"
+              />
+            </div>
+          </div>
+
           <div className="space-y-3">
             <label className="block text-sm font-medium">
               {selectedClinicPackageId ? 'Treatments (auto-filled, editable)' : 'Treatments *'}
@@ -527,6 +587,38 @@ export default function AddPackageModal({
             </div>
           )}
 
+          {/* Patient-Initiated Confirmation */}
+          {showPatientInitiatedConfirm && (
+            <div className="space-y-3 border-2 border-warning rounded-lg p-4 bg-warning/10">
+              <div className="flex items-start gap-2">
+                <PackageIcon className="h-5 w-5 text-warning mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold text-sm">No Doctor Consultation Selected</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Is this package being renewed or upgraded by the patient on their own will (without a new doctor consultation)?
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <TabletButton type="button" variant="outline" size="sm" fullWidth onClick={() => setShowPatientInitiatedConfirm(false)}>
+                  Go Back
+                </TabletButton>
+                <TabletButton
+                  type="button"
+                  variant="warning"
+                  size="sm"
+                  fullWidth
+                  onClick={() => {
+                    setIsPatientInitiated(true);
+                    setShowPatientInitiatedConfirm(false);
+                  }}
+                >
+                  Yes, Patient Requested
+                </TabletButton>
+              </div>
+            </div>
+          )}
+
           {/* Contraindication Warning */}
           {showContraindicationWarning && (
             <div className="space-y-3 border-2 border-destructive rounded-lg p-4 bg-destructive/10">
@@ -616,7 +708,7 @@ export default function AddPackageModal({
           )}
 
           {/* Actions */}
-          {!showMismatchWarning && !showContraindicationWarning && (
+          {!showMismatchWarning && !showContraindicationWarning && !showPatientInitiatedConfirm && (
             <div className="flex gap-3 pt-2">
               <TabletButton type="button" variant="outline" fullWidth onClick={() => onOpenChange(false)}>Cancel</TabletButton>
               <TabletButton type="submit" fullWidth isLoading={isSubmitting}>Add Package</TabletButton>
