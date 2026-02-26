@@ -91,6 +91,8 @@ export default function AddPackageModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mismatchReason, setMismatchReason] = useState('');
   const [showMismatchWarning, setShowMismatchWarning] = useState(false);
+  const [contraindicationOverrides, setContraindicationOverrides] = useState<Record<string, string>>({});
+  const [showContraindicationWarning, setShowContraindicationWarning] = useState(false);
   const { staff } = useAuth();
   const { toast } = useToast();
 
