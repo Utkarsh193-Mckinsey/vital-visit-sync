@@ -25,6 +25,7 @@ import AddPackageModal from '@/components/patient/AddPackageModal';
 import TreatmentSelectionModal from '@/components/patient/TreatmentSelectionModal';
 import PatientProgress from '@/components/patient/PatientProgress';
 import { WhatsAppLink } from '@/components/ui/whatsapp-link';
+import { CautionBanner } from '@/components/patient/CautionBanner';
 
 interface PackageWithTreatment extends Package {
   treatment: Treatment;
