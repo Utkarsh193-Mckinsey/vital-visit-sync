@@ -25,6 +25,89 @@ import type { Treatment } from '@/types/database';
 
 const TREATMENT_INTERESTS = ['Hair', 'Skin', 'Fat Loss', 'IV'];
 
+function ContraindicatedSelector({ treatments, selectedIds, onToggle }: {
+  treatments: Treatment[];
+  selectedIds: string[];
+  onToggle: (id: string) => void;
+}) {
+  const [search, setSearch] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return treatments;
+    const q = search.toLowerCase();
+    return treatments.filter(t =>
+      t.treatment_name.toLowerCase().includes(q) || t.category.toLowerCase().includes(q)
+    );
+  }, [treatments, search]);
+
+  const selectedTreatments = treatments.filter(t => selectedIds.includes(t.id));
+
+  return (
+    <div className="space-y-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+      <Label className="text-sm font-medium flex items-center gap-2 text-destructive">
+        <ShieldAlert className="h-4 w-4" /> Contraindicated Treatments
+      </Label>
+      <p className="text-xs text-muted-foreground">Treatments this patient must NOT receive. Staff will be warned if they try to add these.</p>
+
+      {/* Selected chips */}
+      {selectedTreatments.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selectedTreatments.map(t => (
+            <span
+              key={t.id}
+              className="inline-flex items-center gap-1 rounded-full bg-destructive/15 text-destructive px-2.5 py-1 text-xs font-medium"
+            >
+              {t.treatment_name}
+              <button onClick={() => onToggle(t.id)} className="hover:bg-destructive/20 rounded-full p-0.5">
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Search dropdown */}
+      <div className="relative">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search treatments…"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setIsOpen(true); }}
+            onFocus={() => setIsOpen(true)}
+            className="pl-9 h-10 text-sm border-destructive/30"
+          />
+        </div>
+        {isOpen && (
+          <div className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto rounded-lg border bg-popover shadow-lg">
+            {filtered.length === 0 ? (
+              <p className="p-3 text-sm text-muted-foreground text-center">No treatments found</p>
+            ) : (
+              filtered.map(t => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => { onToggle(t.id); setSearch(''); setIsOpen(false); }}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-accent transition-colors text-left ${
+                    selectedIds.includes(t.id) ? 'bg-destructive/10 text-destructive' : ''
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Checkbox checked={selectedIds.includes(t.id)} className="pointer-events-none" />
+                    <span className="font-medium">{t.treatment_name}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{t.category}</span>
+                </button>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 interface ConsultationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
