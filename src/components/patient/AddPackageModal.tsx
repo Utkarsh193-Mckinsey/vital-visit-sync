@@ -283,7 +283,10 @@ export default function AddPackageModal({
             created_by: staff?.id,
             total_amount: 0,
             amount_paid: 0,
-          })
+            consulting_doctor_id: consultingDoctorId || null,
+            package_notes: packageNotes.trim() || null,
+            is_patient_initiated: isPatientInitiated,
+          } as any)
           .select('id')
           .single();
         if (error) throw error;
