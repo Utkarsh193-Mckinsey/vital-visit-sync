@@ -121,6 +121,8 @@ export default function AddPackageModal({
     setNextPaymentAmount(0);
     setMismatchReason('');
     setShowMismatchWarning(false);
+    setContraindicationOverrides({});
+    setShowContraindicationWarning(false);
   };
 
   const fetchData = async () => {
