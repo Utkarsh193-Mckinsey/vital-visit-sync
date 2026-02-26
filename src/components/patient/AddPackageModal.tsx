@@ -190,6 +190,7 @@ export default function AddPackageModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const validLines = treatmentLines.filter((l) => l.treatmentId && l.sessions > 0);
+    const allLines = [...validLines, ...compLines.filter((l) => l.treatmentId && l.sessions > 0)];
     if (validLines.length === 0) {
       toast({ title: 'Add Treatments', description: 'Please add at least one treatment with sessions.', variant: 'destructive' });
       return;
@@ -197,6 +198,16 @@ export default function AddPackageModal({
     if (totalAmount <= 0) {
       toast({ title: 'Invalid Amount', description: 'Please enter the package price.', variant: 'destructive' });
       return;
+    }
+
+    // Check for contraindicated treatments
+    const contraindicatedInPackage = allLines.filter(l => contraindicatedTreatmentIds.includes(l.treatmentId));
+    if (contraindicatedInPackage.length > 0) {
+      const missingOverrides = contraindicatedInPackage.filter(l => !contraindicationOverrides[l.treatmentId]?.trim());
+      if (missingOverrides.length > 0) {
+        setShowContraindicationWarning(true);
+        return;
+      }
     }
 
     const shortfall = totalAmount - totalPaid;
