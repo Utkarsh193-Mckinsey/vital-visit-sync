@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { TabletButton } from '@/components/ui/tablet-button';
 import { TabletInput } from '@/components/ui/tablet-input';
 import { useToast } from '@/hooks/use-toast';
-import { Package as PackageIcon, Plus, Trash2, Gift, AlertTriangle, Sparkles } from 'lucide-react';
+import { Package as PackageIcon, Plus, Trash2, Gift, AlertTriangle, Sparkles, ShieldAlert } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import type { Treatment } from '@/types/database';
