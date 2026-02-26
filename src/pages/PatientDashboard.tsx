@@ -64,6 +64,18 @@ export default function PatientDashboard() {
       if (patientError) throw patientError;
       setPatient(patientData as Patient);
 
+      // Resolve contraindicated treatment names
+      const cIds = (patientData as any)?.contraindicated_treatments as string[] | null;
+      if (cIds && cIds.length > 0) {
+        const { data: cTreatments } = await supabase
+          .from('treatments')
+          .select('treatment_name')
+          .in('id', cIds);
+        setContraindicatedTreatmentNames(cTreatments?.map(t => t.treatment_name) || []);
+      } else {
+        setContraindicatedTreatmentNames([]);
+      }
+
       // Fetch packages with treatments
       const { data: packagesData, error: packagesError } = await supabase
         .from('packages')
