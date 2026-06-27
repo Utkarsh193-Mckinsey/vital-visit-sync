@@ -39,7 +39,7 @@ export default function AdminSettings() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 h-14">
+        <TabsList className="grid w-full grid-cols-5 h-14">
           <TabsTrigger value="staff" className="h-12 text-base flex items-center gap-2">
             <Users className="h-4 w-4" />
             Staff
@@ -55,6 +55,10 @@ export default function AdminSettings() {
           <TabsTrigger value="consent" className="h-12 text-base flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Consent Forms
+          </TabsTrigger>
+          <TabsTrigger value="github" className="h-12 text-base flex items-center gap-2">
+            <Github className="h-4 w-4" />
+            GitHub
           </TabsTrigger>
         </TabsList>
 
