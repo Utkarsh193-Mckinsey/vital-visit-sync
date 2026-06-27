@@ -24,6 +24,7 @@ serve(async (req) => {
       { email: 'reception@cosmique.ae', password: 'Reception123!', full_name: 'Ahmed Al-Mansoori', role: 'reception' },
       { email: 'nurse@cosmique.ae', password: 'Nurse123!', full_name: 'Sarah Ali', role: 'nurse' },
       { email: 'doctor@cosmique.ae', password: 'Doctor123!', full_name: 'Dr. Deepika', role: 'doctor' },
+      { email: 'priti@cosmique.ae', password: 'Priti123!', full_name: 'Priti', role: 'nurse' },
     ];
 
     const createdStaff = [];
