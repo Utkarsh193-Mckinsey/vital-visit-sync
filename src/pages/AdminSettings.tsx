@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { TabletButton } from '@/components/ui/tablet-button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, FileText, Package, Users, Download, Sparkles } from 'lucide-react';
+import { ArrowLeft, FileText, Package, Users, Download, Sparkles, Github } from 'lucide-react';
 import { generateUserManualPDF } from '@/utils/generateUserManualPDF';
 import ConsentTemplatesManager from '@/components/admin/ConsentTemplatesManager';
 import ConsumablesManager from '@/components/admin/ConsumablesManager';
 import StaffManager from '@/components/admin/StaffManager';
 import ClinicPackagesManager from '@/components/admin/ClinicPackagesManager';
+import GitHubIntegrationSettings from '@/components/admin/GitHubIntegrationSettings';
 
 export default function AdminSettings() {
   const navigate = useNavigate();
@@ -38,7 +39,7 @@ export default function AdminSettings() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 h-14">
+        <TabsList className="grid w-full grid-cols-5 h-14">
           <TabsTrigger value="staff" className="h-12 text-base flex items-center gap-2">
             <Users className="h-4 w-4" />
             Staff
@@ -54,6 +55,10 @@ export default function AdminSettings() {
           <TabsTrigger value="consent" className="h-12 text-base flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Consent Forms
+          </TabsTrigger>
+          <TabsTrigger value="github" className="h-12 text-base flex items-center gap-2">
+            <Github className="h-4 w-4" />
+            GitHub
           </TabsTrigger>
         </TabsList>
 
@@ -71,6 +76,10 @@ export default function AdminSettings() {
 
         <TabsContent value="consent" className="mt-4">
           <ConsentTemplatesManager />
+        </TabsContent>
+
+        <TabsContent value="github" className="mt-4">
+          <GitHubIntegrationSettings />
         </TabsContent>
       </Tabs>
     </PageContainer>
