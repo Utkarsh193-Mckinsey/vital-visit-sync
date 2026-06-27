@@ -116,10 +116,10 @@ export default function GitHubIntegrationSettings() {
   };
 
   const statusConfig = {
-    connected: { label: 'Connected', icon: Check, variant: 'success' as const },
-    disconnected: { label: 'Not connected', icon: X, variant: 'outline' as const },
-    syncing: { label: 'Syncing...', icon: RefreshCw, variant: 'warning' as const },
-    error: { label: 'Sync error', icon: X, variant: 'destructive' as const },
+    connected: { label: 'Connected', icon: Check, variant: 'secondary' as const, className: 'bg-success/10 text-success border-success/20 hover:bg-success/20' },
+    disconnected: { label: 'Not connected', icon: X, variant: 'outline' as const, className: '' },
+    syncing: { label: 'Syncing...', icon: RefreshCw, variant: 'secondary' as const, className: 'bg-warning/10 text-warning border-warning/20 hover:bg-warning/20' },
+    error: { label: 'Sync error', icon: X, variant: 'destructive' as const, className: '' },
   };
 
   const currentStatus = statusConfig[status];
