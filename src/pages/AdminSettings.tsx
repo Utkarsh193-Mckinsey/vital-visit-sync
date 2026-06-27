@@ -77,6 +77,10 @@ export default function AdminSettings() {
         <TabsContent value="consent" className="mt-4">
           <ConsentTemplatesManager />
         </TabsContent>
+
+        <TabsContent value="github" className="mt-4">
+          <GitHubIntegrationSettings />
+        </TabsContent>
       </Tabs>
     </PageContainer>
   );
