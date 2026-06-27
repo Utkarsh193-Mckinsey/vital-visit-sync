@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { PageContainer, PageHeader } from '@/components/layout/PageContainer';
 import { TabletButton } from '@/components/ui/tablet-button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, FileText, Package, Users, Download, Sparkles } from 'lucide-react';
+import { ArrowLeft, FileText, Package, Users, Download, Sparkles, Github } from 'lucide-react';
 import { generateUserManualPDF } from '@/utils/generateUserManualPDF';
 import ConsentTemplatesManager from '@/components/admin/ConsentTemplatesManager';
 import ConsumablesManager from '@/components/admin/ConsumablesManager';
