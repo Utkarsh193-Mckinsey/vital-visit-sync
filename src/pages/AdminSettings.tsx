@@ -9,6 +9,7 @@ import ConsentTemplatesManager from '@/components/admin/ConsentTemplatesManager'
 import ConsumablesManager from '@/components/admin/ConsumablesManager';
 import StaffManager from '@/components/admin/StaffManager';
 import ClinicPackagesManager from '@/components/admin/ClinicPackagesManager';
+import GitHubIntegrationSettings from '@/components/admin/GitHubIntegrationSettings';
 
 export default function AdminSettings() {
   const navigate = useNavigate();
