@@ -151,7 +151,7 @@ export default function GitHubIntegrationSettings() {
                 </p>
               </div>
             </div>
-            <Badge variant={currentStatus.variant}>{currentStatus.label}</Badge>
+            <Badge variant={currentStatus.variant} className={currentStatus.className}>{currentStatus.label}</Badge>
           </div>
 
           <div className="space-y-2">
