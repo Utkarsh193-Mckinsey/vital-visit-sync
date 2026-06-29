@@ -241,9 +241,7 @@ export function AppSidebar() {
     return location.pathname === url;
   };
 
-  const filteredItems = navigationItems.filter(item => 
-    staff && item.roles.includes(staff.role)
-  );
+  const filteredItems = navigationItems;
 
   const handleLogout = async () => {
     await signOut();
