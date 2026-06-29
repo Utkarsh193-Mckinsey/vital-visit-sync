@@ -66,13 +66,7 @@ function ProtectedRoute({
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles && staff && !allowedRoles.includes(staff.role)) {
-    if (staff.role === 'reception') {
-      return <Navigate to="/dashboard" replace />;
-    }
-    return <Navigate to="/waiting" replace />;
-  }
-
+  // All authenticated staff have full access
   return <AppLayout>{children}</AppLayout>;
 }
 
@@ -85,10 +79,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (isAuthenticated && staff) {
-    if (staff.role === 'admin' || staff.role === 'reception') {
-      return <Navigate to="/dashboard" replace />;
-    }
-    return <Navigate to="/waiting" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
@@ -106,11 +97,7 @@ function RootRedirect() {
     return <Navigate to="/login" replace />;
   }
 
-  if (staff?.role === 'admin' || staff?.role === 'reception') {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  return <Navigate to="/waiting" replace />;
+  return <Navigate to="/dashboard" replace />;
 }
 
 function AppRoutes() {
