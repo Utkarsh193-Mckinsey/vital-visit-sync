@@ -66,13 +66,7 @@ function ProtectedRoute({
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles && staff && !allowedRoles.includes(staff.role)) {
-    if (staff.role === 'reception') {
-      return <Navigate to="/dashboard" replace />;
-    }
-    return <Navigate to="/waiting" replace />;
-  }
-
+  // All authenticated staff have full access
   return <AppLayout>{children}</AppLayout>;
 }
 
