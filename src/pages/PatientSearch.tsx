@@ -138,16 +138,14 @@ export default function PatientSearch() {
         subtitle={`Welcome, ${staff?.full_name}`}
         action={
           <div className="flex gap-2">
-            {staff?.role === 'admin' && (
-              <TabletButton 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => navigate('/settings')}
-                aria-label="Settings"
-              >
-                <Settings className="h-5 w-5" />
-              </TabletButton>
-            )}
+            <TabletButton 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => navigate('/settings')}
+              aria-label="Settings"
+            >
+              <Settings className="h-5 w-5" />
+            </TabletButton>
             <TabletButton 
               variant="ghost" 
               size="icon" 

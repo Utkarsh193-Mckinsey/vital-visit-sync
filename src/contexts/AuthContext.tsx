@@ -109,8 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const hasRole = (roles: StaffRole[]) => {
-    if (!staff) return false;
-    return roles.includes(staff.role);
+    return !!staff;
   };
 
   return (

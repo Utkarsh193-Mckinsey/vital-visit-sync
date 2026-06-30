@@ -520,7 +520,7 @@ export default function PatientDashboard() {
                       </div>
                       <div className="flex items-center gap-2">
                         {getStatusBadge(visit)}
-                        {staff?.role === 'nurse' && !visit.vitals_completed && (
+                        {!visit.vitals_completed && (
                           <TabletButton size="sm" onClick={() => navigate(`/visit/${visit.id}/vitals`)}>
                             Take Vitals
                           </TabletButton>
@@ -552,7 +552,7 @@ export default function PatientDashboard() {
                       </div>
                       <div className="flex items-center gap-2">
                         {getStatusBadge(visit)}
-                        {(staff?.role === 'doctor' || staff?.role === 'admin') && (
+                        {visit.vitals_completed && (
                           <TabletButton size="sm" onClick={() => navigate(`/visit/${visit.id}/treatment`)}>
                             Administer Treatment
                           </TabletButton>
