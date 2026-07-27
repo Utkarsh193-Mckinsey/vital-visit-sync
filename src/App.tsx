@@ -32,6 +32,7 @@ import PersonalAssistant from "./pages/PersonalAssistant";
 import WhatsAppChats from "./pages/WhatsAppChats";
 import BookNextAppointment from "./pages/BookNextAppointment";
 import StaffReports from "./pages/StaffReports";
+import OAuthConsent from "./pages/OAuthConsent";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -259,6 +260,9 @@ function AppRoutes() {
           <StaffReports />
         </ProtectedRoute>
       } />
+
+      {/* OAuth consent (public, but requires session inside the page) */}
+      <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
       {/* Catch-all */}
       <Route path="*" element={<NotFound />} />
