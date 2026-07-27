@@ -32,6 +32,7 @@ import PersonalAssistant from "./pages/PersonalAssistant";
 import WhatsAppChats from "./pages/WhatsAppChats";
 import BookNextAppointment from "./pages/BookNextAppointment";
 import StaffReports from "./pages/StaffReports";
+import OAuthConsent from "./pages/OAuthConsent";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -79,7 +80,11 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (isAuthenticated && staff) {
-    return <Navigate to="/dashboard" replace />;
+    // Honor ?next=/some/path so OAuth consent (and other deep links) resume after login.
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get("next");
+    const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+    return <Navigate to={safeNext} replace />;
   }
 
   return <>{children}</>;
@@ -259,6 +264,9 @@ function AppRoutes() {
           <StaffReports />
         </ProtectedRoute>
       } />
+
+      {/* OAuth consent (public, but requires session inside the page) */}
+      <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
       {/* Catch-all */}
       <Route path="*" element={<NotFound />} />
