@@ -80,7 +80,11 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (isAuthenticated && staff) {
-    return <Navigate to="/dashboard" replace />;
+    // Honor ?next=/some/path so OAuth consent (and other deep links) resume after login.
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get("next");
+    const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+    return <Navigate to={safeNext} replace />;
   }
 
   return <>{children}</>;
