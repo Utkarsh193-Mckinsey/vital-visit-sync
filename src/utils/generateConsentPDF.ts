@@ -230,7 +230,26 @@ export async function generateCombinedConsentPDF(data: MultiConsentPDFData): Pro
     yPosition += 6;
     drawDivider();
 
+    // Refund Policy (on every treatment page)
+    checkNewPage(40);
+    pdf.setFontSize(11);
+    setEnglishFont('bold');
+    pdf.text('Refund Policy', margin, yPosition);
+    yPosition += 6;
+    pdf.setFontSize(10);
+    setEnglishFont('normal');
+    const refundLinesEn = pdf.splitTextToSize('Once a package has been purchased, it is non-refundable.', contentWidth);
+    for (const line of refundLinesEn) { pdf.text(line, margin, yPosition); yPosition += 5; }
+    yPosition += 2;
+    setArabicFont();
+    pdf.text('سياسة الاسترداد', pageWidth - margin, yPosition, { align: 'right' });
+    yPosition += 6;
+    const refundLinesAr = pdf.splitTextToSize('بمجرد شراء الحزمة، لا يمكن استردادها.', contentWidth);
+    for (const line of refundLinesAr) { pdf.text(line, pageWidth - margin, yPosition, { align: 'right' }); yPosition += 5; }
+    yPosition += 4;
+
     // Photo/video consent (on every treatment page)
+
     checkNewPage(60);
     pdf.setFontSize(11);
     setEnglishFont('bold');
@@ -555,8 +574,42 @@ export async function generateConsentPDF(data: ConsentPDFData): Promise<Blob> {
   drawDivider();
 
   // ==========================================
+  // REFUND POLICY
+  // ==========================================
+  checkNewPage(40);
+
+  pdf.setFontSize(11);
+  setEnglishFont('bold');
+  pdf.text('Refund Policy', margin, yPosition);
+  yPosition += 6;
+
+  pdf.setFontSize(10);
+  setEnglishFont('normal');
+  const refundPolicyEn = 'Once a package has been purchased, it is non-refundable.';
+  const refundLinesEn = pdf.splitTextToSize(refundPolicyEn, contentWidth);
+  for (const line of refundLinesEn) {
+    pdf.text(line, margin, yPosition);
+    yPosition += 5;
+  }
+  yPosition += 2;
+
+  setArabicFont();
+  pdf.text('سياسة الاسترداد', pageWidth - margin, yPosition, { align: 'right' });
+  yPosition += 6;
+  const refundPolicyAr = 'بمجرد شراء الحزمة، لا يمكن استردادها.';
+  const refundLinesAr = pdf.splitTextToSize(refundPolicyAr, contentWidth);
+  for (const line of refundLinesAr) {
+    pdf.text(line, pageWidth - margin, yPosition, { align: 'right' });
+    yPosition += 5;
+  }
+  yPosition += 4;
+
+  drawDivider();
+
+  // ==========================================
   // VIDEO & PHOTOGRAPHIC CONSENT
   // ==========================================
+
   checkNewPage(60);
   
   pdf.setFontSize(11);
