@@ -585,7 +585,11 @@ export function InlineConsentModal({
               <div className="mt-4 p-4 rounded-lg border bg-warning/5 border-warning/20 text-sm text-warning">
                 ⚠️ Patient must sign the physical consent form before treatment proceeds.
               </div>
+              <div className="mt-2 p-3 rounded-lg border bg-muted/50 border-muted text-sm text-muted-foreground">
+                <strong>Refund Policy:</strong> Once a package has been purchased, it is non-refundable.
+              </div>
             </div>
+
             <div className="flex gap-4 w-full max-w-sm">
               <TabletButton
                 variant="outline"
