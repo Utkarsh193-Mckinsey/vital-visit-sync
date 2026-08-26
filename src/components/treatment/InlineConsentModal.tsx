@@ -430,6 +430,17 @@ export function InlineConsentModal({
               </ScrollArea>
             </div>
 
+            {/* Refund Policy Notice */}
+            <div className={`p-3 rounded-lg border bg-warning/5 border-warning/20 text-sm ${selectedLanguage === 'ar' ? 'text-right' : ''}`} dir={selectedLanguage === 'ar' ? 'rtl' : 'ltr'}>
+              <strong>
+                {selectedLanguage === 'ar' ? 'سياسة الاسترداد:' : 'Refund Policy:'}
+              </strong>{' '}
+              {selectedLanguage === 'ar'
+                ? 'بمجرد شراء الحزمة، لا يمكن استردادها.'
+                : 'Once a package has been purchased, it is non-refundable.'}
+            </div>
+
+
             {/* Signature Area */}
             <div className="space-y-2">
               <div className="flex justify-between items-center">
